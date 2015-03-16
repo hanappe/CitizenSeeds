@@ -1,0 +1,408 @@
+// db.js
+
+var fs = require("fs");
+
+var _db = undefined;
+    
+function create()
+{
+    console.log("Initilising the database");
+    try {
+        fs.mkdirSync("db");
+    } catch (e) {
+        console.log("Failed to make dir db");
+    }
+    try {
+        fs.mkdirSync("db/datastreams");    
+    } catch (e) {
+        console.log("Failed to make dir db/datastreams");
+    }
+    
+    _db = {};
+    _db.accounts = [];
+    _db.groups = [];
+    _db.devices = [];
+    _db.datastreams = [];
+    _db.locations = [];
+    _db.experiments = [];
+    _db.observers = [];
+    _db.observations = [];
+    _db.plants = [];
+    _db.plantlocations = [];
+    _db.sensordata = [];
+    
+    save(_db);
+}
+
+function load()
+{        
+    var text;
+    try {
+        text = fs.readFileSync("db.json");
+    } catch (e) {
+        create();
+        return;
+    }
+    
+    _db = JSON.parse(text);        
+    loadTable("accounts");
+    loadTable("groups");
+    loadTable("devices");
+    loadTable("datastreams");
+    loadTable("locations");
+    loadTable("experiments");
+    loadTable("observers");
+    loadTable("observations");
+    loadTable("plants");
+    loadTable("plantlocations");
+    loadTable("sensordata");
+    
+    return _db;
+}
+
+function init()
+{
+    if (_db)
+        return _db;
+    else load();
+}
+
+function save()
+{
+    saveMaster();
+    saveTable("accounts");
+    saveTable("groups");
+    saveTable("devices");
+    saveTable("datastreams");
+    saveTable("locations");
+    saveTable("experiments");
+    saveTable("observers");
+    saveTable("observations");
+    saveTable("plants");
+    saveTable("plantlocations");
+    saveTable("sensordata");
+}
+
+function saveMaster()
+{
+    try {
+        fs.renameSync("db.json", "db.json.backup");
+    } catch (e) {
+        // FIXME: not an error if file doesn't exist
+    }
+    fs.writeFileSync("db.json", JSON.stringify(_db, undefined, 2));
+}
+
+
+function loadTable(name)
+{
+    var path = "db/" + name + ".json";
+    try {
+	text = fs.readFileSync(path);
+    } catch (e) {
+        // Not an error if file doesn't exist
+	_db[name] = [];
+	    return;
+    }
+    _db[name] = JSON.parse(text);
+}
+
+function saveTable(name)
+{
+    var path = "db/" + name + ".json";
+    try {
+        fs.renameSync(path, path + ".backup");
+    } catch (e) {
+        // FIXME: not an error if file doesn't exist
+        }
+    fs.writeFileSync(path, JSON.stringify(_db[name], undefined, 2));
+}
+
+function newId(name)
+{
+    var id = 1;
+    var table = _db[name];
+    for (var i = 0; i < table.length; i++) {
+        if (table[i].id >= id) 
+            id = table[i].id + 1;
+    }
+    return id;
+}
+
+//------------------------------------------
+
+function getAccounts()
+{
+    return _db.accounts;
+}
+
+function getAccount(id)
+{
+    for (var i = 0; i < _db.accounts.length; i++) {
+        if (_db.accounts[i].id == id)
+            return _db.accounts[i];
+    }
+    return undefined;
+}
+
+function insertAccount(account)
+{
+    _db.push(account);
+    saveTable("accounts");
+    return account;
+}
+
+function updateAccount(account)
+{
+    var a = getAccount(account.id);
+    a.id = account.id;
+    a.email = account.email;
+    a.firstname = account.firstname;
+    a.lastname = account.lastname;
+    a.address1 = account.address1;
+    a.address2 = account.address2;
+    a.zipcode = account.zipcode;
+    a.town = account.town;
+    a.country = account.country;
+    a.flowerpower = account.flowerpower;
+    a.soil = account.soil;
+    a.password = account.password;
+    a.emailValidationToken = account.emailValidationToken;
+    a.group = account.group;
+    a.emailValidated = account.emailValidated;    
+    saveTable("accounts");
+    return account;
+}
+
+//------------------------------------------
+
+function getGroups()
+{
+    return _db.groups;
+}
+    
+function getGroup(id)
+{
+    for (var i = 0; i < _db.groups.length; i++) {
+        if (_db.groups[i].id == id)
+            return _db.groups[i];
+    }
+    return undefined;
+}
+
+function insertGroup(group)
+{
+    group.id = newId("groups");
+    _db.groups.push(group);
+    saveTable("groups");
+    return group;
+}
+
+//------------------------------------------
+
+function getDatastreams()
+{
+    return _db.datastreams;
+}
+
+function getDatastream(id)
+{
+    for (var i = 0; i < _db.datastreams.length; i++) {
+        if (_db.datastreams[i].id == id)
+            return _db.datastreams[i];
+    }
+    return undefined;
+}
+
+//------------------------------------------
+
+function getDevices()
+{
+    return _db.devices;
+}
+
+//------------------------------------------
+
+function getExperiments()
+{
+    return _db.experiments;
+}
+
+function getExperiment(id)
+{
+    for (var i = 0; i < _db.experiments.length; i++) {
+        if (_db.experiments[i].id == id)
+            return _db.experiments[i];
+    }
+        return undefined;
+}
+
+//------------------------------------------
+
+function getObservers()
+{
+    return _db.observers;
+}
+
+function insertObserver(observer)
+{
+    observer.id = newId("observers");
+    _db.observers.push(observer);
+    saveTable("observers");
+    return observer;
+}
+
+function selectObservers(filter)
+{
+    var observers = [];
+    for (var i = 0; i < _db.observers.length; i++) {
+        if (filter.account &&
+            filter.account != _db.observers[i].account)
+            continue;
+        if (filter.plant &&
+            filter.plant != _db.observers[i].plant)
+            continue;
+        if (filter.experiment &&
+            filter.experiment != _db.observers[i].experiment)
+            continue;
+        if (filter.location &&
+            filter.location != _db.observers[i].location)
+            continue;
+        observers.push(_db.observers[i]);
+    }
+    return observers;
+}
+
+//------------------------------------------
+
+function getObservations()
+{
+    return _db.observations;
+}
+
+function getObservation(id)
+{
+    for (var i = 0; i < _db.observations.length; i++) {
+        if (_db.observations[i].id == id)
+            return _db.observations[i];
+    }
+    return undefined;
+}
+
+function newObservationId()
+{
+    var id = 1;
+    for (var i = 0; i < _db.observations.length; i++) {
+        if (_db.observations[i].id >= id) 
+            id = _db.observations[i].id + 1;
+    }
+    return id;
+}
+
+function insertObservation(observation)
+{
+    observation.id = newId("observations");
+    _db.observations.push(observation);
+    saveTable("observations");
+    return observation;
+}
+
+//------------------------------------------
+
+function getLocations()
+{
+    return _db.locations;
+}
+
+function selectLocations(filter)
+{
+    var locations = [];
+    for (var i = 0; i < _db.locations.length; i++) {
+        if (filter.account &&
+            filter.account != _db.locations[i].account)
+            continue;
+        locations.push(_db.locations[i]);
+    }
+    return locations;
+}
+
+function getLocation(id)
+{
+    for (var i = 0; i < _db.locations.length; i++) {
+        if (_db.locations[i].id == id)
+            return _db.locations[i];
+    }
+    return undefined;
+}
+
+function insertLocation(location)
+{
+    observation.id = newId("locations"), 
+    _db.locations.push(locations);
+    saveTable("locations");
+    return location;
+}
+
+//------------------------------------------
+
+function getPlants()
+{
+    return _db.plants;
+}
+    
+function getPlant(id)
+{
+    for (var i = 0; i < _db.plants.length; i++) {
+        if (_db.plants[i].id == id)
+            return _db.plants[i];
+    }
+    return undefined;
+}
+
+//------------------------------------------
+
+function getPlantLocations()
+{
+    return _db.plantlocations;
+}
+
+//------------------------------------------
+
+module.exports = {
+    init: init,
+
+    getAccounts: getAccounts,
+    getAccount: getAccount,
+    insertAccount: insertAccount,
+    updateAccount: updateAccount,
+
+    getGroups: getGroups,
+    getGroup: getGroup,
+    insertGroup: insertGroup,
+
+    getDatastreams: getDatastreams,
+    getDatastream: getDatastream,
+
+    getDevices: getDevices,
+
+    getExperiments: getExperiments,
+    getExperiment: getExperiment,
+
+    getObservers: getObservers,
+    insertObserver: insertObserver,
+    selectObservers: selectObservers,
+    
+    getObservations: getObservations,
+    getObservation: getObservation,
+    insertObservation: insertObservation,
+
+    getLocations: getLocations,
+    selectLocations: selectLocations,
+    getLocation: getLocation,
+    insertLocation: insertLocation,
+
+    getPlants: getPlants,
+    getPlant: getPlant,
+
+    getPlantLocations: getPlantLocations
+}

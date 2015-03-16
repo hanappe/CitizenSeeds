@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>P2P Food Lab - CitizenSeeds</title>
+    <link rel="stylesheet" href="CitizenSeeds.css">
+    <script src="es6-promise-2.0.1.min.js"></script>
+    <script src="CitizenSeedsServer.js"></script>
+    <script src="CitizenSeedsApp.js"></script>
+    <script src="dygraph-combined.js"></script>
+  </head>
+  <body id="Body" onload="showObservations(4)">
+    <div class="PageHeader clearfix">
+      <div class="ProjectTitle FloatLeft">CitizenSeeds</div>
+      <div class="SmallLogo FloatRight">
+        <a href="https://p2pfoodlab.net"><img src="media/logo-small-blue.png" class="SmallLogo"/></a></div>
+    </div>
+    <div class="DateSelection">
+        Voir les images à partir de :&nbsp; 
+        <a href="javascript:void(0)" class="SelectWeek" onclick="showWeek('2014-08-23')">23/08</a> - 
+        <a href="javascript:void(0)" class="SelectWeek" onclick="showWeek('2014-09-20')">20/09</a> - 
+        <a href="javascript:void(0)" class="SelectWeek" onclick="showWeek('2014-10-18')">18/10</a> - 
+        <a href="javascript:void(0)" class="SelectWeek" onclick="showWeek('2014-11-15')">15/11</a> - 
+        <a href="javascript:void(0)" class="SelectWeek" onclick="showWeek('2014-12-13')">13/12</a> - 
+        <a href="javascript:void(0)" class="SelectWeek" onclick="showWeek('2015-01-10')">10/01</a> - 
+        <a href="javascript:void(0)" class="SelectWeek" onclick="showWeek('2015-02-07')">07/02</a> - 
+        <a href="javascript:void(0)" class="SelectWeek" onclick="showWeek('2015-03-07')">07/03</a> - 
+        <a href="javascript:void(0)" class="SelectWeek" onclick="showWeek('2015-04-04')">04/04</a> - 
+        <a href="javascript:void(0)" class="SelectWeek" onclick="showWeek('2015-05-02')">02/05</a>
+    </div>
+    <div id="ExperimentView"></div>
+  </body>
+</html>

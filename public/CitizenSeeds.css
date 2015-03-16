@@ -1,0 +1,365 @@
+
+@font-face {
+    font-family: 'din1451alt';
+    src: url('fonts/din1451alt.eot');
+    src: url('fonts/din1451alt.eot?#iefix') format('embedded-opentype'),
+         url('fonts/din1451alt.woff') format('woff'),
+         url('fonts/din1451alt.ttf') format('truetype'),
+         url('fonts/din1451alt.svg#alte_din_1451_mittelschriftRg') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'ralewayregular';
+    src: url('fonts/raleway-regular-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+  font-family: "Raleway";
+  font-style: normal;
+  font-weight: 400;
+  src: local("Raleway"), url("fonts/Raleway.woff") format("woff");
+}
+
+html, body {
+      font-family: "Raleway", "ralewayregular", "din1451alt", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+      font-size: 14px;
+      color: black;
+      padding: 40px;
+      margin: 0px;
+}
+
+a:link { color: black; text-decoration: none; font-weight: normal; }
+a:visited { color: black; text-decoration: none; font-weight: normal; }
+a:active { color: black; text-decoration: underline; font-weight: normal; }
+a:hover { color: #326296; text-decoration: none; font-weight: normal; }
+
+a.Button:link { color: #ba3c21; text-decoration: none; font-weight: normal; }
+a.Button:visited { color: #ba3c21; text-decoration: none; font-weight: normal; }
+a.Button:active { color: #ba3c21; text-decoration: underline; font-weight: normal; }
+a.Button:hover { color: #ba3c21; text-decoration: none; font-weight: normal; }
+
+.visible {
+    display: block;
+}
+
+.hidden {
+    display: none;
+}
+
+.clearfix:after { 
+    content: "";
+    display: block; 
+    clear: both;
+}
+
+.FloatLeft { 
+    float: left;
+}
+
+.FloatRight { 
+    float: right;
+}
+
+div.Curtain {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 100;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+div.UploadPanel {
+    width: 300px;
+    border: solid 3px black;
+    background-color: white;
+    padding: 20px;
+    margin: auto;
+    margin-top: 40px;
+    -webkit-border-radius: 12px;
+    -khtml-border-radius: 12px;
+    -moz-border-radius: 12px;
+    border-radius: 12px;
+}
+
+textarea.UploadComment {
+    width: 240px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+div.UploadButtons {
+    padding: 10px;
+}
+
+div.UploadButton {
+    padding-left: 10px;
+}
+
+div.UploadPreview {
+    width: 240px;
+    min-height: 180px;
+    border: solid 1px grey;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 10px;
+}
+
+img.UploadPreviewImage {
+    max-width: 240px;
+    border: 0;
+}
+
+div.PageHeader {
+    height: 100px;
+}
+
+div.SmallLogo {
+    height: 100px;
+    margin-right: 20px;
+}
+
+img.SmallLogo {
+    width: 200px;
+    border: 0;
+}
+
+div.ProjectTitle {
+      font-size: 56px;
+}
+
+div.DateSelection {
+    padding-top: 10px;
+    padding-bottom: 20px;
+}
+
+div.TableHolder {
+    padding-top: 6px;
+    border-top: 1px solid black;
+}
+
+div.Table {
+  display: table;
+}
+
+div.Row {
+    display: table-row;
+}
+
+div.Column {
+    display: table-cell;
+}
+
+div.ObservationHeaderView {
+    padding-bottom: 4px;
+    font-size: 24px;
+    border-bottom: 1px solid black;
+    background-color: black;
+    color: white;
+    font-weight: bold;
+}
+
+div.ObservationWeekView div {
+    border-bottom: 1px solid black;
+    padding-top: 4px;
+}
+
+div.WeekTitle {
+    height: 25px;
+}
+
+div.WeekDate {
+    height: 25px;
+    min-width: 90px;
+    border-left: 1px solid black;
+    padding-left: 4px;
+}
+
+div.ObservationRowView {
+    position: relative;
+    height: 65px;
+    vertical-align: top;
+}
+
+div.ObservationRowView div {
+}
+
+div.ObservationLocationView {
+    height: 65px;
+    width: 120px;
+    vertical-align: top;
+    border-bottom: 1px solid black;
+}
+
+div.ObservationView {
+    height: 65px;
+    width: min-90px;
+    border-left: 1px solid black;
+    vertical-align: top;
+    padding-left: 4px;
+    padding-right: 4px;
+    border-bottom: 1px solid black;
+}
+
+img.ObservationView {
+    border: 0px;
+    max-width: 80px;
+    max-height: 80px;
+}
+
+img.EmptyObservationView {
+    border: 0px;
+    width: 80px;
+    height: 60px;
+}
+
+div.DataView {
+    position: relative;
+    height: 12px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    opacity: 0.2;
+}
+
+div.DataView:hover {
+    opacity: 1.0;
+}
+
+div.DataIcon {
+    position: absolute;
+    top: 4px;
+    left: 0px;
+    width: 10px;
+    height: 12px;
+    border: 1px solid #e8e8e8;
+}
+
+div.TempValue {
+    border: 1px solid #ff0000;
+}
+
+div.HumidityValue {
+    border: 1px solid #00ffff;
+}
+
+div.SunValue {
+    border: 1px solid #ffd000;
+}
+
+div.SoilValue {
+    border: 1px solid #0000ff;
+}
+
+div.DataValue {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 10px;
+    height: 0px;
+}
+
+div.TempValue div {
+    background-color: #ff0000;
+}
+
+div.HumidityValue div {
+    background-color: #00ffff;
+}
+
+div.SunValue div {
+    background-color: #ffd000;
+}
+
+div.SoilValue div {
+    background-color: #0000ff;
+}
+
+div.ObservationOps {
+    font-size: 9px;
+}
+
+div.ObservationOps {
+    background-color: white;
+    color: #f0f0f0;
+    font-size: 9px;
+}
+
+div.ObservationOps:hover {
+    background-color: white;
+    color: black;
+    font-size: 9px;
+}
+
+a.ObsOp:link { color: inherit; text-decoration: none; font-weight: bold; padding-right: 4px; }
+a.ObsOp:visited { color: inherit; text-decoration: none; font-weight: bold; padding-right: 4px; }
+a.ObsOp:active { color: inherit; text-decoration: underline; font-weight: bold; padding-right: 4px; }
+a.ObsOp:hover { color: #326296; text-decoration: none; font-weight: bold; padding-right: 4px; }
+
+
+/*
+ * Static pages
+ */
+
+@media (min-width: 700px) and (orientation: landscape) {
+}
+
+@media (max-width: 700px) and (orientation: landscape) {
+}
+
+div.About {
+    width: 100%;
+    background-image: url("media/terrace.jpg");
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+}
+
+div.CitizenSeeds {
+    width: 100%;
+    background-image: url("media/seeds.jpg");
+    background-size: auto 100%;
+    background-repeat: no-repeat;
+}
+
+div.StarterKit {
+    height: 1080px;
+    background-image: url("media/lasemeuse.jpg");
+    background-color: #cccccc;    
+}
+
+div.BigText {
+    width: 100%;
+    font-size: 48px;
+    font-weight: bold;
+    text-shadow: 0px 2px 2px rgba(0, 0, 0, 0.4);
+    border: 1px solid black;
+}
+
+img.BigLogo {
+    width: 1000px;
+}
+
+.White {
+    color: white;
+}
+
+a.BigLink:link { text-decoration: none; font-weight: bold; }
+a.BigLink:visited { text-decoration: none; font-weight: bold; }
+a.BigLink:active { text-decoration: none; font-weight: bold; }
+a.BigLink:hover { text-decoration: underline; font-weight: bold; }
+
+a.White {
+    color: white;
+}
+
+a.Blueish {
+    color: #09ffff;
+}
+
+a.Redish {
+    color: #ff2232;
+}
