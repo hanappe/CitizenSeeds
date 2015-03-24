@@ -359,8 +359,8 @@ function getLocation(id)
 
 function insertLocation(location)
 {
-    observation.id = newId("locations"), 
-    _db.locations.push(locations);
+    location.id = newId("locations"), 
+    _db.locations.push(location);
     saveTable("locations");
     return location;
 }

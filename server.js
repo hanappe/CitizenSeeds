@@ -215,8 +215,7 @@ function createObserver(req, res)
     var location;
     
     if (locations.length == 0) {
-        location = database.insertLocation({ "account": account.id,
-                                             "name": "Mon potager" });
+        location = database.insertLocation({ "account": account.id, "name": "" });
     } else if (locations.length == 1) {
         location = locations[0]; // easy
     } else {
