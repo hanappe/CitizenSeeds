@@ -1235,9 +1235,14 @@ app.get("/payments/cancelled", showPaymentCancelled);
 app.use(express.static("public"));
 
 
-var port = 10201;
-//if (config && config.port) 
-//    port = config.port;
+var config = { "port": 10201 };
 
-logger.debug("Server starting");
-var server = app.listen(port, function () {});
+try {
+    text = fs.readFileSync("config.json");
+    config = JSON.parse(text);        
+} catch (e) {
+    return;
+}
+
+logger.debug("Server starting on port " + config.port);
+var server = app.listen(config.port, function () {});
