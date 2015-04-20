@@ -1,55 +1,57 @@
 {
-    "name": "CitizenSeeds",
-    "version": "0.1.0",
-    "description": "CitizenSeeds",
-    "author": "Peter Hanappe <hanappe@csl.sony.fr>",
-    "contributors": [{
-        "name": "Nicolas Duval",
-        "email": "nicoduv@csl.sony.fr"
-    }],
-    "scripts": {
-        "test": "echo run test",
-        "start": "node server.js",
-        "predeploy": "echo im about to deploy",
-        "postdeploy": "echo ive deployed",
-        "prepublish": "echo no prepublish script"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/hanappe/CitizenSeeds.git"
-    },
-    "bugs": {
-        "email": "hanappe@csl.sony.fr"
-    },
-    "keywords": [
-        "gardening"
-    ],
-    "dependencies": {
-        "express": "*",
-        "body-parser": "*",
-        "multer": "*",
-        "gm": "*",
-        "log4js": "*",
-        "passport": "*",
-        "passport-http": "*",
-        "nodemailer": "*",
-        "nodemailer-smtp-transport": "*",
-        "xregexp": "*",
-        "easy-captcha": "*",
-        "express-session": "*",
-        "locale": "*",
-        "mkdirp": "*",
-        "node-flower-power": "*",
-        "randomstring": "*"
-        },
-    "devDependencies": {},
-    "preferGlobal": true,
-    "private": true,
-    "publishConfig": {
-        "registry": "https://your-private-hosted-npm.registry.nodejitsu.com"
-    },
-    "subdomain": "foobar",
-    "analyze": true,
-    "license": "GPLv3"
+  "name": "CitizenSeeds",
+  "version": "0.1.0",
+  "description": "CitizenSeeds",
+  "author": "Peter Hanappe <hanappe@csl.sony.fr>",
+  "contributors": [
+    {
+      "name": "Nicolas Duval",
+      "email": "nicoduv@csl.sony.fr"
+    }
+  ],
+  "scripts": {
+    "test": "echo run test",
+    "start": "node server.js",
+    "predeploy": "echo im about to deploy",
+    "postdeploy": "echo ive deployed",
+    "prepublish": "echo no prepublish script"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hanappe/CitizenSeeds.git"
+  },
+  "bugs": {
+    "email": "hanappe@csl.sony.fr"
+  },
+  "keywords": [
+    "gardening"
+  ],
+  "dependencies": {
+    "body-parser": "*",
+    "easy-captcha": "*",
+    "exit": "^0.1.2",
+    "express": "*",
+    "express-session": "*",
+    "gm": "*",
+    "locale": "*",
+    "log4js": "*",
+    "mkdirp": "*",
+    "multer": "*",
+    "node-flower-power": "*",
+    "nodemailer": "*",
+    "nodemailer-smtp-transport": "*",
+    "passport": "*",
+    "passport-http": "*",
+    "randomstring": "*",
+    "xregexp": "*"
+  },
+  "devDependencies": {},
+  "preferGlobal": true,
+  "private": true,
+  "publishConfig": {
+    "registry": "https://your-private-hosted-npm.registry.nodejitsu.com"
+  },
+  "subdomain": "foobar",
+  "analyze": true,
+  "license": "GPLv3"
 }
-
