@@ -284,7 +284,7 @@ function sendExperimentPage(req, res)
 	sendError(res, { "message": "Bad experiment ID" });
 	return;
     }
-    fs.readFile("public/experiment.html", "utf-8", function (err, content) {
+    fs.readFile("templates/experiment.html", "utf-8", function (err, content) {
 	if (err) 
 	    sendError(res, { "message": "Server error" });
 	else {
