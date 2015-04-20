@@ -35,8 +35,8 @@ var nodemailer = require("nodemailer");
 var passport = require('passport');
 var BasicStrategy = require('passport-http').BasicStrategy;
 var gm = require('gm');
-//var ipn = require('paypal-ipn');
 var mkdirp = require('mkdirp');
+var exit = require('exit');
 
 var log4js = require('log4js');
 log4js.configure({
@@ -45,6 +45,13 @@ log4js.configure({
 	{ type: 'file', filename: 'log/all.log', category: 'p2pfoodlab' }
     ]
 });
+mkdirp("log/", function(err) {
+    if (err) {
+	console.log("Failed to create the log directory");
+        exit(1);
+    }
+});
+
 var logger = log4js.getLogger('p2pfoodlab');
 logger.setLevel('DEBUG');
 
@@ -976,29 +983,7 @@ function createAccount(req, res)
                                        "contact":  id });
     }
 
-    logger.debug("createAccount @ 15");
-
-    var testPaypal = false;
-    var cart = "";
-    var amount = 0;
-    var button = false;
-    if (flowerpower && soil) {
-        amount = 40;
-        button = "Y2R2LH7A57SVN";
-        if (testPaypal) button = "2BU7X3NMPGSYE";
-        cart = "Flower Power & Terre amendée";
-    } else if (flowerpower) {
-        amount = 20;
-        button = "CYUDXNLULK228";
-        if (testPaypal) button = "HP79C8J77ZASU";
-        cart = "Flower Power";
-    } else if (soil) {
-        amount = 20;
-        button = "XZ764GY97YZWU";
-        if (testPaypal) button = "QQ67A9DLNAZBE";
-        cart = "Terre amendée";
-    }
-    
+    logger.debug("createAccount @ 15");    
     logger.debug("createAccount @ 16");
 
     account = { "id": id,
@@ -1015,13 +1000,6 @@ function createAccount(req, res)
                 "password": randomstring.generate(8),
                 "emailValidationToken": randomstring.generate(16)
               };
-    if (amount) {
-        account.cart = cart;
-        account.amount = amount;
-        account.paid = false;
-        account.payment = randomstring.generate(8);
-    }
-    
     if (group) account.group = group.id;
 
     logger.debug("createAccount @ 17");
@@ -1068,7 +1046,6 @@ function createAccount(req, res)
              + "À très bientôt !\n");
 
     logger.debug("createAccount @ 20");
-
 
     sendMail("peter@hanappe.com",
              "New registration for CitizenSeeds: " + id,
@@ -1139,27 +1116,6 @@ function logout(req, res)
 
     res.writeHead(200, {"Content-Type": "application/json"});
     res.end(JSON.stringify({ "success": true }));
-}
-
-/*
- * Return call from PayPal
- */
-
-function showPaymentSuccess(req, res)
-{
-    logger.debug("showPaymentSuccess");
-    logger.debug(JSON.stringify(req.body));
-    res.end("Nous vous remercions de votre paiement. Votre transaction est terminée et vous allez recevoir par email un avis accusant réception de votre achat."); 
-}
-
-
-
-function showPaymentCancelled(req, res)
-{
-    logger.debug("showPaymentCancelled");
-    logger.debug(JSON.stringify(req.body));
-    res.writeHead(200, {"Content-Type": "text/html"});
-    res.end("Paiement annule."); 
 }
 
 
