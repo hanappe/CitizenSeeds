@@ -1185,8 +1185,6 @@ app.get("/login",
 app.get("/logout", logout);
 
 app.get("/", sendIndex);
-app.get("/payments/success", showPaymentSuccess);
-app.get("/payments/cancelled", showPaymentCancelled);
 
 app.use(express.static("public"));
 
