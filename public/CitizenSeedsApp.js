@@ -842,11 +842,12 @@ function ObservationView(observation, data)
         this.addComponent(new EmptyDataView());
 
     if (observation.thumbnail) 
-        this.image = this.addImage(observation.thumbnail,
+        this.image = this.addImage(_server.root + "/" + observation.thumbnail,
                                    "" /*obs.date*/,
                                    "ObservationView");
     else 
-        this.image = this.addImage("media/white.gif", "", "EmptyObservationView");
+        this.image = this.addImage(_server.root + "/media/white.gif", "",
+                                   "EmptyObservationView");
 
     this.ops = new ObservationOps(observation);
     this.addComponent(this.ops);
@@ -1109,12 +1110,12 @@ var _experiment = undefined;
 var _controller = undefined;
 var _curtain = undefined;
 
-function showObservations(id)
+function showObservations(url, id)
 {
     _curtain = new Curtain();
     document.getElementById("Body").appendChild(_curtain.div);
 
-    _server = new Server();
+    _server = new Server(url);
     
     // First, load all the data and construct the data structure, aka
     // the 'model'.

@@ -39,13 +39,16 @@ function newXMLHttpRequest()
     return xmlhttp;
 }
 
-function Server()
+function Server(root)
 {
+    var server = this;
+    this.root = (root)? root + "/" : "";
+
     // From http://www.html5rocks.com/en/tutorials/es6/promises/
     this.get = function(url) {
         return new Promise(function(resolve, reject) {
             var req = newXMLHttpRequest();
-            req.open('GET', url);
+            req.open('GET', server.root + url);
 
             req.onload = function() {
                 // This is called even on 404 etc
@@ -80,7 +83,7 @@ function Server()
     this.postFile = function(url, formdata) {
         return new Promise(function(resolve, reject) {
             var req = newXMLHttpRequest();
-            req.open('POST', url);
+            req.open('POST', server.root + url);
 
             req.onload = function() {
                 // This is called even on 404 etc
@@ -115,7 +118,7 @@ function Server()
     this.post = function(url, data, contentType) {
         return new Promise(function(resolve, reject) {
             var req = newXMLHttpRequest();
-            req.open('POST', url);
+            req.open('POST', server.root + url);
             if (contentType) 
                 req.setRequestHeader("Content-Type", contentType);
 

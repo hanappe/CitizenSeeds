@@ -276,24 +276,51 @@ function sendExperiment(req, res)
     res.end(JSON.stringify(e));
 }
 
+function Template(name)
+{
+    this.name = name;
+
+    this.replaceVariable = function(content, key, value) {
+        return content.replace(new RegExp("\\$\\{" + key + "\\}", 'g'), value);
+    }
+
+    this.replaceVariables = function(content, vars) {
+        for (var key in vars) 
+            content = this.replaceVariable(content, key, vars[key]);
+        return content;
+    }
+    
+    this.generate = function(res, vars) {
+        var template = this;
+        fs.readFile("templates/" + this.name + ".html", "utf-8", function (err, content) {
+	    if (err) 
+	        sendError(res, { "message": "Server error" });
+	    else {
+                content = template.replaceVariables(content, vars);
+	        res.writeHead(200, {"Content-Type": "text/html"});
+	        res.end(content); 
+	    }
+        });
+
+    }
+}
+
+
 function sendExperimentPage(req, res)
 {
+    logger.debug("Request: sendExperimentPage");
+    logger.debug("ID: " + req.params.id);
+
     var id = req.params.id;
     var experiment = database.getExperiment(id);
     if (!experiment) {
 	sendError(res, { "message": "Bad experiment ID" });
 	return;
     }
-    fs.readFile("templates/experiment.html", "utf-8", function (err, content) {
-	if (err) 
-	    sendError(res, { "message": "Server error" });
-	else {
-	    content = content.replace("${experiment.id}", experiment.id);
-	    content = content.replace("${experiment.prettyname}", experiment.prettyname);
-	    res.writeHead(200, {"Content-Type": "text/html"});
-	    res.end(content); 
-	}
-    });
+    var vars = { "experimentId": experiment.id, 
+	         "experimentName": experiment.prettyname,
+	         "baseUrl": config.baseUrl };    
+    new Template("experiment").generate(res, vars);
 }
 
 /*
