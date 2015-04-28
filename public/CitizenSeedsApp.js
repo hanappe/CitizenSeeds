@@ -737,7 +737,7 @@ function ObservationMatrixView(matrix, viewStart, numWeeks)
 
         this.button = new Button("createObserver_" + this.matrix.plant.id,
                                  "",
-                                 "Rajouter un ligne pour mes photos.",
+                                 "Rajouter une ligne pour mes photos.",
                                  "createObserver");
         this.button.addListener(_controller);
         this.button.matrix = this.matrix;
