@@ -238,8 +238,8 @@ function createObserver(req, res)
                                                "plant": plant.id });
     if (observers.length != 0) {
 	sendError(res, { "success": false, 
-			 "message": "Vous participez déjà dans "
-                         + "l'observation de cette plante." });
+			 "message": "Vous avez déjà une ligne "
+                         + "d'observations pour cette plante." });
         return;
     }
     
@@ -249,8 +249,17 @@ function createObserver(req, res)
 	"location": location.id, 
 	"account": account.id 
 	});
+
+    var r = { "id": observer.id ,
+              "locationId": location.id,
+              "locationName": location.name,
+              "plantId": plant.id,
+              "plantFamily": plant.family,
+              "plantVariety": plant.variety,
+              "accountId": account.id,
+              "experimentId": experiment.id };
     
-    sendJson(res, observer);
+    sendJson(res, r);
 }
 
 /*
