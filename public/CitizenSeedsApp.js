@@ -531,12 +531,14 @@ function closeUploadPanel(err)
     _curtain.finished();
 }
 
-function UploadPanel(hidden)
+function UploadPanel(hidden, doneCallback, cancelCallback)
 {
     var self = this;
     
     this.hidden = hidden;
-
+    this.doneCallback = doneCallback;
+    this.cancelCallback = cancelCallback;
+    
     this.init("UploadPanel", "UploadPanel");
 
     this.buildForm = function() {
@@ -1274,7 +1276,7 @@ function NotebookController(notebook)
 
 function NotebookView(notebook)
 {
-    this.init("NotebookView", "NotebookView");
+    this.init("NotebookView", "NotebookView container");
     this.notebook = notebook;
     
     this.updateView = function() {
@@ -1298,7 +1300,7 @@ function NotebookLocationView(notebook, index)
 {
     var self = this;
     
-    this.init("NotebookLocationView_" + index, "NotebookLocationView");
+    this.init("NotebookLocationView_" + index, "NotebookLocationView row");
     this.notebook = notebook;
     this.index = index;
     

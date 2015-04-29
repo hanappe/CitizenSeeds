@@ -1,18 +1,33 @@
 <!doctype html>
 <html lang="en">
   <head>
+
+    <!-- Basic Page Needs  –––––––––––––––– -->
     <meta charset="utf-8">
     <title>P2P Food Lab - CitizenSeeds</title>
-    <link rel="stylesheet" href="${baseUrl}/CitizenSeedsMobile.css">
+    <meta name="description" content="P2P Food Lab's CitizenSeeds application for shared gardening">
+    <meta name="author" content="Peter Hanappe & Nicolas Duval @ Sony CSL Paris">
+
+    <!-- Mobile Specific Metas –––––––––––– -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- CSS -------------------–––––––––––– -->
+    <link rel="stylesheet" href="${baseUrl}/css/normalize.css">
+    <link rel="stylesheet" href="${baseUrl}/css/skeleton.css">
+
   </head>
   <body id="Body">
+    
+    <header class="section">
+      <div class="container">
+        <a href="https://p2pfoodlab.net"><img class="SmallLogo u-max-full-width" src="${baseUrl}/img/logo-small-blue.png"></img></a>
+      </div>
+      <div class="ProjectTitle container">
+        <h1>CitizenSeeds</h1>
+      </div>
+    </header>
 
-    <div class="XXX">
-      <div class="SmallLogo"><a href="https://p2pfoodlab.net"><img src="${baseUrl}/media/logo-small-blue.png" class="SmallLogo"/></a></div>
-      <div class="ProjectTitle">${experimentName}</div>
-    </div>
-
-    <div id="MobileApp"></div>
+    <section id="MobileApp" class="section"></section>
 
     <script src="${baseUrl}/CitizenSeedsApp.js"></script>
     <script src="${baseUrl}/CitizenSeedsServer.js"></script>
