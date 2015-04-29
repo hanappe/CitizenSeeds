@@ -794,6 +794,61 @@ function sendGroups(req, res)
 }
 
 /*
+ * Locations
+ */      
+
+function sendLocations(req, res)
+{
+    logger.debug("Request: sendLocations");
+    var list = [];
+    var account = (req.query.account)? req.query.account : undefined;
+    var locations = database.getLocations();
+    for (var i = 0; i < locations.length; i++) {
+        if (account && locations[i].account != account)
+            continue;
+        
+        list.push({ "id": locations[i].id,
+                    "name": locations[i].name,
+                    "account": locations[i].account,
+                    "device": locations[i].device });
+    }
+    res.writeHead(200, {"Content-Type": "application/json"});
+    res.end(JSON.stringify(list));
+}
+
+function createLocation(req, res)
+{
+    logger.debug("createLocation ", JSON.stringify(req.user));
+
+    var name = "Ma parcelle";
+    if (req.body.name) {
+        if (!validLocationName(req.body.name)) {
+	    sendError(res, { "success": false, 
+			     "message": "Bad location name" },
+                      __line, __function);    
+            return;
+        }
+        name = req.body.name;
+    }
+
+    var account = req.user;
+    if (!account) {
+	sendError(res, { "success": false, 
+			 "message": "Login failed" },
+                  __line, __function);
+	return;
+    }    
+
+    var location = database.insertLocation({ 
+	"name": name, 
+	"account": account.id
+	});
+    
+    sendJson(res, location);
+}
+
+
+/*
  * Plants
  */      
 
@@ -941,6 +996,16 @@ function validGroupName(s)
     if (s.length > 100)
         return false;
     var unicodeWord = XRegExp("^[\\p{L}\\s-]+$");
+    if (!unicodeWord.test(s))
+        return false;
+    return true;
+}
+
+function validLocationName(s)
+{
+    if (s.length > 100)
+        return false;
+    var unicodeWord = XRegExp("^[0-9\\p{L}\\s,-]+$");
     if (!unicodeWord.test(s))
         return false;
     return true;
@@ -1317,6 +1382,11 @@ app.get("/datastreams/:id(\\d+).json", sendDatastream);
 app.get("/datastreams/:id(\\d+)/datapoints.json", sendDatapoints);
 
 app.get("/groups.json", sendGroups);
+
+app.get("/locations.json", sendLocations);
+app.post("/locations",
+         passport.authenticate('basic', { session: true }),
+         createLocation);
 
 app.get("/plants.json", sendPlants);
 app.get("/plants/:id(\\d+)/locations.json", sendPlantLocations);

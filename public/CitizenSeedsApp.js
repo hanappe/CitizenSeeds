@@ -1229,7 +1229,7 @@ function showObservations(url, id)
 
 var _notebookController = undefined;
 
-function Notebook(list)
+function Notebook()
 {
     this.locations = [];
     this.observers = [];
@@ -1241,23 +1241,23 @@ function Notebook(list)
         }
         return -1;
     }
-    
-    this.sortObservers = function(observers) {
-        for (var i = 0; i < list.length; i++) {
-            var observer = list[i];
-            var index = this.findLocationIndex(observer.locationId);
-            if (index < 0) {
-                index = this.locations.length;
-                this.locations.push({ "id": observer.locationId,
-                                      "name": observer.locationName,
-                                      "account": observer.accountId });
-                this.observers[index] = [];
-            }
-            this.observers[index].push(observer);
+
+    this.importLocations = function(locations) {
+        for (var i = 0; i < locations.length; i++) {
+            alert(JSON.stringify(locations[i]));
+            this.locations.push(locations[i]);
+            this.observers.push([]);
         }
     }
     
-    this.sortObservers(list);
+    this.importObservers = function(observers) {
+        for (var i = 0; i < observers.length; i++) {
+            var observer = observers[i];
+            var index = this.findLocationIndex(observer.locationId);
+            if (index < 0) continue; // FIXME: something wrong with the data on the server
+            this.observers[index].push(observer);
+        }
+    }
 }
 
 function NotebookController(notebook)
@@ -1275,6 +1275,7 @@ function NotebookController(notebook)
 
 function NotebookView(notebook)
 {
+    var self = this;
     this.init("NotebookView", "NotebookView container");
     this.notebook = notebook;
     
@@ -1285,10 +1286,22 @@ function NotebookView(notebook)
             this.addComponent(view);
         }
         var button = new Button("AddLocationButton", "AddLocationButton",
-                                "Ajouter une nouvelle parcelle", "addLocation");
+                                "Ajouter une nouvelle parcelle",
+                                function() { self.addLocation(); });
         this.addComponent(button);
     }
 
+    this.addLocation = function() {
+        var location =  { };
+        _server.postJSON("locations", location).then(function (r) {
+            if (r.error) alert(r.message);
+            else {
+                self.notebook.locations.push(r);
+                self.updateView();
+            }
+        }); 
+    }
+    
     this.updateView();    
     
 }
@@ -1417,7 +1430,7 @@ function NotebookObserverView(notebook, lindex, pindex)
         var text = "";
         if (observer.plantVariety)
             text = observer.plantFamily + " - " + observer.plantVariety;
-        else
+         else
             text = observer.plantFamily;
         this.addEventLink(text, function () { self.takePicture(); }, "NotebookObserverView");
     }
@@ -1446,6 +1459,7 @@ NotebookObserverView.prototype = new UIComponent();
 function startMobileApp(url, id)
 {
     _server = new Server(url);
+    var notebook = new Notebook();
     
     // First, load all the data and construct the data structure, aka
     // the 'model'.
@@ -1454,9 +1468,12 @@ function startMobileApp(url, id)
         return _server.getJSON("login");
     }).then(function(a) {
         _account = a;
+        return _server.getJSON("locations.json?account=" + _account.id);
+    }).then(function(r) {
+        notebook.importLocations(r);
         return _server.getJSON("observers.json?account=" + _account.id + "&experiment=" + id);
     }).then(function(list) {
-        var notebook = new Notebook(list);
+        notebook.importObservers(list);
         _notebookController = new NotebookController(notebook);
     });
 }
