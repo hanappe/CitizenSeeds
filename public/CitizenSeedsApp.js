@@ -1159,6 +1159,7 @@ var _server = undefined;
 var _experiment = undefined;
 var _controller = undefined;
 var _curtain = undefined;
+var _account = undefined;
 
 function showObservations(url, id)
 {
@@ -1221,3 +1222,132 @@ function showObservations(url, id)
     });
 }
 
+//--------------------------------------------------
+
+var _notebookController = undefined;
+
+function Notebook(list)
+{
+    this.locations = [];
+    this.observers = [];
+
+    this.findLocationIndex = function(id) {
+        for (var i = 0; i < this.locations.length; i++) {
+            if (this.locations[i].id == id) 
+                return i;
+        }
+        return -1;
+    }
+    
+    this.sortObservers = function(observers) {
+        for (var i = 0; i < list.length; i++) {
+            var observer = list[i];
+            var index = this.findLocationIndex(observer.locationId);
+            if (index < 0) {
+                index = this.locations.length;
+                this.locations.push({ "id": observer.locationId,
+                                      "name": observer.locationName });
+                this.observers[index] = [];
+            }
+            this.observers[index].push(observer);
+        }
+    }
+
+    this.sortObservers(list);
+}
+
+function NotebookController(notebook)
+{
+    this.notebook = notebook;
+
+    this.createView = function() {
+        this.view = new NotebookView(notebook);
+        var div = document.getElementById("MobileApp");
+        div.appendChild(this.view.div);
+    }
+
+    this.createView();    
+}
+
+function NotebookView(notebook)
+{
+    this.init("NotebookView", "NotebookView");
+    this.notebook = notebook;
+    
+    this.updateView = function() {
+        this.removeComponents();
+        for (var i = 0; i < this.notebook.locations.length; i++) {
+            var view = new NotebookLocationView(notebook, i);
+            this.addComponent(view);
+        }
+    }
+
+    this.updateView();    
+    
+}
+NotebookView.prototype = new UIComponent();
+
+function NotebookLocationView(notebook, index)
+{
+    this.init("NotebookLocationView_" + index, "NotebookLocationView");
+    this.notebook = notebook;
+    this.index = index;
+    
+    this.updateView = function() {
+        this.removeComponents();
+        var location = this.notebook.locations[this.index];
+        if (location.name)
+            this.addText(location.name, "NotebookLocationName");
+        else
+            this.addText("Chez moi", "NotebookLocationName");
+
+        var observers = this.notebook.observers[this.index];
+        for (var i = 0; i < observers.length; i++) {
+            var view = new NotebookObserverView(notebook, index, i);
+            this.addComponent(view);
+        }
+    }
+
+    this.updateView();    
+}
+NotebookLocationView.prototype = new UIComponent();
+
+function NotebookObserverView(notebook, lindex, pindex)
+{
+    this.init("NotebookObserverView_" + lindex + "_" + pindex, "NotebookObserverView");
+    this.notebook = notebook;
+    this.lindex = lindex;
+    this.pindex = pindex;
+
+    this.updateView = function() {
+        this.removeComponents();
+        var observer = this.notebook.observers[lindex][pindex];
+        var text = "";
+        if (observer.plantVariety)
+            text = observer.plantFamily + " - " + observer.plantVariety;
+        else
+            text = observer.plantFamily;
+        this.addText(text);
+    }
+
+    this.updateView();
+}
+NotebookObserverView.prototype = new UIComponent();
+
+function startMobileApp(url, id)
+{
+    _server = new Server(url);
+    
+    // First, load all the data and construct the data structure, aka
+    // the 'model'.
+    _server.getJSON("experiments/" + id + ".json").then(function(e) {
+        _experiment = new Experiment(e, _numWeeks);
+        return _server.getJSON("login");
+    }).then(function(a) {
+        _account = a;
+        return _server.getJSON("observers.json?account=" + _account.id + "&experiment=" + id);
+    }).then(function(list) {
+        var notebook = new Notebook(list);
+        _notebookController = new NotebookController(notebook);
+    });
+}

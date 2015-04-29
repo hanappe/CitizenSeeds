@@ -144,6 +144,7 @@ function sendObservers(req, res)
     var experiment = (req.query.experiment)? req.query.experiment : undefined;
     var locationId = (req.query.location)? req.query.location : undefined;
     var plantId = (req.query.plant)? req.query.plant : undefined;
+    var accountId = (req.query.account)? req.query.account : undefined;
 
     var items = [];
     var observers = database.getObservers();
@@ -153,6 +154,7 @@ function sendObservers(req, res)
         if (experiment && obs.experiment != experiment) continue;
         if (plantId && obs.plant != plantId) continue; 
         if (locationId && obs.location != locationId) continue;
+        if (accountId && obs.account != accountId) continue;
 
         var location = database.getLocation(obs.location);
         var plant = database.getPlant(obs.plant);
@@ -330,6 +332,23 @@ function sendExperimentPage(req, res)
 	         "experimentName": experiment.prettyname,
 	         "baseUrl": config.baseUrl };    
     new Template("experiment").generate(res, vars);
+}
+
+function sendMobileApp(req, res)
+{
+    logger.debug("Request: sendMobileApp");
+    logger.debug("ID: " + req.params.id);
+
+    var id = req.params.id;
+    var experiment = database.getExperiment(id);
+    if (!experiment) {
+	sendError(res, { "message": "Bad experiment ID" });
+	return;
+    }
+    var vars = { "experimentId": experiment.id, 
+	         "experimentName": experiment.prettyname,
+	         "baseUrl": config.baseUrl };    
+    new Template("mobile").generate(res, vars);
 }
 
 /*
@@ -1193,6 +1212,9 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.get("/captcha.jpg", captcha.generate());
 app.get("/experiments/:id(\\d+).json", sendExperiment);
 app.get("/experiments/:id(\\d+).html", sendExperimentPage);
+app.get("/mobile/:id(\\d+).html",
+        passport.authenticate('basic', { session: true }),
+        sendMobileApp);
 
 app.get("/observers.json", sendObservers);
 app.post("/observers", 
