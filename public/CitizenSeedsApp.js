@@ -260,8 +260,10 @@ function Button(id, style, text, action)
     this.text = text;
     this.action = action;
     
-    this.clicked = function() { 
-        self.callListeners("clicked");
+    this.clicked = function() {
+        if (typeof self.action === 'function')
+            self.action(this);
+        else self.callListeners("clicked");
     }
 
     this.setText = function(s) {
@@ -1246,7 +1248,8 @@ function Notebook(list)
             if (index < 0) {
                 index = this.locations.length;
                 this.locations.push({ "id": observer.locationId,
-                                      "name": observer.locationName });
+                                      "name": observer.locationName,
+                                      "account": observer.accountId });
                 this.observers[index] = [];
             }
             this.observers[index].push(observer);
@@ -1266,19 +1269,6 @@ function NotebookController(notebook)
         div.appendChild(this.view.div);
     }
 
-    this.takePicture = function(lindex, pindex) {
-        alert("lindex=" + lindex + ", pindex=" + pindex);
-
-        var observer = this.notebook.observers[lindex][pindex];
-        var date = new Date();
-        var hidden = { "accountId": observer.accountId,
-                       "locationId": observer.locationId,
-                       "plantId": observer.plantId,
-                       "experimentId": observer.experimentId,
-                       "date": toDate(date) };
-        var panel = new UploadPanel(hidden);
-    }
-
     this.createView();    
 }
 
@@ -1293,6 +1283,9 @@ function NotebookView(notebook)
             var view = new NotebookLocationView(notebook, i);
             this.addComponent(view);
         }
+        var button = new Button("AddLocationButton", "AddLocationButton",
+                                "Ajouter une nouvelle parcelle", "addLocation");
+        this.addComponent(button);
     }
 
     this.updateView();    
@@ -1300,14 +1293,18 @@ function NotebookView(notebook)
 }
 NotebookView.prototype = new UIComponent();
 
+
 function NotebookLocationView(notebook, index)
 {
+    var self = this;
+    
     this.init("NotebookLocationView_" + index, "NotebookLocationView");
     this.notebook = notebook;
     this.index = index;
     
     this.updateView = function() {
         this.removeComponents();
+        this.plantSelector = undefined;
         var location = this.notebook.locations[this.index];
         if (location.name)
             this.addText(location.name, "NotebookLocationName");
@@ -1319,14 +1316,89 @@ function NotebookLocationView(notebook, index)
             var view = new NotebookObserverView(notebook, index, i);
             this.addComponent(view);
         }
+
+        var button = new Button("AddObserverButton", "AddObserverButton",
+                                "Rajouter une légume",
+                                function() { self.showPlantSelector(); } );
+        this.addComponent(button);
+    }
+
+    this.hasObserver = function(id) {
+        var observers = this.notebook.observers[this.index];
+        for (var i = 0; i < observers.length; i++) {
+            if (observers[i].plantId == id)
+                return true;
+        }
+        return false;
+    }
+    
+    this.showPlantSelector = function() {
+        var plantsAvailable = [];
+        var plantsExp = _experiment.plants;
+
+        for (var i = 0; i < plantsExp.length; i++) {
+            if (!this.hasObserver(plantsExp[i].id))
+                plantsAvailable.push(plantsExp[i]);
+        }
+        if (!this.plantSelector) {
+            this.plantSelector = new PlantSelectorList();
+            this.addComponent(this.plantSelector);
+        }
+        this.plantSelector.show(this, plantsAvailable);
+    }
+
+    this.addObserver = function(id) {
+        var location = this.notebook.locations[this.index];
+        this.plantSelector.setVisible(false);
+        var observer = {
+            "locationId": location.id,
+            "experimentId": _experiment.id,
+            "plantId": id
+        };
+        _server.postJSON("observers", observer).then(function (r) {
+            if (r.error) alert(r.message);
+            else {
+                self.notebook.observers[self.index].push(r);
+                self.updateView();
+            }
+        }); 
     }
 
     this.updateView();    
 }
 NotebookLocationView.prototype = new UIComponent();
 
+
+function PlantSelectorList()
+{
+    this.init("PlantSelectorList", "PlantSelectorList");
+
+    this.show = function(parent, list) {
+        this.removeComponents();
+        for (var i = 0; i < list.length; i++)
+            this.addComponent(new PlantSelector(parent, list[i]));
+        this.setVisible(true);
+    }
+}
+PlantSelectorList.prototype = new UIComponent();
+
+
+function PlantSelector(parent, plant)
+{
+    this.init("PlantSelector", "PlantSelector");
+    var text = "";
+    if (plant.variety)
+        text = plant.family + " - " + plant.variety;
+    else
+        text = plant.family;
+    this.addEventLink(text, function() { parent.addObserver(plant.id); }, "PlantSelector");    
+}
+PlantSelector.prototype = new UIComponent();
+
+
 function NotebookObserverView(notebook, lindex, pindex)
 {
+    var self = this;
     this.init("NotebookObserverView_" + lindex + "_" + pindex, "NotebookObserverView");
     this.notebook = notebook;
     this.lindex = lindex;
@@ -1340,7 +1412,19 @@ function NotebookObserverView(notebook, lindex, pindex)
             text = observer.plantFamily + " - " + observer.plantVariety;
         else
             text = observer.plantFamily;
-        this.addEventLink(text, function () { _notebookController.takePicture(lindex, pindex); }, "XXX");
+        this.addEventLink(text, function () { self.takePicture(); }, "XXX");
+    }
+        
+    this.takePicture = function() {
+        var observer = this.notebook.observers[this.lindex][this.pindex];
+        var date = new Date();
+        var hidden = { "accountId": observer.accountId,
+                       "locationId": observer.locationId,
+                       "plantId": observer.plantId,
+                       "experimentId": observer.experimentId,
+                       "date": toDate(date) };
+        var panel = new UploadPanel(hidden);
+        this.addComponent(panel);
     }
 
     this.updateView();

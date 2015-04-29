@@ -252,21 +252,30 @@ function createObserver(req, res)
 	return;
     }    
 
-    var locations = database.selectLocations({ "account": account.id });
-    var location;
-    
-    if (locations.length == 0) {
-        location = database.insertLocation({ "account": account.id, "name": "" });
-    } else if (locations.length == 1) {
-        location = locations[0]; // easy
+    var location = undefined;
+    if (req.body.locationId) {
+        location = database.getLocation(req.body.locationId);
+        if (!location) {
+	    sendError(res, { "success": false, 
+			     "message": "Bad location id" },
+                      __line, __function);
+	    return;
+        }
     } else {
-        logger.debug("createObserver: locations: " + JSON.stringify(locations));
-	sendError(res, { "success": false, 
-			 "message": "Can't handle multiple locations, yet" },
-                  __line, __function);
-        return;
+        var locations = database.selectLocations({ "account": account.id });
+        if (locations.length == 0) {
+            location = database.insertLocation({ "account": account.id, "name": "Ma parcelle" });
+        } else if (locations.length == 1) {
+            location = locations[0]; // easy
+        } else {
+            logger.debug("createObserver: locations: " + JSON.stringify(locations));
+	    sendError(res, { "success": false, 
+			     "message": "Can't handle multiple locations, yet" },
+                      __line, __function);
+            return;
+        }
     }
-
+    
     var observers = database.selectObservers({ "account": account.id,
                                                "location": location.id,
                                                "experiment": experiment.id,
