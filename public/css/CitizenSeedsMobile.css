@@ -1,0 +1,98 @@
+
+div.SmallLogo {
+    height: 50px;
+}
+
+img.SmallLogo {
+    width: 200px;
+    border: 0;
+}
+
+div.ProjectTitle {
+    font-size: 24px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+div.NotebookLocationView {
+    width: 100%;
+}
+
+.NotebookLocationName { 
+    width: 100%;
+    font-size: 24px;
+}
+
+div.NotebookObserverView {
+    padding: 8px;
+    margin-bottom: 8px;
+    margin-top: 8px;
+    background-color: green;
+    -webkit-border-radius: 12px;
+    -khtml-border-radius: 12px;
+    -moz-border-radius: 12px;
+    border-radius: 12px;
+}
+
+a.NotebookObserverView:link { color: white; text-decoration: none; font-weight: 600; }
+a.NotebookObserverView:visited { color: white; text-decoration: none; font-weight: 600; }
+a.NotebookObserverView:active { color: white; text-decoration: underline; font-weight: 600; }
+a.NotebookObserverView:hover { color: white; text-decoration: none; font-weight: 600; }
+
+div.UploadPanel {
+    width: 300px;
+    padding: 10px;
+}
+
+div.UploadPanel form {
+    padding: 0px;
+    margin: 0px;
+}
+
+input.Filechooser {
+    padding: 0px;
+    margin: 0px;
+}
+
+textarea.UploadComment {
+    width: 240px;
+    padding: 0px;
+    margin: 0px;
+}
+
+div.UploadButtons {
+    padding: 0px;
+    font-size: 20px;
+}
+
+div.UploadButton {
+    padding-left: 10px;
+}
+
+a.UploadButton:link { color: white; text-decoration: none; font-weight: 600; }
+a.UploadButton:visited { color: white; text-decoration: none; font-weight: 600; }
+a.UploadButton:active { color: white; text-decoration: underline; font-weight: 600; }
+a.UploadButton:hover { color: white; text-decoration: none; font-weight: 600; }
+
+div.UploadPreview {
+    width: 240px;
+    min-height: 180px;
+    border: solid 1px grey;
+    margin-bottom: 10px;
+}
+
+img.UploadPreviewImage {
+    max-width: 240px;
+    border: 0;
+}
+
+div.AddLocationButton {
+    padding: 8px;
+    margin-bottom: 8px;
+    margin-top: 20px;
+    -webkit-border-radius: 12px;
+    -khtml-border-radius: 12px;
+    -moz-border-radius: 12px;
+    border-radius: 12px;
+    border: solid 1px grey;
+}

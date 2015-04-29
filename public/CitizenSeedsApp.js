@@ -201,18 +201,15 @@ function UIComponent()
     }
 
     this.removeComponent = function(c) {
-        var i = 0;
-        while (i < this.components.length) {
+        for (var i = 0; i < this.components.length; i++) {
             component = this.components[i];
             if (component == c) {
                 this.components.splice(i, 1);
                 break;
             }
-            i++;
         }
-        i = 0;
-        while (i < this.div.childNodes.length) {	    
-            e = this.div.childNodes[i++];
+        for (var i = 0; i < this.div.childNodes.length; i++) {	    
+            e = this.div.childNodes[i];
             if (e == c.div) {
                 this.div.removeChild(e);
                 break;
@@ -1018,7 +1015,9 @@ function ExperimentController(experiment)
                            "date": toDate(date) };
             if (target.observation.id)
                 hidden.id = target.observation.id;
-            _curtain.show(new UploadPanel(hidden));
+            _curtain.show(new UploadPanel(hidden),
+                          insertObservation,
+                          closeUploadPanel);
         }
         if (what == "clicked" && target.action == "createObserver") {
             var matrix = target.matrix;
@@ -1335,6 +1334,11 @@ function NotebookLocationView(notebook, index)
     }
     
     this.showPlantSelector = function() {
+        if (this.plantSelector) {
+            this.removeComponent(this.plantSelector);
+            this.plantSelector = undefined;
+            return;
+        }
         var plantsAvailable = [];
         var plantsExp = _experiment.plants;
 
@@ -1351,7 +1355,6 @@ function NotebookLocationView(notebook, index)
 
     this.addObserver = function(id) {
         var location = this.notebook.locations[this.index];
-        this.plantSelector.setVisible(false);
         var observer = {
             "locationId": location.id,
             "experimentId": _experiment.id,
@@ -1364,6 +1367,8 @@ function NotebookLocationView(notebook, index)
                 self.updateView();
             }
         }); 
+        this.removeComponent(this.plantSelector);
+        this.plantSelector = undefined;
     }
 
     this.updateView();    
@@ -1414,10 +1419,15 @@ function NotebookObserverView(notebook, lindex, pindex)
             text = observer.plantFamily + " - " + observer.plantVariety;
         else
             text = observer.plantFamily;
-        this.addEventLink(text, function () { self.takePicture(); }, "XXX");
+        this.addEventLink(text, function () { self.takePicture(); }, "NotebookObserverView");
     }
         
     this.takePicture = function() {
+        if (this.panel) {
+            this.removeComponent(this.panel);
+            this.panel = undefined;
+            return;
+        }
         var observer = this.notebook.observers[this.lindex][this.pindex];
         var date = new Date();
         var hidden = { "accountId": observer.accountId,
@@ -1425,8 +1435,8 @@ function NotebookObserverView(notebook, lindex, pindex)
                        "plantId": observer.plantId,
                        "experimentId": observer.experimentId,
                        "date": toDate(date) };
-        var panel = new UploadPanel(hidden);
-        this.addComponent(panel);
+        this.panel = new UploadPanel(hidden);
+        this.addComponent(this.panel);
     }
 
     this.updateView();
