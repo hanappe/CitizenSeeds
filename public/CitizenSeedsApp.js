@@ -1252,7 +1252,7 @@ function Notebook(list)
             this.observers[index].push(observer);
         }
     }
-
+    
     this.sortObservers(list);
 }
 
@@ -1264,6 +1264,19 @@ function NotebookController(notebook)
         this.view = new NotebookView(notebook);
         var div = document.getElementById("MobileApp");
         div.appendChild(this.view.div);
+    }
+
+    this.takePicture = function(lindex, pindex) {
+        alert("lindex=" + lindex + ", pindex=" + pindex);
+
+        var observer = this.notebook.observers[lindex][pindex];
+        var date = new Date();
+        var hidden = { "accountId": observer.accountId,
+                       "locationId": observer.locationId,
+                       "plantId": observer.plantId,
+                       "experimentId": observer.experimentId,
+                       "date": toDate(date) };
+        var panel = new UploadPanel(hidden);
     }
 
     this.createView();    
@@ -1327,7 +1340,7 @@ function NotebookObserverView(notebook, lindex, pindex)
             text = observer.plantFamily + " - " + observer.plantVariety;
         else
             text = observer.plantFamily;
-        this.addText(text);
+        this.addEventLink(text, function () { _notebookController.takePicture(lindex, pindex); }, "XXX");
     }
 
     this.updateView();

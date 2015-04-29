@@ -37,19 +37,20 @@ var BasicStrategy = require('passport-http').BasicStrategy;
 var gm = require('gm');
 var mkdirp = require('mkdirp');
 var exit = require('exit');
-
 var log4js = require('log4js');
-log4js.configure({
-    appenders: [
-	{ type: 'console' },
-	{ type: 'file', filename: 'log/all.log', category: 'p2pfoodlab' }
-    ]
-});
+
 mkdirp("log/", function(err) {
     if (err) {
 	console.log("Failed to create the log directory");
         exit(1);
     }
+});
+
+log4js.configure({
+    appenders: [
+	{ type: 'console' },
+	{ type: 'file', filename: 'log/all.log', category: 'p2pfoodlab' }
+    ]
 });
 
 var logger = log4js.getLogger('p2pfoodlab');
@@ -123,15 +124,41 @@ function sendJson(res, m)
     return false;
 }
 
-function sendError(res, m)
+function sendError(res, m, line, fun)
 {
     m.error = true;
     m.success = false;
-    logger.error("sendError: " + JSON.stringify(m));
+    logger.error("sendError: " + JSON.stringify(m) + ", line=" + line + ", function=" + fun);
     res.writeHead(200, {"Content-Type": "application/json"});
     res.end(JSON.stringify(m));
     return false;
 }
+
+Object.defineProperty(global, '__stack', {
+    get: function() {
+        var orig = Error.prepareStackTrace;
+        Error.prepareStackTrace = function(_, stack) {
+            return stack;
+        };
+        var err = new Error;
+        Error.captureStackTrace(err, arguments.callee);
+        var stack = err.stack;
+        Error.prepareStackTrace = orig;
+        return stack;
+    }
+});
+
+Object.defineProperty(global, '__line', {
+    get: function() {
+        return __stack[1].getLineNumber();
+    }
+});
+
+Object.defineProperty(global, '__function', {
+    get: function() {
+        return __stack[1].getFunctionName();
+    }
+});
 
 /*
  * Observers
@@ -192,31 +219,36 @@ function createObserver(req, res)
 
     if (!req.body.experimentId) {
 	sendError(res, { "success": false, 
-			 "message": "No experiment ID" });    
+			 "message": "No experiment ID" },
+                  __line, __function);    
         return;
     }
     var experiment = database.getExperiment(req.body.experimentId);
     if (!experiment) {
 	sendError(res, { "success": false, 
-			 "message": "Bad experiment id" });
+			 "message": "Bad experiment id" },
+                  __line, __function);
 	return;
     }    
 
     if (!req.body.plantId) {
 	sendError(res, { "success": false, 
-			 "message": "No plant ID" });    
+			 "message": "No plant ID" },
+                  __line, __function);    
         return;
     }
     var plant = database.getPlant(req.body.plantId);
     if (!plant) {
 	sendError(res, { "success": false, 
-			 "message": "Bad plant id" });
+			 "message": "Bad plant id" },
+                  __line, __function);
 	return;
     }    
     var account = req.user;
     if (!account) {
 	sendError(res, { "success": false, 
-			 "message": "Login failed" });
+			 "message": "Login failed" },
+                  __line, __function);
 	return;
     }    
 
@@ -230,7 +262,8 @@ function createObserver(req, res)
     } else {
         logger.debug("createObserver: locations: " + JSON.stringify(locations));
 	sendError(res, { "success": false, 
-			 "message": "Can't handle multiple locations, yet" });
+			 "message": "Can't handle multiple locations, yet" },
+                  __line, __function);
         return;
     }
 
@@ -241,7 +274,8 @@ function createObserver(req, res)
     if (observers.length != 0) {
 	sendError(res, { "success": false, 
 			 "message": "Vous avez déjà une ligne "
-                         + "d'observations pour cette plante." });
+                         + "d'observations pour cette plante." },
+                  __line, __function);
         return;
     }
     
@@ -305,7 +339,8 @@ function Template(name)
         var template = this;
         fs.readFile("templates/" + this.name + ".html", "utf-8", function (err, content) {
 	    if (err) 
-	        sendError(res, { "message": "Server error" });
+	        sendError(res, { "message": "Failed to read template '" + name + "'" },
+                          __line, __function);
 	    else {
                 content = template.replaceVariables(content, vars);
 	        res.writeHead(200, {"Content-Type": "text/html"});
@@ -325,7 +360,8 @@ function sendExperimentPage(req, res)
     var id = req.params.id;
     var experiment = database.getExperiment(id);
     if (!experiment) {
-	sendError(res, { "message": "Bad experiment ID" });
+	sendError(res, { "message": "Bad experiment ID" },
+                  __line, __function);
 	return;
     }
     var vars = { "experimentId": experiment.id, 
@@ -342,7 +378,8 @@ function sendMobileApp(req, res)
     var id = req.params.id;
     var experiment = database.getExperiment(id);
     if (!experiment) {
-	sendError(res, { "message": "Bad experiment ID" });
+	sendError(res, { "message": "Bad experiment ID" },
+                  __line, __function);
 	return;
     }
     var vars = { "experimentId": experiment.id, 
@@ -468,12 +505,14 @@ function saveObservationLarge(res, path, basedir, observation)
 
     mkdirp(basedir + "large/", function(err) { 
 	if (err) 
-	    sendError(res, { "message": "Failed to create the directories" });
+	    sendError(res, { "message": "Failed to create the directories" },
+                          __line, __function);
 	else 
 	    gm(path).resize(1200, 800).write(orig, function(err) {
 		if (err)  {
                     logger.error(err);
-		    sendError(res, { "message": "Failed to save large" });
+		    sendError(res, { "message": "Failed to save large" },
+                              __line, __function);
 		} else {
                     var location = database.getLocation(observation.location);
                     var plant = database.getPlant(observation.plant);
@@ -502,12 +541,14 @@ function saveObservationSmall(res, path, basedir, observation)
 
     mkdirp(basedir + "small/", function(err) { 
 	if (err) 
-	    sendError(res, { "message": "Failed to create the directories" });
+	    sendError(res, { "message": "Failed to create the directories" },
+                      __line, __function);
 	else 
 	    gm(path).resize(640, 480).write(orig, function(err) {
 		if (err)  {
                     logger.error(err);
-		    sendError(res, { "message": "Failed to save small" });
+		    sendError(res, { "message": "Failed to save small" },
+                              __line, __function);
 		} else 
 		    saveObservationLarge(res, path, basedir, observation);
 	    });
@@ -520,12 +561,14 @@ function saveObservationThumbnail(res, path, basedir, observation)
 
     mkdirp(basedir + "thumbnail/", function(err) { 
 	if (err) 
-	    sendError(res, { "message": "Failed to create the directories" });
+	    sendError(res, { "message": "Failed to create the directories" },
+                      __line, __function);
 	else 
 	    gm(path).resize(150, 100).write(orig, function(err) {
 		if (err)  {
                     logger.error(err);
-		    sendError(res, { "message": "Failed to save thumbnail" });
+		    sendError(res, { "message": "Failed to save thumbnail" },
+                              __line, __function);
 		} else 
 		    saveObservationSmall(res, path, basedir, observation);
 	    });
@@ -538,12 +581,14 @@ function saveObservationOrig(res, path, basedir, observation)
 
     mkdirp(basedir + "orig/", function(err) { 
 	if (err) 
-	    sendError(res, { "message": "Failed to create the directories" });
+	    sendError(res, { "message": "Failed to create the directories" },
+                      __line, __function);
 	else 
 	    gm(path).write(orig, function(err) {
 		if (err) {
                     logger.error(err);
-		    sendError(res, { "message": "Failed to save original photo" });
+		    sendError(res, { "message": "Failed to save original photo" },
+                              __line, __function);
 		} else 
 		    saveObservationThumbnail(res, path, basedir, observation);
 	    });
@@ -558,25 +603,29 @@ function createObservation(req, res)
 
     if (!req.files.photo) {
 	sendError(res, { "success": false, 
-			 "message": "No photo" });
+			 "message": "No photo" },
+                  __line, __function);
 	return;
     }
 
     if (!req.body.locationId) {
 	sendError(res, { "success": false, 
-			 "message": "No location" });    
+			 "message": "No location" },
+                  __line, __function);    
         return;
     }
 
     if (!req.body.experimentId) {
 	sendError(res, { "success": false, 
-			 "message": "No experiment ID" });    
+			 "message": "No experiment ID" },
+                  __line, __function);    
         return;
     }
 
     if (!validDate(req.body.date)) {
 	sendError(res, { "success": false, 
-			 "message": "No date" });    
+			 "message": "No date" },
+                  __line, __function);    
         return;
     }
 
@@ -585,26 +634,30 @@ function createObservation(req, res)
     var plant = database.getPlant(req.body.plantId);
     if (!plant) {
 	sendError(res, { "success": false, 
-			 "message": "Bad plant id" });
+			 "message": "Bad plant id" },
+                  __line, __function);
 	return;
     }    
 
     var location = database.getLocation(req.body.locationId);
     if (!location) {
 	sendError(res, { "success": false, 
-			 "message": "Bad location" });    
+			 "message": "Bad location" },
+                  __line, __function);    
         return;
     }    
     if (account.id != location.account) {
 	sendError(res, { "success": false, 
-			 "message": "Not your location" });    
+			 "message": "Not your location" },
+                  __line, __function);    
         return;
     }
 
     var experiment = database.getExperiment(req.body.experimentId);
     if (!experiment) {
 	sendError(res, { "success": false, 
-			 "message": "Bad experiment" });    
+			 "message": "Bad experiment" },
+                  __line, __function);    
         return;
     }    
 
@@ -613,17 +666,20 @@ function createObservation(req, res)
 	observation = database.getObservation(req.body.id);
 	if (!observation) {
 	    sendError(res, { "success": false, 
-			     "message": "Bad observation id" });    
+			     "message": "Bad observation id" },
+                      __line, __function);    
             return;
 	}
 	if (observation.location != location.id) {
 	    sendError(res, { "success": false, 
-			     "message": "Observation doesn't match location" });    
+			     "message": "Observation doesn't match location" },
+                      __line, __function);    
             return;
 	}
 	if (observation.experiment != experiment.id) {
 	    sendError(res, { "success": false, 
-			     "message": "Observation doesn't match experiment ID" });    
+			     "message": "Observation doesn't match experiment ID" },
+                      __line, __function);    
             return;
 	}
     } else {
@@ -653,7 +709,8 @@ function sendDatastream(req, res)
     var id = req.params.id;
     var datastream = database.getDatastream(id);
     if (!datastream) {
-	sendError(res, { "message": "Bad datastream ID" });
+	sendError(res, { "message": "Bad datastream ID" },
+                  __line, __function);
 	return;
     }
     
@@ -680,7 +737,8 @@ function sendDatapoints(req, res)
 
     var datastream = database.getDatastream(id);
     if (!datastream) {
-	sendError(res, { "message": "Bad datastream ID" });
+	sendError(res, { "message": "Bad datastream ID" },
+                  __line, __function);
 	return;
     }
 
@@ -688,7 +746,8 @@ function sendDatapoints(req, res)
     var toDate = (req.query.to)? convertDate(req.query.to) : undefined;
 
     var data = fs.readFile(datastreamPath(id), function (err, data) {
-	if (err) sendError(res, { "message": "Failed to read the data" });
+	if (err) sendError(res, { "message": "Failed to read the data" },
+                           __line, __function);
 	else { 
 	    var a = JSON.parse(data);
 	    var r = [];
@@ -923,96 +982,110 @@ function createAccount(req, res)
     if (account)
         return sendError(res, { "success": false,
                                 "field": "username",
-                                "message": "Le pseudonyme que vous avez choisi est déjà utilisé. Merci d'en choisir un autre." }); 
+                                "message": "Le pseudonyme que vous avez choisi est déjà utilisé. Merci d'en choisir un autre." },
+                         __line, __function); 
 
     logger.debug("createAccount @ 2");
 
     if (!req.session.captcha.valid) 
         return sendError(res, { "success": false,
                                 "field": "captcha",
-                                "message": "Captcha invalide. Veuillez vérifier votre saisie." }); 
+                                "message": "Captcha invalide. Veuillez vérifier votre saisie." },
+                         __line, __function); 
 
     logger.debug("createAccount @ 3");
 
     if (!validUsername(id))
         return sendError(res, { "success": false,
                                 "field": "username",
-                                "message": "Le pseudonyme que vous avez choisi n'est pas valide. Merci d'en choisir un autre." }); 
+                                "message": "Le pseudonyme que vous avez choisi n'est pas valide. Merci d'en choisir un autre." },
+                         __line, __function); 
 
     logger.debug("createAccount @ 4");
 
     if (!validEmail(email))
         return sendError(res, { "success": false,
                                 "field": "email",
-                                "message": "Veuillez vérifier votre adresse email. Elle ne semble pas valide." }); 
+                                "message": "Veuillez vérifier votre adresse email. Elle ne semble pas valide." },
+                         __line, __function); 
 
     logger.debug("createAccount @ 5");
 
     if (!validFirstname(firstname))
         return sendError(res, { "success": false,
                                 "field": "address",
-                                "message": "Votre prénom contient des caractères que nous ne gérons pas (encore). Merci de les substituer." }); 
+                                "message": "Votre prénom contient des caractères que nous ne gérons pas (encore). Merci de les substituer." },
+                         __line, __function); 
 
     logger.debug("createAccount @ 6");
 
     if (!validLastname(lastname))
         return sendError(res, { "success": false,
                                 "field": "address",
-                                "message": "Votre nom contient des caractères que nous ne gérons pas (encore). Merci de les substituer." }); 
+                                "message": "Votre nom contient des caractères que nous ne gérons pas (encore). Merci de les substituer." },
+                         __line, __function); 
 
     logger.debug("createAccount @ 7");
 
     if (!validAddress(address1) || (address2 != "" && !validAddress(address2)))
         return sendError(res, { "success": false,
                                 "field": "address",
-                                "message": "Votre adresss contient des caractères que nous ne gérons pas (encore). Merci de les substituer." }); 
+                                "message": "Votre adresss contient des caractères que nous ne gérons pas (encore). Merci de les substituer." },
+                         __line, __function); 
 
     if (!validZipcode(zipcode))
         return sendError(res, { "success": false,
                                 "field": "address",
-                                "message": "Votre code postal contient des caractères que nous ne gérons pas (encore). Merci de les substituer." }); 
+                                "message": "Votre code postal contient des caractères que nous ne gérons pas (encore). Merci de les substituer." },
+                         __line, __function); 
 
     logger.debug("createAccount @ 8");
 
     if (!validTown(town))
         return sendError(res, { "success": false,
                                 "field": "address",
-                                "message": "Votre nom de ville contient des caractères que nous ne gérons pas (encore). Merci de les substituer." }); 
+                                "message": "Votre nom de ville contient des caractères que nous ne gérons pas (encore). Merci de les substituer." },
+                         __line, __function); 
 
     logger.debug("createAccount @ 9");
 
     if (!validCountry(country))
         return sendError(res, { "success": false,
                                 "field": "address",
-                                "message": "Veuillez vérifier le nom du pays. Merci !" }); 
+                                "message": "Veuillez vérifier le nom du pays. Merci !" },
+                         __line, __function); 
 
     logger.debug("createAccount @ 10");
 
     if (flowerpower !== true && flowerpower !== false)
         return sendError(res, { "success": false,
                                 "field": "flowerpower",
-                                "message": "Valeur invalide pour le champs 'flowerpower'." }); 
+                                "message": "Valeur invalide pour le champs 'flowerpower'." },
+                          __line, __function); 
 
     logger.debug("createAccount @ 11");
 
     if (soil !== true && soil !== false)
         return sendError(res, { "success": false,
                                 "field": "soil",
-                                "message": "Valeur invalide pour le champs 'soil'." }); 
+                                "message": "Valeur invalide pour le champs 'soil'." },
+                         __line, __function); 
 
     logger.debug("createAccount @ 12");
 
     if (!validDelivery(delivery))
         return sendError(res, { "success": false,
                                 "field": "soil",
-                                "message": "Valeur invalide pour le lieu de RDV." });     
+                                "message": "Valeur invalide pour le lieu de RDV." },
+                          __line, __function);     
     
     logger.debug("createAccount @ 13");
 
     if (!validParticipation(participation))
         return sendError(res, { "success": false,
                                 "field": "participation",
-                                "message": "Type de participation invalide." }); 
+                                "message": "Type de participation invalide." },
+                          __line, __function); 
 
     logger.debug("createAccount @ 14");
 
@@ -1021,16 +1094,19 @@ function createAccount(req, res)
         if (!group)
             return sendError(res, { "success": false,
                                     "field": "group",
-                                    "message": "L'identifiant du groupe sélectionné semble érroné... Nos excuses. Merci de nous contacter." }); 
+                                    "message": "L'identifiant du groupe sélectionné semble érroné... Nos excuses. Merci de nous contacter." },
+                             __line, __function); 
     } else if (participation == "create") {
         if (!validGroupName(groupName))
             return sendError(res, { "success": false,
                                     "field": "groupname",
-                                    "message": "Le nom du groupe contient des caractères que nous ne gérons pas (encore). Merci de les substituer." }); 
+                                    "message": "Le nom du groupe contient des caractères que nous ne gérons pas (encore). Merci de les substituer." },
+                             __line, __function); 
         if (!validAddress(groupAddress))
             return sendError(res, { "success": false,
                                     "field": "groupaddress",
-                                    "message": "L'adresse du groupe contient des caractères que nous ne gérons pas (encore). Merci de les substituer." });
+                                    "message": "L'adresse du groupe contient des caractères que nous ne gérons pas (encore). Merci de les substituer." },
+                             __line, __function);
 
         group = database.insertGroup({ "id": gid,
                                        "name": groupName,
