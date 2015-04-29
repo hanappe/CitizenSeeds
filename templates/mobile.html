@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>P2P Food Lab - CitizenSeeds</title>
+    <link rel="stylesheet" href="${baseUrl}/CitizenSeedsMobile.css">
+  </head>
+  <body id="Body">
+
+    <div class="XXX">
+      <div class="SmallLogo"><a href="https://p2pfoodlab.net"><img src="${baseUrl}/media/logo-small-blue.png" class="SmallLogo"/></a></div>
+      <div class="ProjectTitle">${experimentName}</div>
+    </div>
+
+    <div id="MobileApp"></div>
+
+    <script src="${baseUrl}/CitizenSeedsApp.js"></script>
+    <script src="${baseUrl}/CitizenSeedsServer.js"></script>
+    <script>setTimeout(function() { startMobileApp("${baseUrl}", ${experimentId}); }, 1);</script>
+
+  </body>
+</html>
