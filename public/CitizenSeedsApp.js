@@ -515,7 +515,6 @@ function Curtain()
     }
 
     this.finished = function() {
-        this.removeComponents();
         this.setVisible(false);
     }
     
@@ -528,13 +527,14 @@ function closeUploadPanel(err)
     _curtain.finished();
 }
 
-function UploadPanel(hidden, doneCallback, cancelCallback)
+function UploadPanel(hidden, doneCallback, cancelCallback, progressListener)
 {
     var self = this;
     
     this.hidden = hidden;
     this.doneCallback = doneCallback;
     this.cancelCallback = cancelCallback;
+    this.progressListener = progressListener;
     
     this.init("UploadPanel", "UploadPanel");
 
@@ -605,15 +605,16 @@ function UploadPanel(hidden, doneCallback, cancelCallback)
         //this.fileinput.click();
     }
 
-    this.send = function() {
+    this.send = function(progressListener) {
 	var fd = new FormData();
         fd.append("photo", this.fileinput.files[0]);
         fd.append("comment", this.textarea.value);
         for (var name in this.hidden) {
             fd.append(name, this.hidden[name]);
         }
-        _server.postFileJSON("observations", fd).then(this.doneCallback,
-                                                      this.cancelCallback);
+        if (_curtain) _curtain.finished(); // FIXME
+        _server.postFileJSON("observations", fd, this.progressListener).then(this.doneCallback,
+                                                                             this.cancelCallback);
     }
 
     this.cancel = function() {
@@ -873,11 +874,17 @@ function ObservationView(observations, col, data)
     this.observations = observations;
     this.data = data;
 
-    this.startSpinningWheel = function () {
-        this.image.src = "spinner.gif";
+    this.startUpload = function () {
+        this.image.src = _server.root + "/media/spinner.gif";
+        if (!this.progress) {
+            this.progress = new ProgressBar();
+            this.addComponent(this.progress);
+        }
+        this.progress.setValue(0);
     }
 
-    this.stopSpinningWheel = function () {
+    this.stopUpload = function () {
+        this.image.src = _server.root + "/media/white.gif";
     }
 
     this.getObservationView = function (observation) {
@@ -886,6 +893,11 @@ function ObservationView(observations, col, data)
         return this;
     }
 
+    this.setProgress = function (value) {
+        if (this.progress) 
+            this.progress.setValue(value);
+    }
+    
     this.updateObservation = function () {
         this.removeComponents();
         if (this.data) 
@@ -900,13 +912,27 @@ function ObservationView(observations, col, data)
             this.image = this.addImage(_server.root + "/media/white.gif", "",
                                        "EmptyObservationView");
         
-        this.ops = new ObservationOps(this.observations[this.col]);
+        this.ops = new ObservationOps(this.observations[this.col], this);
         this.addComponent(this.ops);
     }
 
     this.updateObservation();
 }
 ObservationView.prototype = new UIComponent();
+
+
+function ProgressBar()
+{
+    this.init("ProgressBar", "ProgressBar");
+    this.valueView = new UIComponent().init("ProgressValue", "ProgressValue");
+    this.valueView.moveTo(0, 0);
+    this.addComponent(this.valueView);
+
+    this.setValue = function (value) {
+        this.valueView.resize(Math.floor(value * 0.8), 3);
+    }
+}
+ProgressBar.prototype = new UIComponent();
 
 
 function DataView(data)
@@ -972,13 +998,14 @@ function EmptyDataIcon(name, value, level, style)
 EmptyDataIcon.prototype = new UIComponent();
 
 
-function ObservationOps(observation)
+function ObservationOps(observation, parent)
 {
     this.init("ObservationOps", "ObservationOps clearfix");
 
     this.uploadButton = new Button("UploadObs", "ObsOp FloatLeft", "U", "upload");
     this.uploadButton.addListener(_controller);
     this.uploadButton.observation = observation;
+    this.uploadButton.progressListener = parent;
     this.addComponent(this.uploadButton);
 
     //this.commentButton = new Button("CommentObs", "ObsOp FloatLeft", "C", "comment");
@@ -1019,7 +1046,8 @@ function ExperimentController(experiment)
                 hidden.id = target.observation.id;
             _curtain.show(new UploadPanel(hidden,
                                           insertObservation,
-                                          closeUploadPanel));
+                                          closeUploadPanel,
+                                          target.progressListener));
         }
         if (what == "clicked" && target.action == "createObserver") {
             var matrix = target.matrix;

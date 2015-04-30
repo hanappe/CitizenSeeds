@@ -80,16 +80,16 @@ function Server(root)
     }
 
     // Upload file 
-    this.postFile = function(url, formdata) {
+    this.postFile = function(url, formdata, progressListener) {
         return new Promise(function(resolve, reject) {
             var req = newXMLHttpRequest();
-            req.open('POST', server.root + url);
 
             req.onload = function() {
                 // This is called even on 404 etc
                 // so check the status
                 if (req.status == 200) {
                     // Resolve the promise with the response text
+            	    if (progressListener) progressListener.startUpload();
                     resolve(req.response);
                 }
                 else {
@@ -104,13 +104,24 @@ function Server(root)
                 reject(Error("Network Error"));
             };
 
+            if (progressListener) {
+            	progressListener.startUpload();
+            }
+            
+            req.upload.addEventListener("progress", function(e) {
+                if (progressListener && e.lengthComputable) {
+		    var pc = Math.round(100 * e.loaded / e.total);
+		    progressListener.setProgress(pc);
+                }}, false);
+            
             // Make the request
+            req.open('POST', server.root + url);
             req.send(formdata);
         });
     }
 
-    this.postFileJSON = function(url, formdata) {
-        return this.postFile(url, formdata).then(JSON.parse);
+    this.postFileJSON = function(url, formdata, progressListener) {
+        return this.postFile(url, formdata, progressListener).then(JSON.parse);
     }
 
 

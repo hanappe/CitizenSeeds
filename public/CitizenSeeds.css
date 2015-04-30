@@ -213,12 +213,33 @@ div.ObservationView {
     padding-left: 4px;
     padding-right: 4px;
     border-bottom: 1px solid black;
+    background: white none 0 0 no-repeat;
+    position: relative;
 }
 
 img.ObservationView {
     border: 0px;
     max-width: 80px;
     max-height: 80px;
+}
+
+
+div.ProgressBar {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 80px;
+    height: 3px;
+    border: 1px solid #e8e8e8;
+}
+
+div.ProgressValue {
+    background-color: black;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 0px;
+    height: 3px;
 }
 
 img.EmptyObservationView {
