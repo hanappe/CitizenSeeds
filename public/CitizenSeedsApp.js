@@ -1438,7 +1438,7 @@ PlantSelector.prototype = new UIComponent();
 function NotebookObserverView(notebook, lindex, pindex)
 {
     var self = this;
-    this.init("NotebookObserverView_" + lindex + "_" + pindex, "NotebookObserverView u-full-width");
+    this.init("NotebookObserverView_" + lindex + "_" + pindex, "NotebookObserverView");
     this.notebook = notebook;
     this.lindex = lindex;
     this.pindex = pindex;
@@ -1451,7 +1451,7 @@ function NotebookObserverView(notebook, lindex, pindex)
             text = observer.plantFamily + " - " + observer.plantVariety;
          else
             text = observer.plantFamily;
-        this.addEventLink(text, function () { self.takePicture(); }, "NotebookObserverView");
+        this.addEventLink(text, function () { self.takePicture(); }, "NotebookObserverView u-full-width");
 
         var observation = this.notebook.observations[lindex][pindex];
         if (observation) {
