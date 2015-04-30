@@ -1,4 +1,14 @@
 
+.clearfix:after { 
+    content: "";
+    display: block; 
+    clear: both;
+}
+
+.FloatLeft { 
+    float: left;
+}
+
 div.SmallLogo {
     height: 50px;
 }
@@ -30,25 +40,111 @@ div.NotebookLocationView {
     font-size: 24px;
 }
 
-div.NotebookObserverView {
-    padding: 8px;
-    margin-bottom: 8px;
-    margin-top: 8px;
-    background-color: green;
-    -webkit-border-radius: 12px;
-    -khtml-border-radius: 12px;
-    -moz-border-radius: 12px;
-    border-radius: 12px;
+.button.NotebookObserverView,
+button.NotebookObserverView {
+  color: #FFF;
+  background-color: Green;
+  border-color: Green;
+  text-align: left;
+  text-transform: none;
+  font-size: 15px;
 }
 
-a.NotebookObserverView:link { color: white; text-decoration: none; font-weight: 600; }
-a.NotebookObserverView:visited { color: white; text-decoration: none; font-weight: 600; }
-a.NotebookObserverView:active { color: white; text-decoration: underline; font-weight: 600; }
-a.NotebookObserverView:hover { color: white; text-decoration: none; font-weight: 600; }
+.button.NotebookObserverView:hover,
+button.NotebookObserverView:hover,
+.button.NotebookObserverView:focus,
+button.NotebookObserverView:focus {
+  color: #FFF;
+  background-color: DarkGreen;
+  border-color: DarkGreen;
+}
+
+.button.NewLocation,
+button.NewLocation {
+  color: grey;
+  background-color: white;
+  border-color: grey;
+  text-align: left;
+  text-transform: none;
+  font-size: 15px;
+}
+
+.button.NewLocation:hover,
+button.NewLocation:hover,
+.button.NewLocation:focus,
+button.NewLocation:focus {
+  color: white;
+  background-color: black;
+  border-color: black;
+}
+
+
+.button.NewObserver,
+button.NewObserver {
+  color: black;
+  background-color: white;
+  border-color: white;
+  text-align: left;
+  text-transform: none;
+  font-size: 15px;
+}
+
+.button.NewObserver:hover,
+button.NewObserver:hover,
+.button.NewObserver:focus,
+button.NewObserver:focus {
+  color: white;
+  background-color: black;
+  border-color: black;
+}
+
+
+.button.PlantSelector,
+button.PlantSelector {
+  color: black;
+  background-color: white;
+  border-color: DarkGreen;
+  text-align: left;
+  text-transform: none;
+  font-size: 15px;
+  margin-left: 20px;
+}
+
+.button.PlantSelector:hover,
+button.PlantSelector:hover,
+.button.PlantSelector:focus,
+button.PlantSelector:focus {
+  color: black;
+  background-color: DarkGreen;
+  border-color: DarkGreen;
+}
+
+.button.CancelPlantSelector,
+button.CancelPlantSelector {
+  color: black;
+  background-color: grey;
+  border-color: grey;
+  text-align: left;
+  text-transform: none;
+  font-size: 15px;
+  margin-left: 20px;
+}
+
+.button.CancelPlantSelector:hover,
+button.CancelPlantSelector:hover,
+.button.CancelPlantSelector:focus,
+button.CancelPlantSelector:focus {
+  color: white;
+  background-color: black;
+  border-color: black;
+}
 
 div.UploadPanel {
     width: 300px;
     padding: 10px;
+    border: solid 1px DarkGreen;
+    margin-bottom: 30px;
+    border-radius: 4px;
 }
 
 div.UploadPanel form {
@@ -67,6 +163,25 @@ textarea.UploadComment {
     margin: 0px;
 }
 
+.button.UploadButton,
+button.UploadButton {
+  color: black;
+  background-color: white;
+  border-color: black;
+  text-align: left;
+  text-transform: none;
+  font-size: 15px;
+}
+
+.button.UploadButton:hover,
+button.UploadButton:hover,
+.button.UploadButton:focus,
+button.UploadButton:focus {
+  color: white;
+  background-color: black;
+  border-color: black;
+}
+
 div.UploadButtons {
     padding: 0px;
     font-size: 20px;
@@ -75,11 +190,6 @@ div.UploadButtons {
 div.UploadButton {
     padding-left: 10px;
 }
-
-a.UploadButton:link { color: white; text-decoration: none; font-weight: 600; }
-a.UploadButton:visited { color: white; text-decoration: none; font-weight: 600; }
-a.UploadButton:active { color: white; text-decoration: underline; font-weight: 600; }
-a.UploadButton:hover { color: white; text-decoration: none; font-weight: 600; }
 
 div.UploadPreview {
     width: 240px;
@@ -93,13 +203,3 @@ img.UploadPreviewImage {
     border: 0;
 }
 
-div.AddLocationButton {
-    padding: 8px;
-    margin-bottom: 8px;
-    margin-top: 20px;
-    -webkit-border-radius: 12px;
-    -khtml-border-radius: 12px;
-    -moz-border-radius: 12px;
-    border-radius: 12px;
-    border: solid 1px grey;
-}

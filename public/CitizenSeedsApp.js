@@ -269,7 +269,7 @@ function Button(id, style, text, action)
     }
 
     this.init(id, style);
-    this.link = this.addEventLink(text, this.clicked, style);
+    this.link = this.addEventLink(text, this.clicked, "button " + style);
 }
 
 Button.prototype = new UIComponent();
@@ -561,6 +561,8 @@ function UploadPanel(hidden, doneCallback, cancelCallback)
         this.fileinput = document.createElement("INPUT");
         this.fileinput.setAttribute("type", "file");
         this.fileinput.setAttribute("name", "photo");
+        this.fileinput.setAttribute("accept", "image/*");
+        this.fileinput.setAttribute("capture", "camera");
         this.fileinput.className = "Filechooser";
         setEventHandler(this.fileinput, "change", this._showIcon);
         this.form.appendChild(this.fileinput);
@@ -1014,9 +1016,9 @@ function ExperimentController(experiment)
                            "date": toDate(date) };
             if (target.observation.id)
                 hidden.id = target.observation.id;
-            _curtain.show(new UploadPanel(hidden),
-                          insertObservation,
-                          closeUploadPanel);
+            _curtain.show(new UploadPanel(hidden,
+                                          insertObservation,
+                                          closeUploadPanel));
         }
         if (what == "clicked" && target.action == "createObserver") {
             var matrix = target.matrix;
@@ -1304,8 +1306,8 @@ function NotebookView(notebook)
             var view = new NotebookLocationView(notebook, i);
             this.addComponent(view);
         }
-        var button = new Button("AddLocationButton", "AddLocationButton",
-                                "Ajouter une nouvelle parcelle",
+        var button = new Button("AddLocationButton", "NewLocation u-full-width",
+                                "Ajouter une nouvelle parcelle de cultures",
                                 function() { self.addLocation(); });
         this.addComponent(button);
     }
@@ -1350,8 +1352,8 @@ function NotebookLocationView(notebook, index)
             this.addComponent(view);
         }
 
-        var button = new Button("AddObserverButton", "AddObserverButton",
-                                "Rajouter une légume",
+        var button = new Button("AddObserverButton", "NewObserver u-full-width",
+                                "Rajouter une légume dans ma liste d'observations",
                                 function() { self.showPlantSelector(); } );
         this.addComponent(button);
     }
@@ -1363,6 +1365,14 @@ function NotebookLocationView(notebook, index)
                 return true;
         }
         return false;
+    }
+
+    this.hidePlantSelector = function() {
+        if (this.plantSelector) {
+            this.removeComponent(this.plantSelector);
+            this.plantSelector = undefined;
+            return;
+        }
     }
     
     this.showPlantSelector = function() {
@@ -1379,7 +1389,7 @@ function NotebookLocationView(notebook, index)
                 plantsAvailable.push(plantsExp[i]);
         }
         if (!this.plantSelector) {
-            this.plantSelector = new PlantSelectorList();
+            this.plantSelector = new PlantSelectorList(this);
             this.addComponent(this.plantSelector);
         }
         this.plantSelector.show(this, plantsAvailable);
@@ -1408,7 +1418,7 @@ function NotebookLocationView(notebook, index)
 NotebookLocationView.prototype = new UIComponent();
 
 
-function PlantSelectorList()
+function PlantSelectorList(parent)
 {
     this.init("PlantSelectorList", "PlantSelectorList");
 
@@ -1416,6 +1426,7 @@ function PlantSelectorList()
         this.removeComponents();
         for (var i = 0; i < list.length; i++)
             this.addComponent(new PlantSelector(parent, list[i]));
+        this.addEventLink("Annuler", function() { parent.hidePlantSelector(); }, "button CancelPlantSelector u-max-full-width");    
         this.setVisible(true);
     }
 }
@@ -1430,7 +1441,7 @@ function PlantSelector(parent, plant)
         text = plant.family + " - " + plant.variety;
     else
         text = plant.family;
-    this.addEventLink(text, function() { parent.addObserver(plant.id); }, "PlantSelector");    
+    this.addEventLink(text, function() { parent.addObserver(plant.id); }, "button PlantSelector u-max-full-width");    
 }
 PlantSelector.prototype = new UIComponent();
 
@@ -1451,7 +1462,7 @@ function NotebookObserverView(notebook, lindex, pindex)
             text = observer.plantFamily + " - " + observer.plantVariety;
          else
             text = observer.plantFamily;
-        this.addEventLink(text, function () { self.takePicture(); }, "NotebookObserverView u-full-width");
+        this.addEventLink(text, function () { self.takePicture(); }, "button NotebookObserverView u-full-width");
 
         var observation = this.notebook.observations[lindex][pindex];
         if (observation) {
