@@ -856,9 +856,10 @@ ObservationRowView.prototype = new UIComponent();
 function ObservationLocationView(observer)
 {
     this.init("ObservationLocationView", "ObservationLocationView Column");
-    this.addLink(observer.accountId,
+/*    this.addLink(observer.accountId,
                  "https://p2pfoodlab.net/community/people/" + observer.accountId + "/notebook",
-                 "ObservationLocationView");
+                 "ObservationLocationView");*/
+    this.addText(observer.accountId);
     this.addBreak();
     this.addText(observer.locationName, "ObservationLocationView");
 }
