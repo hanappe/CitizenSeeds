@@ -580,7 +580,7 @@ function UploadPanel(hidden, doneCallback, cancelCallback)
         var buttonPanel = new UIComponent().init("UploadButtons",
                                                  "UploadButtons clearfix");
         var button = new Button("UploadButton", "UploadButton FloatLeft",
-                                "Annuler", "cancel");
+                                "Annuler", this.cancelCallback);
         button.addListener(this);
         buttonPanel.addComponent(button);
 
@@ -610,9 +610,8 @@ function UploadPanel(hidden, doneCallback, cancelCallback)
         for (var name in this.hidden) {
             fd.append(name, this.hidden[name]);
         }
-
-        _server.postFileJSON("observations", fd).then(insertObservation,
-                                                      closeUploadPanel);
+        _server.postFileJSON("observations", fd).then(this.doneCallback,
+                                                      this.cancelCallback);
     }
 
     this.cancel = function() {
@@ -1233,6 +1232,7 @@ function Notebook()
 {
     this.locations = [];
     this.observers = [];
+    this.observations = [];
 
     this.findLocationIndex = function(id) {
         for (var i = 0; i < this.locations.length; i++) {
@@ -1242,14 +1242,25 @@ function Notebook()
         return -1;
     }
 
-    this.importLocations = function(locations) {
-        for (var i = 0; i < locations.length; i++) {
-            alert(JSON.stringify(locations[i]));
-            this.locations.push(locations[i]);
-            this.observers.push([]);
-        }
+    this.addLocation = function(location) {
+        this.locations.push(location);
+        this.observers.push([]);
+        this.observations.push([]);
     }
-    
+
+    this.importLocations = function(locations) {
+        for (var i = 0; i < locations.length; i++)
+            this.addLocation(locations[i]);
+    }
+
+    this.findObserverIndex = function(plantId) {
+        for (var i = 0; i < this.observers.length; i++) {
+            if (this.observers[i].plantId == plantId) 
+                return i;
+        }
+        return -1;
+    }
+
     this.importObservers = function(observers) {
         for (var i = 0; i < observers.length; i++) {
             var observer = observers[i];
@@ -1257,6 +1268,14 @@ function Notebook()
             if (index < 0) continue; // FIXME: something wrong with the data on the server
             this.observers[index].push(observer);
         }
+    }
+
+    this.addObservation = function(observation) {
+        var lindex = this.findLocationIndex(observation.locationId);
+        if (lindex < 0) return; // FIXME: something wrong with the data on the server
+        var pindex = this.findObserverIndex(observation.plant);
+        if (pindex < 0) return; // FIXME: something wrong with the data on the server
+        this.observations[lindex][pindex] = observation;
     }
 }
 
@@ -1296,7 +1315,7 @@ function NotebookView(notebook)
         _server.postJSON("locations", location).then(function (r) {
             if (r.error) alert(r.message);
             else {
-                self.notebook.locations.push(r);
+                self.notebook.addLocation(r);
                 self.updateView();
             }
         }); 
@@ -1419,7 +1438,7 @@ PlantSelector.prototype = new UIComponent();
 function NotebookObserverView(notebook, lindex, pindex)
 {
     var self = this;
-    this.init("NotebookObserverView_" + lindex + "_" + pindex, "NotebookObserverView");
+    this.init("NotebookObserverView_" + lindex + "_" + pindex, "NotebookObserverView u-full-width");
     this.notebook = notebook;
     this.lindex = lindex;
     this.pindex = pindex;
@@ -1433,12 +1452,22 @@ function NotebookObserverView(notebook, lindex, pindex)
          else
             text = observer.plantFamily;
         this.addEventLink(text, function () { self.takePicture(); }, "NotebookObserverView");
+
+        var observation = this.notebook.observations[lindex][pindex];
+        if (observation) {
+            this.addImage(_server.root + "/" + observation.thumbnail,
+                          "" /*obs.date*/, "NotebookObservation");
+        }
     }
-        
+
+    this.hideDialog = function() {
+        this.removeComponent(this.panel);
+        this.panel = undefined;
+    }
+    
     this.takePicture = function() {
         if (this.panel) {
-            this.removeComponent(this.panel);
-            this.panel = undefined;
+            this.hideDialog();
             return;
         }
         var observer = this.notebook.observers[this.lindex][this.pindex];
@@ -1448,7 +1477,9 @@ function NotebookObserverView(notebook, lindex, pindex)
                        "plantId": observer.plantId,
                        "experimentId": observer.experimentId,
                        "date": toDate(date) };
-        this.panel = new UploadPanel(hidden);
+        this.panel = new UploadPanel(hidden,
+                                     function (r) { notebook.addObservation(r); self.updateView(); },
+                                     function (r) { self.hideDialog(); } );
         this.addComponent(this.panel);
     }
 
