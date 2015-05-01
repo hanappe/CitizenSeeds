@@ -182,6 +182,30 @@ function UIComponent()
         return img;
     }
 
+
+    this.addEventImage = function(src, alt, className, handler) {
+        var a = document.createElement("A");
+        a.className = className;
+        a.setAttribute("href", "javascript:void(0)");
+        a.onclick = function() { return false; }
+        a.onmousedown = function() { return false; }
+        setEventHandler(a, "click", handler);
+
+        var img = document.createElement("IMG");
+        img.src = src;
+        if (alt) {
+            img.alt = alt;
+            img.title = alt;
+        } 
+        if (className)
+            img.className = className;
+
+        a.appendChild(img);
+        this.div.appendChild(a);
+
+        return a;
+    }
+    
     this.addComponent = function(c) {
         //alert("UIComponent.addComponent: " + this + ": " + c);
         this.components.push(c);
@@ -869,6 +893,9 @@ function ObservationView(observations, col, data)
     this.observations = observations;
     this.data = data;
 
+    var view = this;
+    var observation = observations[col];
+    
     this.getObservationView = function (observation) {
         if (!this.observations || this.observations[this.col].id != observation.id)
             return undefined;
@@ -878,6 +905,7 @@ function ObservationView(observations, col, data)
     this.setProgress = function (value) {
         if (!this.progress) {
             this.image.src = _server.root + "/media/spinner.gif";
+            this.image.className = "Spinner";
             this.progress = new ProgressBar();
             this.addComponent(this.progress);
         }
@@ -895,10 +923,15 @@ function ObservationView(observations, col, data)
         if (this.observations[col].thumbnail) 
             this.image = this.addImage(_server.root + "/" + this.observations[col].thumbnail + "?t=" + new Date().getTime(),
                                        "" /*obs.date*/, "ObservationView");
-        else 
+        else {
             this.image = this.addImage(_server.root + "/media/white.gif", "",
-                                       "EmptyObservationView");
-        
+                                            "EmptyObservationView");
+            /*
+            this.image = this.addEventImage(_server.root + "/media/white.gif", "",
+                                            "EmptyObservationView",
+                                            function() { _controller.uploadPhoto(observation, view); });
+            */
+        }
         this.ops = new ObservationOps(this.observations[this.col], this);
         this.addComponent(this.ops);
     }
@@ -989,7 +1022,8 @@ function ObservationOps(observation, parent)
 {
     this.init("ObservationOps", "ObservationOps clearfix");
 
-    this.uploadButton = new Button("UploadObs", "ObsOp FloatLeft", "U", "upload");
+    this.uploadButton = new Button("UploadObs", "ObsOp FloatLeft", "U",
+                                   function() { _controller.uploadPhoto(observation, parent); });
     this.uploadButton.addListener(_controller);
     this.uploadButton.observation = observation;
     this.uploadButton.progressListener = parent;
@@ -1023,37 +1057,55 @@ function ExperimentController(experiment)
         this.experiment.insertObservation(observation);
     }
 
-    this.handleEvent = function(what, target) {
-        if (what == "clicked" && target.action == "upload") {
-            var observer = target.observation.observer;
-            var date = new Date(this.experiment.viewStart.getFullYear(),
-                                this.experiment.viewStart.getMonth(),
-                                this.experiment.viewStart.getDate() + target.observation.col * 7,
-                                12, 0, 0); // FIXME
-            var hidden = { "accountId": observer.accountId,
-                           "locationId": observer.locationId,
-                           "plantId": observer.plantId,
-                           "experimentId": observer.experimentId,
-                           "date": toDate(date) };
-            if (target.observation.id)
-                hidden.id = target.observation.id;
-            _curtain.show(new UploadPanel(hidden,
-                                          function(data) {
+    this.uploadPhoto = function(observation, view) {
+        // Make sure that the visitor is logged in BEFORE uploading
+        // the photo. And that she isn't uploading a photo for someone
+        // else's row of observations.
+        _server.getJSON("login").then(function(e) {
+            if (e.error) alert(e.message);
+            else if (observation.observer.accountId != e.id)
+                alert("Il semblerait que cette ligne d'observations appartient à quelqu'un d'autre.");
+            else self._uploadPhoto(observation, view);
+        });
+    }
+
+    this._uploadPhoto = function(observation, view) {
+        var observer = observation.observer;
+        var date = new Date(this.experiment.viewStart.getFullYear(),
+                            this.experiment.viewStart.getMonth(),
+                            this.experiment.viewStart.getDate() + observation.col * 7,
+                            12, 0, 0); // FIXME
+        var hidden = { "accountId": observer.accountId,
+                       "locationId": observer.locationId,
+                       "plantId": observer.plantId,
+                       "experimentId": observer.experimentId,
+                       "date": toDate(date) };
+        if (observation.id)
+            hidden.id = observation.id;
+        _curtain.show(new UploadPanel(hidden,
+                                      function(data) {
+                                          if (data.error) {
+                                              alert(data.message);
+                                              view.updateObservation();
+                                          } else {
                                               _controller.insertObservation(data);
-                                              target.view.updateObservation();
-                                          },
-                                          function() {
-                                              _curtain.finished();
-                                              target.view.updateObservation();
-                                          },
-                                          function() {
-                                              _curtain.finished();
-                                              target.view.updateObservation();
-                                          },
-                                          function(value) {
-                                              target.view.setProgress(value);
-                                          }));
-        }
+                                              view.updateObservation();
+                                          }
+                                      },
+                                      function() {
+                                          _curtain.finished();
+                                          view.updateObservation();
+                                      },
+                                      function() {
+                                          _curtain.finished();
+                                          view.updateObservation();
+                                      },
+                                      function(value) {
+                                          view.setProgress(value);
+                                      }));
+    }
+    
+    this.handleEvent = function(what, target) {
         if (what == "clicked" && target.action == "createObserver") {
             var matrix = target.matrix;
             var observer = {

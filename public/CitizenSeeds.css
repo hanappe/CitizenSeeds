@@ -222,6 +222,11 @@ img.ObservationView {
     max-height: 80px;
 }
 
+img.Spinner {
+    border: 0px;
+    width: 64px;
+    height: 64px;
+}
 
 div.ProgressBar {
     position: relative;
