@@ -214,7 +214,6 @@ div.ObservationView {
     padding-right: 4px;
     border-bottom: 1px solid black;
     background: white none 0 0 no-repeat;
-    position: relative;
 }
 
 img.ObservationView {
@@ -225,9 +224,7 @@ img.ObservationView {
 
 
 div.ProgressBar {
-    position: absolute;
-    top: 5px;
-    left: 5px;
+    position: relative;
     width: 80px;
     height: 3px;
     border: 1px solid #e8e8e8;

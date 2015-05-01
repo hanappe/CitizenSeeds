@@ -527,14 +527,15 @@ function closeUploadPanel(err)
     _curtain.finished();
 }
 
-function UploadPanel(hidden, doneCallback, cancelCallback, progressListener)
+function UploadPanel(hidden, doneCallback, cancelCallback, errorCallback, progressCallback)
 {
     var self = this;
     
     this.hidden = hidden;
     this.doneCallback = doneCallback;
     this.cancelCallback = cancelCallback;
-    this.progressListener = progressListener;
+    this.errorCallback = errorCallback;
+    this.progressCallback = progressCallback;
     
     this.init("UploadPanel", "UploadPanel");
 
@@ -587,38 +588,32 @@ function UploadPanel(hidden, doneCallback, cancelCallback, progressListener)
         buttonPanel.addComponent(button);
 
         button = new Button("UploadButton", "UploadButton FloatLeft",
-                            "Envoyer", "send");
+                            "Envoyer", this.send);
         button.addListener(this);
         buttonPanel.addComponent(button);
         
         this.addComponent(buttonPanel);
     }
 
-    this.handleEvent = function(what, target) {
-        if (target.action == "cancel")
-            this.cancel();
-        else if (target.action == "send")
-            this.send();
-    }
-
     this.selectFile = function() {
         //this.fileinput.click();
     }
 
-    this.send = function(progressListener) {
+    this.send = function() {
 	var fd = new FormData();
-        fd.append("photo", this.fileinput.files[0]);
-        fd.append("comment", this.textarea.value);
-        for (var name in this.hidden) {
-            fd.append(name, this.hidden[name]);
+        fd.append("photo", self.fileinput.files[0]);
+        fd.append("comment", self.textarea.value);
+        for (var name in self.hidden) {
+            fd.append(name, self.hidden[name]);
         }
         if (_curtain) _curtain.finished(); // FIXME
-        _server.postFileJSON("observations", fd, this.progressListener).then(this.doneCallback,
-                                                                             this.cancelCallback);
+        _server.postFileJSON("observations", fd, self.progressCallback).then(self.doneCallback,
+                                                                             self.errorCallback);
     }
 
     this.cancel = function() {
-        this.callListeners("close");
+        if (self.cancelCallback)
+            self.cancelCallback();
     }
 
     this._showIcon = function(e) {
@@ -874,19 +869,6 @@ function ObservationView(observations, col, data)
     this.observations = observations;
     this.data = data;
 
-    this.startUpload = function () {
-        this.image.src = _server.root + "/media/spinner.gif";
-        if (!this.progress) {
-            this.progress = new ProgressBar();
-            this.addComponent(this.progress);
-        }
-        this.progress.setValue(0);
-    }
-
-    this.stopUpload = function () {
-        this.image.src = _server.root + "/media/white.gif";
-    }
-
     this.getObservationView = function (observation) {
         if (!this.observations || this.observations[this.col].id != observation.id)
             return undefined;
@@ -894,19 +876,24 @@ function ObservationView(observations, col, data)
     }
 
     this.setProgress = function (value) {
-        if (this.progress) 
-            this.progress.setValue(value);
+        if (!this.progress) {
+            this.image.src = _server.root + "/media/spinner.gif";
+            this.progress = new ProgressBar();
+            this.addComponent(this.progress);
+        }
+        this.progress.setValue(value);
     }
     
     this.updateObservation = function () {
         this.removeComponents();
+        this.progress = undefined;
         if (this.data) 
             this.addComponent(new DataView(this.data));
         else 
             this.addComponent(new EmptyDataView());
         
         if (this.observations[col].thumbnail) 
-            this.image = this.addImage(_server.root + "/" + this.observations[col].thumbnail,
+            this.image = this.addImage(_server.root + "/" + this.observations[col].thumbnail + "?t=" + new Date().getTime(),
                                        "" /*obs.date*/, "ObservationView");
         else 
             this.image = this.addImage(_server.root + "/media/white.gif", "",
@@ -1006,6 +993,7 @@ function ObservationOps(observation, parent)
     this.uploadButton.addListener(_controller);
     this.uploadButton.observation = observation;
     this.uploadButton.progressListener = parent;
+    this.uploadButton.view = parent;
     this.addComponent(this.uploadButton);
 
     //this.commentButton = new Button("CommentObs", "ObsOp FloatLeft", "C", "comment");
@@ -1030,6 +1018,11 @@ function ExperimentController(experiment)
         this.view = new ExperimentView(this.experiment);
     }
 
+    this.insertObservation = function(observation) {
+        observation.date = new Date(observation.date);
+        this.experiment.insertObservation(observation);
+    }
+
     this.handleEvent = function(what, target) {
         if (what == "clicked" && target.action == "upload") {
             var observer = target.observation.observer;
@@ -1045,9 +1038,21 @@ function ExperimentController(experiment)
             if (target.observation.id)
                 hidden.id = target.observation.id;
             _curtain.show(new UploadPanel(hidden,
-                                          insertObservation,
-                                          closeUploadPanel,
-                                          target.progressListener));
+                                          function(data) {
+                                              _controller.insertObservation(data);
+                                              target.view.updateObservation();
+                                          },
+                                          function() {
+                                              _curtain.finished();
+                                              target.view.updateObservation();
+                                          },
+                                          function() {
+                                              _curtain.finished();
+                                              target.view.updateObservation();
+                                          },
+                                          function(value) {
+                                              target.view.setProgress(value);
+                                          }));
         }
         if (what == "clicked" && target.action == "createObserver") {
             var matrix = target.matrix;
@@ -1065,24 +1070,6 @@ function ExperimentController(experiment)
             }); 
         }
     }
-    
-    this.insertObservation = function (observation) {
-        observation.date = new Date(observation.date);
-        this.experiment.insertObservation(observation);
-        var view = this.view.getObservationView(observation);
-        if (view) view.updateObservation();
-        else alert("view is undefined");
-    }
-}
-
-function insertObservation(data)
-{
-    _curtain.finished();
-    if (data.error) {
-        alert(data.message);
-        return;
-    }
-    _controller.insertObservation(data);
 }
 
 function showWeek(s)
@@ -1519,6 +1506,7 @@ function NotebookObserverView(notebook, lindex, pindex)
                        "date": toDate(date) };
         this.panel = new UploadPanel(hidden,
                                      function (r) { notebook.addObservation(r); self.updateView(); },
+                                     function (r) { self.hideDialog(); },
                                      function (r) { self.hideDialog(); } );
         this.addComponent(this.panel);
     }
