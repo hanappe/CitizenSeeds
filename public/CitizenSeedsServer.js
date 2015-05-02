@@ -21,6 +21,7 @@
 
 function newXMLHttpRequest()
 {
+    /*
     var xmlhttp = undefined;
     
     try {
@@ -37,6 +38,8 @@ function newXMLHttpRequest()
         xmlhttp = new XMLHttpRequest();
     }
     return xmlhttp;
+    */
+    return new XMLHttpRequest();
 }
 
 var Promise = Promise || ES6Promise.Promise;
