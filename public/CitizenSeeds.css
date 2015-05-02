@@ -228,6 +228,12 @@ img.Spinner {
     height: 64px;
 }
 
+div.PhotoViewer {
+    width: 640px;
+    margin: auto;
+    margin-top: 40px;
+}
+
 div.ProgressBar {
     position: relative;
     width: 80px;

@@ -885,6 +885,14 @@ function ObservationLocationView(observer)
 }
 ObservationLocationView.prototype = new UIComponent();
 
+function PhotoViewer(observations, col)
+{
+    this.init("PhotoViewer", "PhotoViewer");
+    this.image = this.addEventImage(_server.root + "/" + observations[col].small + "?t=" + new Date().getTime(),
+                                    "", "PhotoViewer", function() { _curtain.finished(); });
+    
+}
+PhotoViewer.prototype = new UIComponent();
 
 function ObservationView(observations, col, data)
 {
@@ -915,14 +923,21 @@ function ObservationView(observations, col, data)
     this.updateObservation = function () {
         this.removeComponents();
         this.progress = undefined;
+        var observations = this.observations;
+        var col = this.col;
         if (this.data) 
             this.addComponent(new DataView(this.data));
         else 
             this.addComponent(new EmptyDataView());
         
         if (this.observations[col].thumbnail) 
-            this.image = this.addImage(_server.root + "/" + this.observations[col].thumbnail + "?t=" + new Date().getTime(),
-                                       "" /*obs.date*/, "ObservationView");
+            //this.image = this.addImage(_server.root + "/" + this.observations[col].thumbnail + "?t=" + new Date().getTime(),
+            //                           "" /*obs.date*/, "ObservationView");
+            this.image = this.addEventImage(_server.root + "/" + this.observations[col].thumbnail + "?t=" + new Date().getTime(),
+                                            "" /*obs.date*/, "ObservationView",
+                                            function() {
+                                                _curtain.show(new PhotoViewer(observations, col));
+                                            });
         else {
             this.image = this.addImage(_server.root + "/media/white.gif", "",
                                             "EmptyObservationView");
