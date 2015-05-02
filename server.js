@@ -894,7 +894,7 @@ function sendIndex(req, res)
     } else {
         res.writeHead(302, { 'Location': 'https://p2pfoodlab.net/CitizenSeedsInfo.fr.html' });
     }
-    response.end();
+    res.end();
 }
 
 function validUsername(s)
