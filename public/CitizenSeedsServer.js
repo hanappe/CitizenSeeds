@@ -39,6 +39,8 @@ function newXMLHttpRequest()
     return xmlhttp;
 }
 
+var Promise = Promise || ES6Promise.Promise;
+
 function Server(root)
 {
     var server = this;
