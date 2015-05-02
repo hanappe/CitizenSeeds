@@ -1391,7 +1391,7 @@ function NotebookView(notebook)
         }
         var button = new Button("AddLocationButton", "NewLocation u-full-width",
                                 "Ajouter une nouvelle parcelle de cultures",
-                                function() { self.addLocation(); });
+                                function() { if (confirm("Vraiment ajouter une nouvelle parcelle ?")) { self.addLocation(); }});
         this.addComponent(button);
     }
 
