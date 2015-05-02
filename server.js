@@ -413,7 +413,7 @@ function observationPath(obs, size)
 function sendObservations(req, res)
 {
     logger.debug("Request: sendObservations");
-    logger.debug("Account: " + req.user);
+    logger.debug("Account: " + JSON.stringify(req.user));
 
     var fromDate = (req.query.from)? convertDate(req.query.from) : undefined;
     var toDate = (req.query.to)? convertDate(req.query.to) : undefined;
@@ -889,13 +889,12 @@ function sendPlantLocations(req, res)
 function sendIndex(req, res)
 {
     logger.debug("Request: sendIndex");
-    res.writeHead(200, {"Content-Type": "text/html"});
-    var path = "public/index.html";
     if (req.locale == "fr") {
-        path = "public/index.fr.html";
+        res.writeHead(302, { 'Location': 'https://p2pfoodlab.net/CitizenSeedsInfo.fr.html' });
+    } else {
+        res.writeHead(302, { 'Location': 'https://p2pfoodlab.net/CitizenSeedsInfo.fr.html' });
     }
-    var page = fs.readFileSync(path); // FIXME: async
-    res.end(page); 
+    response.end();
 }
 
 function validUsername(s)
