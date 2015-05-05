@@ -165,6 +165,7 @@ div.ObservationMatrixView {
 }
 
 div.ObservationHeaderView {
+    padding-top: 4px;
     padding-bottom: 4px;
     font-size: 24px;
     border-bottom: 1px solid black;
@@ -338,6 +339,18 @@ a.ObsOp:visited { color: inherit; text-decoration: none; font-weight: bold; padd
 a.ObsOp:active { color: inherit; text-decoration: underline; font-weight: bold; padding-right: 4px; }
 a.ObsOp:hover { color: #326296; text-decoration: none; font-weight: bold; padding-right: 4px; }
 
+
+div.Map {
+    width: 400px;
+    height: 300px;
+    margin: 10px;
+    border: solid 2px black;
+    position: relative;
+}
+
+#popup {
+    padding-bottom: 16px;
+}
 
 /*
  * Static pages
