@@ -1544,7 +1544,8 @@ function NotebookObserverView(notebook, lindex, pindex)
             text = observer.plantFamily + " - " + observer.plantVariety;
          else
             text = observer.plantFamily;
-        this.addEventLink(text, function () { self.takePicture(); }, "button NotebookObserverView u-full-width");
+        this.addEventLink(text, function () { self.takePicture(); },
+                          "button NotebookObserverView u-full-width");
 
         var observation = this.notebook.observations[lindex][pindex];
         if (observation) {

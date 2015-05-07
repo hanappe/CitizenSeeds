@@ -212,7 +212,7 @@ img.Spinner {
 div.ProgressBar {
     position: relative;
     width: 80px;
-    height: 3px;
+    height: 12px;
     border: 1px solid #e8e8e8;
 }
 
@@ -222,6 +222,6 @@ div.ProgressValue {
     top: 0px;
     left: 0px;
     width: 0px;
-    height: 3px;
+    height: 13px;
 }
 
