@@ -1563,7 +1563,7 @@ function NotebookObserverView(notebook, lindex, pindex)
     this.setProgress = function(value) {
         this.hideDialog();
         if (!this.progress) {
-            this.addImage(_server.root + "/media/spinner.gif", "", "Spinner");
+            //this.addImage(_server.root + "/media/spinner.gif", "", "Spinner");
             this.progress = new ProgressBar();
             this.addComponent(this.progress);
         }
