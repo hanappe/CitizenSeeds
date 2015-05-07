@@ -1560,6 +1560,10 @@ function NotebookObserverView(notebook, lindex, pindex)
         }
     }
 
+    this.setError = function(e) {
+        this.addText("Erreur " + JSON.stringify(e));
+    }
+    
     this.setProgress = function(value) {
         this.hideDialog();
         if (!this.progress) {
@@ -1592,7 +1596,7 @@ function NotebookObserverView(notebook, lindex, pindex)
                                          self.updateView();
                                      },
                                      function (r) { self.updateView(); },
-                                     function (r) { self.updateView(); },
+                                     function (r) { self.updateView(); self.setError(r); },
                                      function(value) {
                                          self.setProgress(value);
                                      });
