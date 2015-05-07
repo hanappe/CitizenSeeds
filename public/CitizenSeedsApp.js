@@ -1339,9 +1339,9 @@ function Notebook()
             this.addLocation(locations[i]);
     }
 
-    this.findObserverIndex = function(plantId) {
-        for (var i = 0; i < this.observers.length; i++) {
-            if (this.observers[i].plantId == plantId) 
+    this.findObserverIndex = function(lindex, plantId) {
+        for (var i = 0; i < this.observers[lindex].length; i++) {
+            if (this.observers[lindex][i].plantId == plantId) 
                 return i;
         }
         return -1;
@@ -1359,8 +1359,8 @@ function Notebook()
     this.addObservation = function(observation) {
         var lindex = this.findLocationIndex(observation.locationId);
         if (lindex < 0) return; // FIXME: something wrong with the data on the server
-        var pindex = this.findObserverIndex(observation.plant);
-        if (pindex < 0) return; // FIXME: something wrong with the data on the server
+        var pindex = this.findObserverIndex(lindex, observation.plantId);
+        if (pindex < 0)  return; // FIXME: something wrong with the data on the server
         this.observations[lindex][pindex] = observation;
     }
 }
