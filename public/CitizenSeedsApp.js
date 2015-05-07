@@ -118,6 +118,10 @@ function UIComponent()
         this.div.style.top = y + "px";
     }
 
+    this.setWidth = function(w) {
+        this.div.style.width = w + "px";
+    }
+
     this.resize = function(w, h) {
         this.div.style.width = w + "px";
         this.div.style.height = h + "px";
@@ -961,7 +965,7 @@ function ProgressBar()
     this.addComponent(this.valueView);
 
     this.setValue = function (value) {
-        this.valueView.resize(Math.floor(value * 0.8), 3);
+        this.valueView.setWidth(Math.floor(value * 0.8)); // FIXME: assumes max width of 80px
     }
 }
 ProgressBar.prototype = new UIComponent();
