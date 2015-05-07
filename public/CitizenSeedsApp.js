@@ -1554,15 +1554,14 @@ function NotebookObserverView(notebook, lindex, pindex)
     }
 
     this.hideDialog = function() {
-        this.removeComponent(this.panel);
-        this.panel = undefined;
-    }
-
-    this.setProgress = function(value) {
         if (this.panel) {
             this.removeComponent(this.panel);
             this.panel = undefined;
         }
+    }
+
+    this.setProgress = function(value) {
+        this.hideDialog();
         if (!this.progress) {
             this.addImage(_server.root + "/media/spinner.gif", "", "Spinner");
             this.progress = new ProgressBar();
