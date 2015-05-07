@@ -45,6 +45,7 @@ a.Button {
     -khtml-border-radius: 12px;
     -moz-border-radius: 12px;
     border-radius: 12px;
+    display: inline-block;
 }
 a.Button:link { color: #ba3c21; text-decoration: none; font-weight: normal; }
 a.Button:visited { color: #ba3c21; text-decoration: none; font-weight: normal; }
@@ -58,10 +59,6 @@ a.MobileButton:hover {
     color: white;
     background-color: #326296;
     font-weight: bold;
-}
-
-.xxx {
-    padding-top: 20px;
 }
 
 .visible {
