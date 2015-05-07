@@ -3,8 +3,14 @@
   <head>
     <meta charset="utf-8">
     <title>P2P Food Lab - CitizenSeeds</title>
+    <meta name="description" content="P2P Food Lab's CitizenSeeds application for shared gardening">
+    <meta name="author" content="Peter Hanappe & Nicolas Duval @ Sony CSL Paris">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- link rel="stylesheet" href="${baseUrl}/ol.css" -->
+    <!-- link rel="stylesheet" href="${baseUrl}/bootstrap.min.css" -->
     <link rel="stylesheet" href="${baseUrl}/CitizenSeeds.css">
   </head>
+
   <body id="Body">
     <div class="PageHeader clearfix">
       <div class="ProjectTitle FloatLeft">${experimentName}</div>
@@ -12,15 +18,21 @@
         <a href="https://p2pfoodlab.net"><img src="${baseUrl}/media/logo-small-blue.png" class="SmallLogo"/></a></div>
     </div>
 
-    <div>
-        <p>Cette page a été testée
+    <div class="xxx">
+      <a href="../mobile/4.html" class="Button MobileButton">Pour uploader vos photos avec votre téléphone portable ou avec votre tablette, essayez la page pour les mobiles.</a>
+    </div>
+    
+    <div class="xxx">
+      <p>Cette page a été testée
         avec <a href="https://www.mozilla.org/fr/firefox/new/">Firefox</a>, <a href="http://www.chromium.org/Home">Chromium</a>/<a href="https://www.google.com/intl/fr/chrome/browser/desktop/index.html">Chrome</a>,
-        et Internet Explorer (version 10 et plus). Si vous rencontrez
+        Internet Explorer (version 10 et plus), et Safari (version 8). Si vous rencontrez
         des problèmes avec votre navigateur, envoyez-nous les détails
         puis, si possible, utilisez un des navigateurs mentionnés
         précédemment.</p>
     </div>
 
+    <!-- div id="Map" class="Map"><div id="popup"></div></div -->
+    
     <!--
     <div class="DateSelection" id="DateSelection">
         Voir les images à partir de :&nbsp; 
@@ -31,7 +43,11 @@
     <script src="${baseUrl}/es6-promise-2.0.1.min.js"></script>
     <script src="${baseUrl}/CitizenSeedsApp.js"></script>
     <script src="${baseUrl}/CitizenSeedsServer.js"></script>
+    <!-- script src="${baseUrl}/ol.js"></script -->
+    <!-- script src="${baseUrl}/jquery.min.js"></script -->
+    <!-- script src="${baseUrl}/bootstrap.min.js"></script -->
     <script>setTimeout(function() { showObservations("${baseUrl}", ${experimentId}); }, 1);</script>
+    <!-- script>setTimeout(function() { showMap(); }, 10);</script -->
 
   </body>
 </html>
