@@ -203,3 +203,25 @@ img.UploadPreviewImage {
     border: 0;
 }
 
+img.Spinner {
+    border: 0px;
+    width: 64px;
+    height: 64px;
+}
+
+div.ProgressBar {
+    position: relative;
+    width: 80px;
+    height: 3px;
+    border: 1px solid #e8e8e8;
+}
+
+div.ProgressValue {
+    background-color: black;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 0px;
+    height: 3px;
+}
+
