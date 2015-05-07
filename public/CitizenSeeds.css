@@ -32,15 +32,37 @@ html, body {
       margin: 0px;
 }
 
-a:link { color: black; text-decoration: none; font-weight: normal; }
-a:visited { color: black; text-decoration: none; font-weight: normal; }
-a:active { color: black; text-decoration: underline; font-weight: normal; }
-a:hover { color: #326296; text-decoration: none; font-weight: normal; }
+a { color: #326296; text-decoration: none; font-weight: normal; }
+a:link { text-decoration: none; font-weight: normal; }
+a:visited { text-decoration: none; font-weight: normal; }
+a:active { text-decoration: underline; font-weight: normal; }
+a:hover { text-decoration: none; font-weight: normal; }
 
+a.Button {
+    padding: 20px;
+    margin-bottom: 10px;
+    -webkit-border-radius: 12px;
+    -khtml-border-radius: 12px;
+    -moz-border-radius: 12px;
+    border-radius: 12px;
+}
 a.Button:link { color: #ba3c21; text-decoration: none; font-weight: normal; }
 a.Button:visited { color: #ba3c21; text-decoration: none; font-weight: normal; }
 a.Button:active { color: #ba3c21; text-decoration: underline; font-weight: normal; }
 a.Button:hover { color: #ba3c21; text-decoration: none; font-weight: normal; }
+
+a.MobileButton, a.MobileButton:link,
+a.MobileButton:visited, a.MobileButton:active,
+a.MobileButton:hover {
+    border: solid 1px #326296;
+    color: white;
+    background-color: #326296;
+    font-weight: bold;
+}
+
+.xxx {
+    padding-top: 20px;
+}
 
 .visible {
     display: block;
@@ -414,3 +436,4 @@ a.Blueish {
 a.Redish {
     color: #ff2232;
 }
+

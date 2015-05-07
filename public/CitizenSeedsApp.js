@@ -546,11 +546,6 @@ function Curtain()
 }
 Curtain.prototype = new UIComponent();
 
-function closeUploadPanel(err)
-{
-    _curtain.finished();
-}
-
 function UploadPanel(hidden, doneCallback, cancelCallback, errorCallback, progressCallback)
 {
     var self = this;
@@ -920,7 +915,7 @@ function ObservationView(observations, col, data)
         this.progress.setValue(value);
     }
     
-    this.updateObservation = function () {
+    this.updateObservation = function (forceReload) {
         this.removeComponents();
         this.progress = undefined;
         var observations = this.observations;
@@ -930,17 +925,19 @@ function ObservationView(observations, col, data)
         else 
             this.addComponent(new EmptyDataView());
         
-        if (this.observations[col].thumbnail) 
+        if (this.observations[col].thumbnail) {
             //this.image = this.addImage(_server.root + "/" + this.observations[col].thumbnail + "?t=" + new Date().getTime(),
             //                           "" /*obs.date*/, "ObservationView");
-            this.image = this.addEventImage(_server.root + "/" + this.observations[col].thumbnail + "?t=" + new Date().getTime(),
-                                            "" /*obs.date*/, "ObservationView",
+            var src = _server.root + "/" + this.observations[col].thumbnail;
+            if (forceReload)
+                src += "?t=" + new Date().getTime(); // Reuse cached image unless a reload is necessary (after an upload, for example).
+            this.image = this.addEventImage(src, "", "ObservationView",
                                             function() {
                                                 _curtain.show(new PhotoViewer(observations, col));
                                             });
-        else {
+        } else {
             this.image = this.addImage(_server.root + "/media/white.gif", "",
-                                            "EmptyObservationView");
+                                       "EmptyObservationView");
             /*
             this.image = this.addEventImage(_server.root + "/media/white.gif", "",
                                             "EmptyObservationView",
@@ -951,7 +948,7 @@ function ObservationView(observations, col, data)
         this.addComponent(this.ops);
     }
 
-    this.updateObservation();
+    this.updateObservation(false);
 }
 ObservationView.prototype = new UIComponent();
 
@@ -1101,19 +1098,19 @@ function ExperimentController(experiment)
                                       function(data) {
                                           if (data.error) {
                                               alert(data.message);
-                                              view.updateObservation();
+                                              view.updateObservation(true);
                                           } else {
                                               _controller.insertObservation(data);
-                                              view.updateObservation();
+                                              view.updateObservation(true);
                                           }
                                       },
                                       function() {
                                           _curtain.finished();
-                                          view.updateObservation();
+                                          view.updateObservation(true);
                                       },
                                       function() {
                                           _curtain.finished();
-                                          view.updateObservation();
+                                          view.updateObservation(true);
                                       },
                                       function(value) {
                                           view.setProgress(value);
@@ -1539,6 +1536,8 @@ function NotebookObserverView(notebook, lindex, pindex)
 
     this.updateView = function() {
         this.removeComponents();
+        this.panel = undefined;
+        this.progress = undefined;
         var observer = this.notebook.observers[lindex][pindex];
         var text = "";
         if (observer.plantVariety)
@@ -1558,6 +1557,19 @@ function NotebookObserverView(notebook, lindex, pindex)
         this.removeComponent(this.panel);
         this.panel = undefined;
     }
+
+    this.setProgress = function(value) {
+        if (this.panel) {
+            this.removeComponent(this.panel);
+            this.panel = undefined;
+        }
+        if (!this.progress) {
+            this.addImage(_server.root + "/media/spinner.gif", "", "Spinner");
+            this.progress = new ProgressBar();
+            this.addComponent(this.progress);
+        }
+        this.progress.setValue(value);
+    }
     
     this.takePicture = function() {
         if (this.panel) {
@@ -1571,10 +1583,21 @@ function NotebookObserverView(notebook, lindex, pindex)
                        "plantId": observer.plantId,
                        "experimentId": observer.experimentId,
                        "date": toDate(date) };
+        
         this.panel = new UploadPanel(hidden,
-                                     function (r) { notebook.addObservation(r); self.updateView(); },
-                                     function (r) { self.hideDialog(); },
-                                     function (r) { self.hideDialog(); } );
+                                     function (data) {
+                                         if (data.error)
+                                             alert(data.message);
+                                         else
+                                             notebook.addObservation(data);
+                                         self.updateView();
+                                     },
+                                     function (r) { self.updateView(); },
+                                     function (r) { self.updateView(); },
+                                     function(value) {
+                                         self.setProgress(value);
+                                     });
+
         this.addComponent(this.panel);
     }
 
