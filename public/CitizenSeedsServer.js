@@ -112,12 +112,14 @@ function Server(root)
             if (progressCallback) {
             	progressCallback(0);
             }
-            
-            req.upload.addEventListener("progress", function(e) {
-                if (progressCallback && e.lengthComputable) {
-		    var pc = Math.round(100 * e.loaded / e.total);
-		    progressCallback(pc);
-                }}, false);
+
+            if (req.upload && req.upload.addEventListener) {
+                req.upload.addEventListener("progress", function(e) {
+                    if (progressCallback && e.lengthComputable) {
+		        var pc = Math.round(100 * e.loaded / e.total);
+		        progressCallback(pc);
+                    }}, false);
+            }
             
             // Make the request
             req.open('POST', server.root + url);
