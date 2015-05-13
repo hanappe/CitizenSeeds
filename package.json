@@ -29,6 +29,7 @@
   "dependencies": {
     "body-parser": "*",
     "easy-captcha": "*",
+    "exif": "^0.4.0",
     "exit": "^0.1.2",
     "express": "*",
     "express-session": "*",

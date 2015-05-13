@@ -38,6 +38,7 @@ var gm = require('gm');
 var mkdirp = require('mkdirp');
 var exit = require('exit');
 var log4js = require('log4js');
+var ExifImage = require('exif').ExifImage;
 
 mkdirp("log/", function(err) {
     if (err) {
@@ -445,6 +446,7 @@ function sendObservations(req, res)
 
         var copy = { "id": obs.id,
                      "date": obs.date,
+                     "dateCreated": obs.dateCreated,
                      "experimentId": obs.experiment,
                      "locationId": loca.id,
                      "locationName": loca.name,
@@ -533,6 +535,7 @@ function saveObservationLarge(res, path, basedir, observation)
                     var plant = database.getPlant(observation.plant);
                     var copy = { "id": observation.id,
                                  "date": observation.date,
+                                 "dateCreated": observation.dateCreated,
                                  "experimentId": observation.experiment,
                                  "locationId": location.id,
                                  "locationName": location.name,
@@ -545,7 +548,7 @@ function saveObservationLarge(res, path, basedir, observation)
                     copy.small = observationPath(observation, "small");
                     copy.thumbnail = observationPath(observation, "thumbnail");
 		    sendJson(res, copy);
-		}
+                }
 	    });
     });
 }
@@ -608,6 +611,27 @@ function saveObservationOrig(res, path, basedir, observation)
 		    saveObservationThumbnail(res, path, basedir, observation);
 	    });
     });
+}
+
+function getObservationExif(res, path, basedir, observation)
+{
+    try {
+        new ExifImage({ image : path }, function (error, exifData) {
+            if (error)
+                logger.error(error);
+            else {
+                logger.debug(JSON.stringify(exifData));
+                if (exifData && exifData.exif && exifData.exif.CreateDate) {
+                    observation.dateCreated = exifData.exif.CreateDate;
+                    database.updateObservation(observation);
+                }
+            }
+            saveObservationOrig(res, path, basedir, observation);
+        });
+    } catch (error) {
+        logger.error(error);
+        saveObservationOrig(res, path, basedir, observation);
+    }
 }
 
 function createObservation(req, res)
@@ -709,7 +733,8 @@ function createObservation(req, res)
     var p = req.files.photo.path;
     var basedir = "public/observations/" + location.id + "/" + plant.id + "/";
     
-    saveObservationOrig(res, p, basedir, observation);
+    //saveObservationOrig(res, p, basedir, observation);
+    getObservationExif(res, p, basedir, observation);
 }
 
 /*

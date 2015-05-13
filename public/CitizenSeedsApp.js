@@ -529,6 +529,7 @@ function Curtain()
         this.addComponent(dialog);
         dialog.addListener(this);
         this.setVisible(true);
+        //setEventHandler(this.div, "click", this.handleClick);
     }
 
     this.handleEvent = function(what, target) {
@@ -540,13 +541,12 @@ function Curtain()
 
     this.handleClick = function(e) {
         self.setVisible(false);
+        //setEventHandler(self.div, "click", null);
     }
 
     this.finished = function() {
         this.setVisible(false);
     }
-    
-    // setEventHandler(this.div, "click", this.handleClick);
 }
 Curtain.prototype = new UIComponent();
 
@@ -716,17 +716,7 @@ function ExperimentView(experiment)
         }
         return undefined;
     }
-
-    this.getObservationView = function (observation) {
-        for (var i = 0; i < this.components.length; i++) {
-            if (this.components[i].getObservationView) {
-                var view = this.components[i].getObservationView(observation);
-                if (view) return view;
-            }
-        }
-        return undefined;
-    }
-
+    
     this.clearMatrices = function() {
         this.removeComponents();
     }
@@ -780,19 +770,6 @@ function ObservationMatrixView(matrix, viewStart, numWeeks)
         }
     }
     
-    this.getObservationView = function (observation) {
-        if (!this.matrix || this.matrix.plant.id != observation.plantId)
-            return undefined;
-        
-        for (var i = 0; i < this.matrixView.components.length; i++) {
-            if (this.matrixView.components[i].getObservationView) {
-                var view = this.matrixView.components[i].getObservationView(observation);
-                if (view) return view;
-            }
-        }
-        return undefined;
-    }
-
     this.matrix = matrix;
     this.viewStart = viewStart;
     this.numWeeks = numWeeks;
@@ -849,26 +826,14 @@ function ObservationRowView(observer, observations)
     this.locationView.moveTo(0, 0);
     
     for (var i = 0; i < observations.length; i++) {
-        var view = new ObservationView(observations, i, null); // FIXME: add sensor data
+        var view = new ObservationView(observer,
+                                       observations[i], i, null); // FIXME: add sensor data
 //                                       { "temperature": 20,
 //                                         "humidity": 70,
 //                                         "sunlight": 10000,
 //                                         "water": 40 });
         this.addComponent(view);
         view.moveTo(120 + i * 90, 0);
-    }
-
-    this.getObservationView = function (observation) {
-        if (!this.observer || this.observer.locationId != observation.locationId)
-            return undefined;
-
-        for (var i = 0; i < this.components.length; i++) {
-            if (this.components[i].getObservationView) {
-                var view = this.components[i].getObservationView(observation);
-                if (view) return view;
-            }
-        }
-        return undefined;
     }
 }
 ObservationRowView.prototype = new UIComponent();
@@ -886,31 +851,26 @@ function ObservationLocationView(observer)
 }
 ObservationLocationView.prototype = new UIComponent();
 
-function PhotoViewer(observations, col)
+function PhotoViewer(observations)
 {
     this.init("PhotoViewer", "PhotoViewer");
-    this.image = this.addEventImage(_server.root + "/" + observations[col].small + "?t=" + new Date().getTime(),
-                                    "", "PhotoViewer", function() { _curtain.finished(); });
-    
+    for (var i = 0; i < observations.length; i++) { 
+        this.addEventImage(_server.root + "/" + observations[i].small,
+                           "", "PhotoViewer", function() { _curtain.finished(); });
+    }
 }
 PhotoViewer.prototype = new UIComponent();
 
-function ObservationView(observations, col, data)
+function ObservationView(observer, observations, col, data)
 {
     this.init("ObservationView", "ObservationView Column");
     this.col = col;
+    this.observer = observer;
     this.observations = observations;
     this.data = data;
 
-    var view = this;
-    var observation = observations[col];
+    var self = this;
     
-    this.getObservationView = function (observation) {
-        if (!this.observations || this.observations[this.col].id != observation.id)
-            return undefined;
-        return this;
-    }
-
     this.setProgress = function (value) {
         if (!this.progress) {
             this.image.src = _server.root + "/media/spinner.gif";
@@ -920,37 +880,93 @@ function ObservationView(observations, col, data)
         }
         this.progress.setValue(value);
     }
+
+    this.uploadPhoto = function() {
+        // Make sure that the visitor is logged in BEFORE uploading
+        // the photo. And that she isn't uploading a photo for someone
+        // else's row of observations.
+        _server.getJSON("login").then(function(e) {
+            if (e.error) alert(e.message);
+            else if (observer.accountId != e.id)
+                alert("Il semblerait que cette ligne d'observations appartient à quelqu'un d'autre.");
+            else self._uploadPhoto();
+        });
+    }
+    
+    this._uploadPhoto = function () {
+        var date = new Date(_controller.experiment.viewStart.getFullYear(),
+                            _controller.experiment.viewStart.getMonth(),
+                            _controller.experiment.viewStart.getDate() + col * 7,
+                            12, 0, 0); // FIXME
+        var hidden = { "accountId": observer.accountId,
+                       "locationId": observer.locationId,
+                       "plantId": observer.plantId,
+                       "experimentId": observer.experimentId,
+                       "date": toDate(date) };
+        _curtain.show(new UploadPanel(hidden,
+                                      function(data) {
+                                          if (data.error) {
+                                              alert(data.message);
+                                              self.updateObservation(true);
+                                          } else {
+                                              _controller.insertObservation(data);
+                                              self.updateObservation(true);
+                                          }
+                                      },
+                                      function() {
+                                          _curtain.finished();
+                                          self.updateObservation(true);
+                                      },
+                                      function() {
+                                          _curtain.finished();
+                                          self.updateObservation(true);
+                                      },
+                                      function(value) {
+                                          self.setProgress(value);
+                                      }));
+    }
     
     this.updateObservation = function (forceReload) {
         this.removeComponents();
         this.progress = undefined;
-        var observations = this.observations;
-        var col = this.col;
+
         if (this.data) 
             this.addComponent(new DataView(this.data));
         else 
             this.addComponent(new EmptyDataView());
+
+        var index = -1;
+        for (var i = 0; i < this.observations.length; i++) {
+            if (this.observations[i].thumbnail) {
+                index = i;
+                break;
+            }
+        }
         
-        if (this.observations[col].thumbnail) {
-            //this.image = this.addImage(_server.root + "/" + this.observations[col].thumbnail + "?t=" + new Date().getTime(),
-            //                           "" /*obs.date*/, "ObservationView");
-            var src = _server.root + "/" + this.observations[col].thumbnail;
+        if (index >= 0) {
+            var src = _server.root + "/" + this.observations[index].thumbnail;
             if (forceReload)
                 src += "?t=" + new Date().getTime(); // Reuse cached image unless a reload is necessary (after an upload, for example).
             this.image = this.addEventImage(src, "", "ObservationView",
                                             function() {
-                                                _curtain.show(new PhotoViewer(observations, col));
+                                                if (self.observations.length == 1)
+                                                    _curtain.show(new PhotoViewer(self.observations));
+                                                else
+                                                    _curtain.show(new Slideshow(self.observations, null, 650, 650, null));
+
                                             });
         } else {
             this.image = this.addImage(_server.root + "/media/white.gif", "",
                                        "EmptyObservationView");
-            /*
-            this.image = this.addEventImage(_server.root + "/media/white.gif", "",
-                                            "EmptyObservationView",
-                                            function() { _controller.uploadPhoto(observation, view); });
-            */
         }
-        this.ops = new ObservationOps(this.observations[this.col], this);
+        if (this.observations.length > 1) {
+            var count = document.createElement("DIV");
+            count.className = "ObservationCount";
+            count.innerHTML = "" + this.observations.length;
+            this.div.appendChild(count);
+        }
+        
+        this.ops = new ObservationOps(this);
         this.addComponent(this.ops);
     }
 
@@ -1036,22 +1052,13 @@ function EmptyDataIcon(name, value, level, style)
 EmptyDataIcon.prototype = new UIComponent();
 
 
-function ObservationOps(observation, parent)
+function ObservationOps(parent)
 {
     this.init("ObservationOps", "ObservationOps clearfix");
 
     this.uploadButton = new Button("UploadObs", "ObsOp FloatLeft", "U",
-                                   function() { _controller.uploadPhoto(observation, parent); });
-    this.uploadButton.addListener(_controller);
-    this.uploadButton.observation = observation;
-    this.uploadButton.progressListener = parent;
-    this.uploadButton.view = parent;
+                                   function() { parent.uploadPhoto(); });
     this.addComponent(this.uploadButton);
-
-    //this.commentButton = new Button("CommentObs", "ObsOp FloatLeft", "C", "comment");
-    //this.commentButton.addListener(ctrl);
-    //this.commentButton.observation = observation;
-    //this.addComponent(this.commentButton);
 }
 ObservationOps.prototype = new UIComponent();
 
@@ -1073,54 +1080,6 @@ function ExperimentController(experiment)
     this.insertObservation = function(observation) {
         observation.date = new Date(observation.date);
         this.experiment.insertObservation(observation);
-    }
-
-    this.uploadPhoto = function(observation, view) {
-        // Make sure that the visitor is logged in BEFORE uploading
-        // the photo. And that she isn't uploading a photo for someone
-        // else's row of observations.
-        _server.getJSON("login").then(function(e) {
-            if (e.error) alert(e.message);
-            else if (observation.observer.accountId != e.id)
-                alert("Il semblerait que cette ligne d'observations appartient à quelqu'un d'autre.");
-            else self._uploadPhoto(observation, view);
-        });
-    }
-
-    this._uploadPhoto = function(observation, view) {
-        var observer = observation.observer;
-        var date = new Date(this.experiment.viewStart.getFullYear(),
-                            this.experiment.viewStart.getMonth(),
-                            this.experiment.viewStart.getDate() + observation.col * 7,
-                            12, 0, 0); // FIXME
-        var hidden = { "accountId": observer.accountId,
-                       "locationId": observer.locationId,
-                       "plantId": observer.plantId,
-                       "experimentId": observer.experimentId,
-                       "date": toDate(date) };
-        if (observation.id)
-            hidden.id = observation.id;
-        _curtain.show(new UploadPanel(hidden,
-                                      function(data) {
-                                          if (data.error) {
-                                              alert(data.message);
-                                              view.updateObservation(true);
-                                          } else {
-                                              _controller.insertObservation(data);
-                                              view.updateObservation(true);
-                                          }
-                                      },
-                                      function() {
-                                          _curtain.finished();
-                                          view.updateObservation(true);
-                                      },
-                                      function() {
-                                          _curtain.finished();
-                                          view.updateObservation(true);
-                                      },
-                                      function(value) {
-                                          view.setProgress(value);
-                                      }));
     }
     
     this.handleEvent = function(what, target) {
@@ -1176,20 +1135,16 @@ function ObservationMatrix(plant, cols)
         var observations = [];
         var row = this.observers.length;
         for (var col = 0; col < this.cols; col++)
-            observations.push(new Observation(observer, col));
+            observations.push([]);
         this.observers.push(observer);
         this.observations.push(observations);
         this.map[observer.locationId] = observations;
     }
 
     this.addObservation = function(obs, col) {
-        var observations = this.map[obs.locationId];
-        var observation = observations[col];
-        observation.id = obs.id;
-        observation.date = obs.date;
-        observation.orig = obs.orig;
-        observation.small = obs.small;
-        observation.thumbnail = obs.thumbnail;
+        var row = this.map[obs.locationId];
+        var cell = row[col];
+        cell.push(obs);
     }
 }
 
@@ -1241,6 +1196,239 @@ function Experiment(e, numWeeks)
         }
     }
 }
+
+
+function SlideSelector(slideshow, i)
+{
+        var self = this;
+        this.slideshow = slideshow;        
+        this.i = i;        
+
+        this.select = function() {
+                self.slideshow.selectSlide(self.i);
+        }
+}
+
+function Slideshow(observations, captions, width, height, handler)
+{
+    var self = this;
+    
+    this.init("Slideshow", "Slideshow");
+    
+    this.observations = observations;
+    this.captions = captions;
+    this.self = this;
+    this.curSlide = 0;
+    this.preLoad = [];
+    this.slide = null;
+    this.slideSelectors = [];
+    this.width = width;
+    this.height = height;
+    this.handler = handler;
+
+    this.preloadSlides = function() {
+        this.preLoad = [];
+        for (i = 0; i < this.observations.length; i++) {
+            this.preLoad[i] = new Image();
+            if ((typeof this.observations[i]) == "string")
+                src = this.observations[i];
+            else 
+                src = _server.root + "/" + this.observations[i].small;
+            this.preLoad[i].src = src;
+        }
+        setEventHandler(this.preLoad[0], "load", this._doTransition);
+    }
+
+    this.nextSlide = function(loop) {
+        if (self) self.selectSlide(self.curSlide + 1, loop);
+        else this.selectSlide(this.curSlide + 1, loop);
+    }
+
+    this.prevSlide = function() {
+        if (self) self.selectSlide(self.curSlide - 1);
+        else this.selectSlide(this.curSlide - 1);
+    }
+
+    this.selectSlide = function(i, loop) {
+        this.curSlide = i;
+        if (loop) this.curSlide = (this.observations.length + this.curSlide) % this.observations.length;
+        if (this.curSlide < 0) 
+            this.curSlide = 0;
+        if (this.curSlide >= this.observations.length)
+            this.curSlide = this.observations.length - 1;
+        this.doTransition();
+    }
+
+    this._doTransition = function() {
+        self.doTransition();
+    }
+
+    this.doTransition = function() {
+        var img = this.preLoad[this.curSlide];
+        var w = img.width;
+        var h = img.height;
+        var tw = this.imageWidth;
+        var th = this.imageHeight;
+        
+        if (w > tw) {
+            h = h * tw / w;
+            w = tw;
+        }
+        if (h > th) {
+            w = w * th / h;
+            h = th;
+        }
+        this.slide.width = w;
+        this.slide.height = h;
+        this.slide.style.top = "" + ((th - h) / 2) + "px";
+        this.slide.style.left = "" + ((tw - w) / 2) + "px";
+        this.slide.src = this.preLoad[this.curSlide].src;
+        this.displayCaption();
+        this.updateSlideNumbers();
+    }
+
+    this.insertLink = function(p, className, anchor, id, handler) {
+        var a = document.createElement("A");
+        a.className = className;
+        a.id = id;
+        a.setAttribute("href", "javascript:void(0)");
+        a.appendChild(document.createTextNode(anchor));
+        p.appendChild(a);        
+        a.onclick = function() { return false; }
+        a.onmousedown = function() { return false; }
+        setEventHandler(a, "click", handler);
+        return a;
+    }
+
+    this.insertSlideNumbers = function() {
+        if (this.observations.length <= 1)
+            return;
+
+        this.insertLink(this.ctrl, "Arrow", "<", 
+                        "Slideshow_prevSlide", 
+                        this.prevSlide);
+        
+        for (i = 0; i < this.observations.length; i++) {
+            var sel = new SlideSelector(this, i);
+            var link = this.insertLink(this.ctrl, "Number", "" + (i + 1), 
+                                       "Slideshow_selectSlide_" + i, 
+                                       sel.select);
+            sel.link = link;
+            this.slideSelectors[i] = sel;
+            if (i == this.curSlide) 
+                link.className = "SelectedNumber";
+        }
+        
+        this.insertLink(this.ctrl, "Arrow", ">", 
+                        "Slideshow_nextSlide", this.nextSlide);
+    }
+
+    this.updateSlideNumbers = function() {
+        if (this.observations.length <= 1)
+            return;
+        for (i = 0; i < this.observations.length; i++)
+            this.slideSelectors[i].link.className = "Number";
+        this.slideSelectors[this.curSlide].link.className = "SelectedNumber";
+    }
+
+    this.displayCaption = function() {
+        var observation = this.observations[this.curSlide];
+        if (observation) {
+            var text = observation.plantFamily + ", ";
+            if (observation.plantVariety)
+                text += observation.plantVariety + ", ";
+            text += observation.locationName + "<br>" + observation.accountId + ", " + toDate(observation.date);
+            this.caption.innerHTML = text;
+        }
+        //if (this.captions) {
+        //    var div = document.getElementById("Slideshow_CaptionBox");
+        //    div.innerHTML = this.captions[this.curSlide];
+        //}
+    }
+    
+    this._onSlideClicked = function(e) {
+        self.handler(self);
+    }
+
+    this.createShow = function() {
+        this.resize(this.width, this.height);
+
+        this.addEventImage(_server.root + "/media/close.png", "", "SlideshowClose",
+                           function() { _curtain.finished(); } );
+
+        var slideshow = document.createElement("DIV");
+        slideshow.className = "Slideshow_Slideshow";
+        slideshow.id = "Slideshow_Slideshow";
+        this.div.appendChild(slideshow);
+        
+        var pic = document.createElement("DIV");
+        pic.className = "PictureBox";
+        pic.id = "Slideshow_PictureBox";
+        slideshow.appendChild(pic);
+
+        var img = document.createElement("IMG");
+        img.className = "SlideshowImage";
+        this.slide = img;
+
+        //if (this.handler)
+        {
+            var a = document.createElement("A");
+            a.setAttribute("href", "javascript:void(0)");
+            a.onclick = function() { return false; }
+            a.onmousedown = function() { return false; }
+            setEventHandler(a, "click", function() { self.nextSlide(true); });
+
+            a.appendChild(img);
+            pic.appendChild(a);
+        }
+        // else {
+        //    pic.appendChild(img);
+        //}
+        
+        this.caption = document.createElement("DIV");
+        this.caption.className = "CaptionBox";
+        this.caption.id = "Slideshow_CaptionBox";
+        slideshow.appendChild(this.caption);
+        this.displayCaption();
+        
+        this.imageWidth = this.width;
+        pic.style.width = this.width + "px";
+
+        //if (this.captions)
+        {
+            this.imageHeight = (this.height
+                                - 32
+                                - 64 - 12
+                                - 32);
+            pic.style.height = (this.height
+                                - 32
+                                - 64 - 12 - 32) + "px";
+        } /*else {
+            this.imageHeight = (this.height
+                                - 32
+                                - 12 - 32);
+            pic.style.height = (this.height
+                                - 32
+                                - 12 - 32) + "px";
+        }*/
+
+        if (this.observations.length > 1) {
+            this.ctrl = document.createElement("DIV");
+            this.ctrl.className = "ControlBox";
+            this.ctrl.setAttribute("id", "ControlBox");
+            slideshow.appendChild(this.ctrl);
+            this.insertSlideNumbers();
+        }
+        
+        return 0;
+    }
+    
+    this.createShow();
+    this.preloadSlides();
+}
+Slideshow.prototype = new UIComponent();
+
+
 
 //--------------------------------------------------
 
