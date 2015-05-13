@@ -962,7 +962,7 @@ function ObservationView(observer, observations, col, data)
         if (this.observations.length > 1) {
             var count = document.createElement("DIV");
             count.className = "ObservationCount";
-            count.innerHTML = "" + this.observations.length;
+            count.innerHTML = "x" + this.observations.length;
             this.div.appendChild(count);
         }
         
