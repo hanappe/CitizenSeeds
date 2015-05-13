@@ -236,11 +236,55 @@ function getDatastream(id)
     return undefined;
 }
 
+function insertDatastream(datastream)
+{
+    datastream.id = newId("datastreams");
+    _db.datastreams.push(datastream);
+    saveTable("datastreams");
+    return datastream;
+}
+
 //------------------------------------------
 
 function getDevices()
 {
     return _db.devices;
+}
+
+function insertDevice(device)
+{
+    device.id = newId("devices");
+    _db.devices.push(device);
+    saveTable("devices");
+    return device;
+}
+
+function getDevice(id)
+{
+    for (var i = 0; i < _db.devices.length; i++) {
+        if (_db.devices[i].id == id)
+            return _db.devices[i];
+    }
+    return undefined;
+}
+
+function updateDevice(device)
+{
+    var d = getDevice(device.id);
+    d.account = device.account;
+    d.name = device.name;
+    d.datastreams = device.datastreams;
+    d.type = device.type;
+    if (d.type == "flowerpower") {
+        d.flowerpower = {};
+        d.flowerpower.username = device.flowerpower.username;
+        d.flowerpower.password = device.flowerpower.password;
+        d.flowerpower.serial = device.flowerpower.serial;
+        d.flowerpower.location = device.flowerpower.location;
+        d.flowerpower.nickname = device.flowerpower.nickname;
+    }
+    saveTable("devices");
+    return account;
 }
 
 //------------------------------------------
@@ -329,6 +373,18 @@ function insertObservation(observation)
     return observation;
 }
 
+function updateObservation(observation)
+{
+    var d = getObservation(observation.id);
+    d.date = observation.date;
+    d.location = observation.location;
+    d.experiment = observation.experiment;
+    d.plant = observation.plant;
+    d.dateCreated = observation.dateCreated;
+    saveTable("observations");
+    return d;
+}
+
 //------------------------------------------
 
 function getLocations()
@@ -363,6 +419,16 @@ function insertLocation(location)
     _db.locations.push(location);
     saveTable("locations");
     return location;
+}
+
+function updateLocation(location)
+{
+    var d = getLocation(location.id);
+    d.account = location.account;
+    d.name = location.name;
+    d.device = location.device;
+    saveTable("locations");
+    return account;
 }
 
 //------------------------------------------
@@ -404,8 +470,12 @@ module.exports = {
 
     getDatastreams: getDatastreams,
     getDatastream: getDatastream,
+    insertDatastream: insertDatastream,
 
     getDevices: getDevices,
+    getDevice: getDevice,
+    insertDevice: insertDevice,
+    updateDevice: updateDevice,
 
     getExperiments: getExperiments,
     getExperiment: getExperiment,
@@ -417,11 +487,13 @@ module.exports = {
     getObservations: getObservations,
     getObservation: getObservation,
     insertObservation: insertObservation,
+    updateObservation: updateObservation,
 
     getLocations: getLocations,
     selectLocations: selectLocations,
     getLocation: getLocation,
     insertLocation: insertLocation,
+    updateLocation: updateLocation,
 
     getPlants: getPlants,
     getPlant: getPlant,
