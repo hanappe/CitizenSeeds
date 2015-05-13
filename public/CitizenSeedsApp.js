@@ -745,10 +745,13 @@ function ObservationMatrixView(matrix, viewStart, numWeeks)
 
     this.buildView = function() {
         this.header = new ObservationHeaderView();
+        var text = this.matrix.plant.family;
         if (this.matrix.plant.variety)
-            this.header.setText(this.matrix.plant.family + " - " + this.matrix.plant.variety);
-        else
-            this.header.setText(this.matrix.plant.family);
+            text += " - " + this.matrix.plant.variety;
+        if (this.matrix.plant.note)
+            text += "  - " + this.matrix.plant.note;
+        this.header.setText(text);
+            
         this.addComponent(this.header);
 
         this.matrixView = new ObservationTableView();
@@ -764,8 +767,7 @@ function ObservationMatrixView(matrix, viewStart, numWeeks)
         this.button.matrix = this.matrix;
         this.addComponent(this.button);
     }
-    
-    
+        
     this.clear = function() {
         this.matrixView.removeComponents();
     }
@@ -1520,11 +1522,11 @@ PlantSelectorList.prototype = new UIComponent();
 function PlantSelector(parent, plant)
 {
     this.init("PlantSelector", "PlantSelector");
-    var text = "";
+    var text = plant.family;
     if (plant.variety)
-        text = plant.family + " - " + plant.variety;
-    else
-        text = plant.family;
+        text += " - " + plant.variety;
+    if (plant.note)
+        text += " - " + plant.note;
     this.addEventLink(text, function() { parent.addObserver(plant.id); }, "button PlantSelector u-max-full-width");    
 }
 PlantSelector.prototype = new UIComponent();

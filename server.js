@@ -323,8 +323,14 @@ function sendExperiment(req, res)
               "startDate": exp.startDate };
 
     e.plants = [];
-    for (var i = 0; i < exp.plants.length; i++)
-        e.plants.push(database.getPlant(exp.plants[i]));
+    for (var i = 0; i < exp.plants.length; i++) {
+        var plant = database.getPlant(exp.plants[i].id);
+        var p = { "id": plant.id,
+                  "family": plant.family,
+                  "variety": plant.variety,
+                  "note": exp.plants[i].note };
+        e.plants.push(p);
+    }
     
     res.writeHead(200, {"Content-Type": "application/json"});
     res.end(JSON.stringify(e));
