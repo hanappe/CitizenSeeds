@@ -381,6 +381,9 @@ function updateObservation(observation)
     d.experiment = observation.experiment;
     d.plant = observation.plant;
     d.dateCreated = observation.dateCreated;
+    d.dateUpload = observation.dateUpload;
+    d.dateUser = observation.dateUser;
+    d.deleted = observation.deleted;
     saveTable("observations");
     return d;
 }
@@ -458,6 +461,8 @@ function getPlantLocations()
 
 module.exports = {
     init: init,
+
+    saveTable: saveTable,
 
     getAccounts: getAccounts,
     getAccount: getAccount,

@@ -98,6 +98,11 @@ div.Curtain {
     background-color: rgba(0, 0, 0, 0.5);
 }
 
+div.AccountPanel {
+    margin-top: 10px;    
+    margin-bottom: 10px;    
+}
+
 div.UploadPanel {
     width: 300px;
     border: solid 1px black;

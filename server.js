@@ -428,6 +428,29 @@ function observationPath(obs, size)
             + obs.id + ".jpg");
 }
 
+function formatObservation(obs)
+{
+    var loca = database.getLocation(obs.location);
+    var pl = database.getPlant(obs.plant);
+
+    var copy = { "id": obs.id,
+                 "date": obs.date,
+                 "dateCreated": obs.dateCreated,
+                 "experimentId": obs.experiment,
+                 "locationId": loca.id,
+                 "locationName": loca.name,
+                 "plantId": pl.id,
+                 "plantFamily": pl.family,
+                 "plantVariety": pl.variety,
+                 "accountId": loca.account };
+    
+    copy.orig = observationPath(obs, "orig");
+    copy.small = observationPath(obs, "small");
+    copy.thumbnail = observationPath(obs, "thumbnail");
+
+    return copy;
+}
+
 function sendObservations(req, res)
 {
     logger.debug("Request: sendObservations");
@@ -444,6 +467,7 @@ function sendObservations(req, res)
     
     for (var i = 0; i < observations.length; i++) {
         var obs = observations[i];
+        if (obs.deleted) continue;
         if (plant && obs.plant != plant) continue;
         if (location && obs.location != location) continue;
         if (experiment && obs.experiment != experiment) continue;
@@ -451,26 +475,8 @@ function sendObservations(req, res)
         var date = convertDate(obs.date);
         if (fromDate && date.getTime() < fromDate.getTime()) continue;
         if (toDate && date.getTime() > toDate.getTime()) continue;
-
-        var loca = database.getLocation(obs.location);
-        var pl = database.getPlant(obs.plant);
-
-        var copy = { "id": obs.id,
-                     "date": obs.date,
-                     "dateCreated": obs.dateCreated,
-                     "experimentId": obs.experiment,
-                     "locationId": loca.id,
-                     "locationName": loca.name,
-                     "plantId": pl.id,
-                     "plantFamily": pl.family,
-                     "plantVariety": pl.variety,
-                     "accountId": loca.account };
         
-        copy.orig = observationPath(obs, "orig");
-        copy.small = observationPath(obs, "small");
-        copy.thumbnail = observationPath(obs, "thumbnail");
-
-        items.push(copy);
+        items.push(formatObservation(obs));
     }
 
     if (req.query.sort && req.query.sort == "plant")
@@ -512,19 +518,37 @@ function sendObservationMeta(req, res)
 {
     var id = req.params.id;
     var obs = database.getObservation(id);
-    var location = database.getLocation(obs.location);
-    var copy = { "id": obs.id,
-                 "date": obs.date,
-                 "locationId": location.id,
-                 "locationName": location.name,
-                 "plant": obs.plant,
-                 "accountId": location.account };
-    
-    copy.orig = observationPath(obs, "orig");
-    copy.small = observationPath(obs, "small");
-    copy.thumbnail = observationPath(obs, "thumbnail");
     res.writeHead(200, {"Content-Type": "application/json"});
-    res.end(JSON.stringify(copy));
+    res.end(JSON.stringify(formatObservation(obs)));
+}
+
+function deleteObservation(req, res)
+{
+    var id = req.params.id;
+    var account = req.user;
+
+    logger.debug("deleteObservation: " + id);
+    
+    var observation = database.getObservation(id);
+    if (!observation) {
+	sendError(res, { "message": "Bad ID" }, __line, __function);
+        return;
+    }
+    var location = database.getLocation(observation.location);
+    if (!location) {
+	sendError(res, { "message": "Internal server error (couldn't find associated location)" },
+                  __line, __function);
+        return;
+    }
+    if (location.account != account.id) {
+	sendError(res, { "message": "This observation does not seem to belong to you..." },
+                  __line, __function);
+        return;
+    }
+    observation.deleted = true;
+    database.updateObservation(observation);
+    res.writeHead(200, {"Content-Type": "application/json"});
+    res.end(JSON.stringify(formatObservation(observation)));    
 }
 
 function saveObservationLarge(res, path, basedir, observation)
@@ -770,7 +794,7 @@ function createObservation(req, res)
 
 function sendDatastream(req, res)
 {
-    logger.debug("Request: sendObservations");
+    logger.debug("Request: sendDatastream");
     logger.debug("Account: " + req.user);
 
     var id = req.params.id;
@@ -1360,6 +1384,16 @@ function sendAccount(req, res)
     sendJson(res, copy);
 }
 
+function sendWhoami(req, res)
+{
+    res.writeHead(200, {"Content-Type": "application/json"});
+    if (req.user) {
+        res.end(JSON.stringify({ "id": req.user.id }));
+    } else {
+        res.end(JSON.stringify({ "message": "Who are you?" }));
+    }
+}
+
 function login(req, res)
 {
     logger.debug(JSON.stringify(req.session));
@@ -1372,9 +1406,9 @@ function login(req, res)
 function logout(req, res)
 {
     logger.debug(JSON.stringify(req.session));
+    req.logout();
     req.session.destroy();
     //req.session.save();
-    //req.logout();
 
     res.writeHead(200, {"Content-Type": "application/json"});
     res.end(JSON.stringify({ "success": true }));
@@ -1434,6 +1468,9 @@ app.get("/observations/:id(\\d+).json", sendObservationMeta);
 app.post("/observations",
          passport.authenticate('basic', { session: true }),
          createObservation);
+app.delete("/observations/:id(\\d+)",
+           passport.authenticate('basic', { session: true }),
+           deleteObservation);
 
 app.get("/datastreams/:id(\\d+).json", sendDatastream);
 app.get("/datastreams/:id(\\d+)/datapoints.json", sendDatapoints);
@@ -1449,6 +1486,7 @@ app.get("/plants.json", sendPlants);
 app.get("/plants/:id(\\d+)/locations.json", sendPlantLocations);
 app.post("/accounts", captcha.check, createAccount);
 app.get("/accounts/:id", sendAccount);
+app.get("/whoami", sendWhoami);
 app.get("/login",
         passport.authenticate('basic', { session: true }),
         login);

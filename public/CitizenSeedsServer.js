@@ -21,24 +21,6 @@
 
 function newXMLHttpRequest()
 {
-    /*
-    var xmlhttp = undefined;
-    
-    try {
-            xmlhttp = new ActiveXObject("Msxml2.XMLHTTP");
-    } catch (e) {
-        try {
-            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
-        } catch (e2) {
-            xmlhttp = undefined;
-        }
-    }
-    if ((xmlhttp == undefined) 
-        && (typeof XMLHttpRequest != 'undefined')) {
-        xmlhttp = new XMLHttpRequest();
-    }
-    return xmlhttp;
-    */
     return new XMLHttpRequest();
 }
 
@@ -49,8 +31,43 @@ function Server(root)
     var server = this;
     this.root = (root)? root + "/" : "";
 
+    // Adapted from http://www.html5rocks.com/en/tutorials/es6/promises/
+    this.request = function(method, url, data, contentType) {
+        return new Promise(function(resolve, reject) {
+            var req = newXMLHttpRequest();
+            req.open(method, server.root + url);
+            if (contentType) 
+                req.setRequestHeader("Content-Type", contentType);
+
+            req.onload = function() {
+                // This is called even on 404 etc
+                // so check the status
+                if (req.status == 200) {
+                    // Resolve the promise with the response text
+                    resolve(req.response);
+                }
+                else {
+                    // Otherwise reject with the status text
+                    // which will hopefully be a meaningful error
+                    reject(Error(req.statusText));
+                }
+            };
+
+            // Handle network errors
+            req.onerror = function() {
+                reject(Error("Network Error"));
+            };
+
+            // Make the request
+            if (data) req.send(data);
+            else req.send();
+        });
+    }
+
     // From http://www.html5rocks.com/en/tutorials/es6/promises/
     this.get = function(url) {
+        return this.request('GET', url);
+/*        
         return new Promise(function(resolve, reject) {
             var req = newXMLHttpRequest();
             req.open('GET', server.root + url);
@@ -77,6 +94,7 @@ function Server(root)
             // Make the request
             req.send();
         });
+*/
     }
 
     // From http://www.html5rocks.com/en/tutorials/es6/promises/
@@ -134,6 +152,8 @@ function Server(root)
 
     // Adapted from http://www.html5rocks.com/en/tutorials/es6/promises/
     this.post = function(url, data, contentType) {
+        return this.request('POST', url, data, contentType);
+/*
         return new Promise(function(resolve, reject) {
             var req = newXMLHttpRequest();
             req.open('POST', server.root + url);
@@ -162,11 +182,22 @@ function Server(root)
             // Make the request
             req.send(data);
         });
+*/
     }
 
     // From http://www.html5rocks.com/en/tutorials/es6/promises/
     this.postJSON = function(url, obj) {
         return this.post(url, JSON.stringify(obj),
                         "application/json;charset=UTF-8").then(JSON.parse);
+    }
+
+    // Adapted from http://www.html5rocks.com/en/tutorials/es6/promises/
+    this.delete = function(url) {
+        return this.request('DELETE', url);
+    }
+
+    // From http://www.html5rocks.com/en/tutorials/es6/promises/
+    this.deleteJSON = function(url) {
+        return this.delete(url).then(JSON.parse);
     }
 }

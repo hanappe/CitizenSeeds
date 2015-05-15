@@ -711,6 +711,7 @@ function ExperimentView(experiment)
               document.getElementById("ExperimentView"));
 
     var matrices = experiment.matrices;
+
     for (var i = 0; i < matrices.length; i++) {
         var view = new ObservationMatrixView(matrices[i],
                                              experiment.viewStart,
@@ -722,6 +723,15 @@ function ExperimentView(experiment)
         for (var i = 0; i < this.components.length; i++) {
             if (this.components[i].matrix && (this.components[i].matrix == matrix))
                 return this.components[i];
+        }
+        return undefined;
+    }
+
+
+    this.getObservationView = function(plant, location, col) {
+        for (var i = 0; i < this.components.length; i++) {
+            if (this.components[i].matrix && (this.components[i].matrix.plant.id == plant))
+                return this.components[i].getObservationView(location, col);
         }
         return undefined;
     }
@@ -737,11 +747,22 @@ function ObservationMatrixView(matrix, viewStart, numWeeks)
 {
     this.init("ObservationMatrixView", "ObservationMatrixView");
 
+    this.rows = [];
+    
     this.addObservationRow = function (observer, observations) {
         var row = new ObservationRowView(observer, observations);
+        this.rows.push(row);
         this.matrixView.addComponent(row);
     }
 
+    this.getObservationView = function(location, col) {
+        for (var i = 0; i < this.rows.length; i++) {
+            if (this.rows[i].observer.locationId == location)
+                return this.rows[i].getObservationView(col);
+        }
+        return undefined;
+    }
+    
     this.buildView = function() {
         this.header = new ObservationHeaderView();
         var text = this.matrix.plant.family;
@@ -846,6 +867,10 @@ function ObservationRowView(observer, observations)
         this.addComponent(this.cells[i]);
         this.cells[i].moveTo(120 + i * 90, 0);
     }
+    
+    this.getObservationView = function(col) {
+        return this.cells[col];
+    }
 
     this.updateObservationView = function(col) {
         this.cells[col].updateObservation();
@@ -903,9 +928,15 @@ function ObservationView(row, observer, observations, col, data)
         // else's row of observations.
         _server.getJSON("login").then(function(e) {
             if (e.error) alert(e.message);
-            else if (observer.accountId != e.id)
-                alert("Il semblerait que cette ligne d'observations appartient à quelqu'un d'autre.");
-            else self._uploadPhoto();
+            else {
+                if (!_account || !_account.id) {
+                    _account = e;
+                    _accountPanel.update();
+                }
+                if (observer.accountId != e.id)
+                    alert("Il semblerait que cette ligne d'observations appartient à quelqu'un d'autre.");
+                else self._uploadPhoto();
+            }
         });
     }
     
@@ -1097,7 +1128,32 @@ function ExperimentController(experiment)
         observation.date = new Date(observation.date);
         this.experiment.insertObservation(observation);
     }
-    
+
+    this.deleteObservation = function(observation) {
+        _server.getJSON("login").then(function(e) {
+            if (e.error) alert(e.message);
+            else {
+                if (!_account || !_account.id) {
+                    _account = e;
+                    _accountPanel.update();
+                }
+                if (observation.accountId != _account.id)
+                    alert("Il semblerait que cette image n'est pas a vous !");
+                else {
+                    _server.deleteJSON("observations/" + observation.id).then(function (r) {
+                        if (r.error) alert(r.message);
+                        else {
+                            r.date = new Date(r.date);
+                            var index = self.experiment.removeObservation(r);
+                            var view = self.view.getObservationView(index.plant, index.location, index.col);
+                            if (view) view.updateObservation();
+                            _curtain.finished();
+                        }
+                    })
+                }
+            }});
+    }
+
     this.handleEvent = function(what, target) {
         if (what == "clicked" && target.action == "createObserver") {
             var matrix = target.matrix;
@@ -1157,6 +1213,17 @@ function ObservationMatrix(plant, cols)
         this.map[observer.locationId] = observations;
     }
 
+    this.removeObservation = function(obs) {
+        var row = this.map[obs.locationId];
+        var cell = row[obs.col];
+        for (var i = 0; i < cell.length; i++) {
+            if (cell[i].id == obs.id) {
+                cell.splice(i, 1);
+                return { "plant": this.plant.id, "location": obs.locationId, "col": obs.col };
+            }
+        }
+    }
+    
     this.addObservation = function(obs) {
         var row = this.map[obs.locationId];
         var cell = row[obs.col];
@@ -1189,6 +1256,16 @@ function Experiment(e, numWeeks)
         }
     }
 
+    this.removeObservation = function(observation) {
+        observation.col = this.getWeekNum(observation.date);
+        for (var i = 0; i < this.matrices.length; i++) {
+            if (this.matrices[i].plant.id == observation.plantId) {
+                return this.matrices[i].removeObservation(observation);
+            }
+        }
+        return null;
+    }
+    
     this.insertObservation = function(observation) {
         observation.col = this.getWeekNum(observation.date);
         for (var i = 0; i < this.matrices.length; i++) {
@@ -1340,10 +1417,19 @@ function Slideshow(observations)
         self.handler(self);
     }
 
+    this.deleteObservation = function() {
+        if (confirm("Vraiment jeter l'image ?")) {
+            _controller.deleteObservation(self.observations[self.curSlide]);
+        }
+    }
+    
     this.createShow = function() {
-        this.addEventImage(_server.root + "/media/close.png", "", "SlideshowClose",
+        this.addEventImage(_server.root + "/media/close.png", "Fermer le slideshow", "SlideshowClose FloatLeft",
                            function() { _curtain.finished(); } );
 
+        this.addEventImage(_server.root + "/media/trash.png", "Jeter à la poubelle", "FloatRight",
+                           function() { self.deleteObservation() } );
+        
         var slideshow = document.createElement("DIV");
         slideshow.className = "Slideshow_Slideshow";
         slideshow.id = "Slideshow_Slideshow";
@@ -1390,6 +1476,31 @@ function Slideshow(observations)
 Slideshow.prototype = new UIComponent();
 
 
+//--------------------------------------------------
+
+function AccountPanel()
+{
+    var self = this;
+
+    function authenticate() {
+        alert("authenticate");
+    }
+
+    this.update = function() {
+        this.removeComponents();
+        if (_account && _account.id) {
+            this.addText("Nom : " + _account.id);
+            //this.addEventLink("Changer", function() { self.authenticate(); }, "");    
+        } else {
+            this.addEventLink("Se connecter", function() { self.authenticate(); }, "");    
+        }
+    }
+    
+    this.init("AccountPanel", "AccountPanel", document.getElementById("AccountPanel"));
+    this.update();
+}
+AccountPanel.prototype = new UIComponent();
+
 
 //--------------------------------------------------
 
@@ -1399,6 +1510,7 @@ var _experiment = undefined;
 var _controller = undefined;
 var _curtain = undefined;
 var _account = undefined;
+var _accountPanel = undefined;
 
 function showObservations(url, id)
 {
@@ -1409,6 +1521,8 @@ function showObservations(url, id)
 
     var start = new Date();
     var prof = { };
+
+    _accountPanel = new AccountPanel();
 
     // First, load all the data and construct the data structure, aka
     // the 'model'.
@@ -1481,6 +1595,16 @@ function showObservations(url, id)
 
         prof.buildView = (new Date().getTime() - start.getTime()) / 1000;
 
+        return _server.getJSON("whoami");
+
+    }).then(function(data) {
+        prof.getWhoami = (new Date().getTime() - start.getTime()) / 1000;
+
+        if (data.id) {
+            _account = data;
+            _accountPanel.update();
+        }
+        
         //alert(JSON.stringify(prof));
     });
 }
