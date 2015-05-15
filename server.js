@@ -117,6 +117,17 @@ function convertDate(s)
     else return new Date(s + " 00:00:00" + tz);
 }
 
+function convertExifDate(d)
+{
+    var Y = parseInt(d.substr(0, 4));
+    var M = parseInt(d.substr(5, 2)) - 1;
+    var D = parseInt(d.substr(8, 2));
+    var h = parseInt(d.substr(11, 2));
+    var m = parseInt(d.substr(14, 2));
+    var s = parseInt(d.substr(17, 2));
+    return new Date(Y, M, D, h, m, s);
+}
+
 function sendJson(res, m)
 {
     logger.debug("send: " + JSON.stringify(m));
@@ -622,7 +633,21 @@ function getObservationExif(res, path, basedir, observation)
             else {
                 logger.debug(JSON.stringify(exifData));
                 if (exifData && exifData.exif && exifData.exif.CreateDate) {
-                    observation.dateCreated = exifData.exif.CreateDate;
+                    var d = convertExifDate(exifData.exif.CreateDate);
+                    observation.dateCreated = d.toISOString();
+                    var d2 = new Date(observation.date);
+                    // If the date of the exif photo capture is less
+                    // than 7 days different then the date of the
+                    // indicated by the participant, use the exif date
+                    // instead.
+                    var diff = (d2.getTime() - d.getTime()) / 24 / 60 / 60 / 1000;
+                    var exp = database.getExperiment(observation.experiment);
+                    var start = new Date(exp.startDate);
+                    var now = new Date();
+                    if (diff < 32
+                        && (d.getTime() < now.getTime())
+                        && (d.getTime() >= start.getTime()))
+                        observation.date = observation.dateCreated;
                     database.updateObservation(observation);
                 }
             }
@@ -667,7 +692,7 @@ function createObservation(req, res)
                   __line, __function);    
         return;
     }
-
+    
     var account = req.user;
 
     var plant = database.getPlant(req.body.plantId);
@@ -726,6 +751,8 @@ function createObservation(req, res)
 	    "location": location.id, 
 	    "experiment": experiment.id, 
 	    "date": req.body.date,
+            "dateUpload": new Date().toISOString(),
+            "dateUser": req.body.date,
 	    "plant": plant.id
 	});
     }
