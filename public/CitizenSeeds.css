@@ -32,6 +32,10 @@ html, body {
       margin: 0px;
 }
 
+.noscroll {
+    overflow: hidden;
+}
+
 a { color: #326296; text-decoration: none; font-weight: normal; }
 a:link { text-decoration: none; font-weight: normal; }
 a:visited { text-decoration: none; font-weight: normal; }
@@ -87,23 +91,20 @@ div.Curtain {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    right: 0;
+    bottom: 0;
     z-index: 100;
+    overflow: scroll;
     background-color: rgba(0, 0, 0, 0.5);
 }
 
 div.UploadPanel {
     width: 300px;
-    border: solid 3px black;
+    border: solid 1px black;
     background-color: white;
     padding: 20px;
     margin: auto;
     margin-top: 40px;
-    -webkit-border-radius: 12px;
-    -khtml-border-radius: 12px;
-    -moz-border-radius: 12px;
-    border-radius: 12px;
 }
 
 textarea.UploadComment {
@@ -447,18 +448,16 @@ a.Redish {
 
 
 
-
 div.Slideshow {
-    width: 640px;
-    margin: auto;
-    margin-top: 20px;
+    position: static;
+    margin: 4px auto;
+    display: table;
     background-color: white;
     border: solid 1px black;
 }
 
 div.PictureBox {
-      margin: 0 auto;
-      position: relative;
+      margin: auto auto;
 }
 
 img.SlideshowClose {
@@ -466,21 +465,15 @@ img.SlideshowClose {
     height: 32px;
 }
 
-img.SlideshowImage {
-    position: absolute;
-    top: 0px;
-    left: 0px;
-}
-
 div.CaptionBox {
       margin: 0 auto;
       text-align: center;
-      height: 64px;
+      height: 24px;
       line-height: 22px;
-      padding: 4px;
-      padding-top: 8px;
-      padding-left: 20px;
-      padding-right: 20px;
+      padding: 2px;
+      padding-top: 2px;
+      padding-left: 10px;
+      padding-right: 10px;
       color: black;
 }
 
@@ -489,6 +482,7 @@ div.ControlBox {
       text-align: center;
       height: 32px;
 }
+
 
 a.Arrow:link {  
     font-size: 20px;

@@ -523,13 +523,18 @@ function Curtain()
     
     this.init("Curtain", "Curtain");
     this.setVisible(false);
-
+    
     this.show = function(dialog) {
+        var body = document.getElementById("Body");
+        body.className = "noscroll";
         this.removeComponents();
         this.addComponent(dialog);
         dialog.addListener(this);
         this.setVisible(true);
-        //setEventHandler(this.div, "click", this.handleClick);
+        setEventHandler(dialog.div, "click", function (e) {
+            if (e.stopPropagation) e.stopPropagation();
+            if (window.event && window.event.cancelBubble) window.event.cancelBubble = true;
+        });
     }
 
     this.handleEvent = function(what, target) {
@@ -545,8 +550,12 @@ function Curtain()
     }
 
     this.finished = function() {
+        var body = document.getElementById("Body");
+        body.className = "";
         this.setVisible(false);
     }
+
+    setEventHandler(this.div, "click", this.handleClick);
 }
 Curtain.prototype = new UIComponent();
 
@@ -957,9 +966,9 @@ function ObservationView(row, observer, observations, col, data)
             this.image = this.addEventImage(src, "", "ObservationView",
                                             function() {
                                                 if (self.observations.length == 1)
-                                                    _curtain.show(new PhotoViewer(self.observations));
+                                                    _curtain.show(new Slideshow(self.observations));
                                                 else
-                                                    _curtain.show(new Slideshow(self.observations, null, 650, 650, null));
+                                                    _curtain.show(new Slideshow(self.observations));
 
                                             });
         } else {
@@ -1216,22 +1225,18 @@ function SlideSelector(slideshow, i)
         }
 }
 
-function Slideshow(observations, captions, width, height, handler)
+function Slideshow(observations)
 {
     var self = this;
     
     this.init("Slideshow", "Slideshow");
     
     this.observations = observations;
-    this.captions = captions;
     this.self = this;
     this.curSlide = 0;
     this.preLoad = [];
     this.slide = null;
     this.slideSelectors = [];
-    this.width = width;
-    this.height = height;
-    this.handler = handler;
 
     this.preloadSlides = function() {
         this.preLoad = [];
@@ -1271,24 +1276,6 @@ function Slideshow(observations, captions, width, height, handler)
     }
 
     this.doTransition = function() {
-        var img = this.preLoad[this.curSlide];
-        var w = img.width;
-        var h = img.height;
-        var tw = this.imageWidth;
-        var th = this.imageHeight;
-        
-        if (w > tw) {
-            h = h * tw / w;
-            w = tw;
-        }
-        if (h > th) {
-            w = w * th / h;
-            h = th;
-        }
-        this.slide.width = w;
-        this.slide.height = h;
-        this.slide.style.top = "" + ((th - h) / 2) + "px";
-        this.slide.style.left = "" + ((tw - w) / 2) + "px";
         this.slide.src = this.preLoad[this.curSlide].src;
         this.displayCaption();
         this.updateSlideNumbers();
@@ -1344,13 +1331,9 @@ function Slideshow(observations, captions, width, height, handler)
             var text = observation.plantFamily + ", ";
             if (observation.plantVariety)
                 text += observation.plantVariety + ", ";
-            text += observation.locationName + "<br>" + observation.accountId + ", " + toDate(observation.date);
+            text += observation.locationName + " - " + observation.accountId + ", " + toDate(observation.date);
             this.caption.innerHTML = text;
         }
-        //if (this.captions) {
-        //    var div = document.getElementById("Slideshow_CaptionBox");
-        //    div.innerHTML = this.captions[this.curSlide];
-        //}
     }
     
     this._onSlideClicked = function(e) {
@@ -1358,8 +1341,6 @@ function Slideshow(observations, captions, width, height, handler)
     }
 
     this.createShow = function() {
-        this.resize(this.width, this.height);
-
         this.addEventImage(_server.root + "/media/close.png", "", "SlideshowClose",
                            function() { _curtain.finished(); } );
 
@@ -1377,20 +1358,14 @@ function Slideshow(observations, captions, width, height, handler)
         img.className = "SlideshowImage";
         this.slide = img;
 
-        //if (this.handler)
-        {
-            var a = document.createElement("A");
-            a.setAttribute("href", "javascript:void(0)");
-            a.onclick = function() { return false; }
-            a.onmousedown = function() { return false; }
-            setEventHandler(a, "click", function() { self.nextSlide(true); });
-
-            a.appendChild(img);
-            pic.appendChild(a);
-        }
-        // else {
-        //    pic.appendChild(img);
-        //}
+        var a = document.createElement("A");
+        a.setAttribute("href", "javascript:void(0)");
+        a.onclick = function() { return false; }
+        a.onmousedown = function() { return false; }
+        setEventHandler(a, "click", function() { self.nextSlide(true); });
+        
+        a.appendChild(img);
+        pic.appendChild(a);
         
         this.caption = document.createElement("DIV");
         this.caption.className = "CaptionBox";
@@ -1398,27 +1373,6 @@ function Slideshow(observations, captions, width, height, handler)
         slideshow.appendChild(this.caption);
         this.displayCaption();
         
-        this.imageWidth = this.width;
-        pic.style.width = this.width + "px";
-
-        //if (this.captions)
-        {
-            this.imageHeight = (this.height
-                                - 32
-                                - 64 - 12
-                                - 32);
-            pic.style.height = (this.height
-                                - 32
-                                - 64 - 12 - 32) + "px";
-        } /*else {
-            this.imageHeight = (this.height
-                                - 32
-                                - 12 - 32);
-            pic.style.height = (this.height
-                                - 32
-                                - 12 - 32) + "px";
-        }*/
-
         if (this.observations.length > 1) {
             this.ctrl = document.createElement("DIV");
             this.ctrl.className = "ControlBox";
@@ -1452,10 +1406,16 @@ function showObservations(url, id)
     document.getElementById("Body").appendChild(_curtain.div);
 
     _server = new Server(url);
-    
+
+    var start = new Date();
+    var prof = { };
+
     // First, load all the data and construct the data structure, aka
     // the 'model'.
     _server.getJSON("experiments/" + id + ".json").then(function(e) {
+
+        prof.loadExperiment = (new Date().getTime() - start.getTime()) / 1000;
+            
         _experiment = new Experiment(e, _numWeeks);
 
         var today = new Date();
@@ -1473,17 +1433,31 @@ function showObservations(url, id)
         }
         _experiment.viewStart = viewStart;
         _experiment.viewEnd = viewEnd;
-        
+
+        prof.handleExperiment = (new Date().getTime() - start.getTime()) / 1000;
+
         return _server.getJSON("observers.json?experiment=" + id);
 
     }).then(function(obs) {
+
+        prof.loadObservers = (new Date().getTime() - start.getTime()) / 1000;
+
         _experiment.setObservers(obs);
+
+        prof.handleObservers = (new Date().getTime() - start.getTime()) / 1000;
+
         return _server.getJSON("observations.json?"
                                + "experiment=" + id
 	                       + "&from=" + toDate(_experiment.viewStart)
 			       + "&to=" + toDate(_experiment.viewEnd));
     }).then(function(obs) {
+
+        prof.loadObservations = (new Date().getTime() - start.getTime()) / 1000;
+
         _experiment.setObservations(obs);
+
+        prof.setObservations = (new Date().getTime() - start.getTime()) / 1000;
+
         // Now create the controller and build the view.
         _controller = new ExperimentController(_experiment);
         _controller.buildView();
@@ -1504,6 +1478,10 @@ function showObservations(url, id)
             date = new Date(date.getFullYear(), date.getMonth(),date.getDate() + 28);
         }
         */
+
+        prof.buildView = (new Date().getTime() - start.getTime()) / 1000;
+
+        //alert(JSON.stringify(prof));
     });
 }
 
