@@ -1129,7 +1129,7 @@ function ExperimentController(experiment)
         this.experiment.insertObservation(observation);
     }
 
-    this.deleteObservation = function(observation) {
+    this.deleteObservation = function(observation, callback) {
         _server.getJSON("login").then(function(e) {
             if (e.error) alert(e.message);
             else {
@@ -1147,7 +1147,7 @@ function ExperimentController(experiment)
                             var index = self.experiment.removeObservation(r);
                             var view = self.view.getObservationView(index.plant, index.location, index.col);
                             if (view) view.updateObservation();
-                            _curtain.finished();
+                            if (callback) callback();
                         }
                     })
                 }
@@ -1417,9 +1417,20 @@ function Slideshow(observations)
         self.handler(self);
     }
 
+    this.update = function() {
+        // FIXME FIXEM
+        if (self.observations.length == 0) {
+            _curtain.finished();
+        } else {
+            self.removeComponents();
+            self.createShow();
+            self.selectSlide(self.curSlide, true);
+        }
+    }
+    
     this.deleteObservation = function() {
         if (confirm("Vraiment jeter l'image ?")) {
-            _controller.deleteObservation(self.observations[self.curSlide]);
+            _controller.deleteObservation(self.observations[self.curSlide], this.update);
         }
     }
     
@@ -1483,17 +1494,18 @@ function AccountPanel()
     var self = this;
 
     function authenticate() {
-        alert("authenticate");
     }
 
     this.update = function() {
         this.removeComponents();
+        /*
         if (_account && _account.id) {
             this.addText("Nom : " + _account.id);
             //this.addEventLink("Changer", function() { self.authenticate(); }, "");    
         } else {
             this.addEventLink("Se connecter", function() { self.authenticate(); }, "");    
         }
+        */
     }
     
     this.init("AccountPanel", "AccountPanel", document.getElementById("AccountPanel"));
