@@ -1112,7 +1112,7 @@ function DataView(observer, data)
     //if (level < 0) level = 0;
     //if (level > 11) level = 11;
     //icon = new DataIcon("Soleil", data.sunlight.avg, level, "SunValue");
-    level = data.sunlight.dli;
+    level = 2 * data.sunlight.dli;
     if (level > 11) level = 11;
     icon = new DataIcon("Soleil", level, "SunValue");
     icon.moveTo(22, 4);
