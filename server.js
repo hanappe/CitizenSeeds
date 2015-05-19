@@ -1404,11 +1404,10 @@ function logout(req, res)
     res.end(JSON.stringify({ "success": true }));
 }
 
-
 function reload(req, res)
 {
     logger.debug("Reloading DB");
-    var key1 = req.params.key;
+    var key1 = req.query.key;
     if (!key1)
         return sendError(res, { "success": false, "message": "Bad request." });
     var key2 = config.reloadKey;
@@ -1416,7 +1415,7 @@ function reload(req, res)
         return sendError(res, { "success": false, "message": "Server configuration error." });
     if (key1 != key2) 
         return sendError(res, { "success": false, "message": "Not authorized." });
-
+    database.reload();
     res.writeHead(200, {"Content-Type": "application/json"});
     res.end(JSON.stringify({ "success": true }));
 }

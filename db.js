@@ -25,48 +25,17 @@
 var fs = require("fs");
 
 var _db = undefined;
-    
-function create()
-{
-    console.log("Initilising the database");
-    try {
-        fs.mkdirSync("db");
-    } catch (e) {
-        console.log("Failed to make dir db");
-    }
-    try {
-        fs.mkdirSync("db/datastreams");    
-    } catch (e) {
-        console.log("Failed to make dir db/datastreams");
-    }
-    
-    _db = {};
-    _db.accounts = [];
-    _db.groups = [];
-    _db.devices = [];
-    _db.datastreams = [];
-    _db.locations = [];
-    _db.experiments = [];
-    _db.observers = [];
-    _db.observations = [];
-    _db.plants = [];
-    _db.plantlocations = [];
-    _db.sensordata = [];
-    
-    save(_db);
-}
 
 function load()
 {        
     var text;
     try {
         text = fs.readFileSync("db.json");
+        _db = JSON.parse(text);        
     } catch (e) {
-        create();
-        return;
+        createMaster(); 
     }
     
-    _db = JSON.parse(text);        
     loadTable("accounts");
     loadTable("groups");
     loadTable("devices");
@@ -82,27 +51,34 @@ function load()
     return _db;
 }
 
+function reload()
+{
+    load();
+}
+
 function init()
 {
     if (_db)
         return _db;
     else load();
 }
-
-function save()
+    
+function createMaster()
 {
-    saveMaster();
-    saveTable("accounts");
-    saveTable("groups");
-    saveTable("devices");
-    saveTable("datastreams");
-    saveTable("locations");
-    saveTable("experiments");
-    saveTable("observers");
-    saveTable("observations");
-    saveTable("plants");
-    saveTable("plantlocations");
-    saveTable("sensordata");
+    console.log("Initilising the database");
+    try {
+        fs.mkdirSync("db");
+    } catch (e) {
+        console.log("Failed to make dir db");
+    }
+    try {
+        fs.mkdirSync("db/datastreams");    
+    } catch (e) {
+        console.log("Failed to make dir db/datastreams");
+    }
+    
+    _db = {};
+    saveMaster(_db);
 }
 
 function saveMaster()
@@ -115,7 +91,6 @@ function saveMaster()
     fs.writeFileSync("db.json", JSON.stringify(_db, undefined, 2));
 }
 
-
 function loadTable(name)
 {
     var path = "db/" + name + ".json";
@@ -124,7 +99,7 @@ function loadTable(name)
     } catch (e) {
         // Not an error if file doesn't exist
 	_db[name] = [];
-	    return;
+	return;
     }
     _db[name] = JSON.parse(text);
 }
@@ -487,6 +462,7 @@ function updateSensorDatum(datum)
 
 module.exports = {
     init: init,
+    reload: reload,
 
     saveTable: saveTable,
 
