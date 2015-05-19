@@ -610,5 +610,5 @@ div.DateBox {
 pre.PerformanceProfile {
     background-color: white;
     color: black;
-    display: hidden;
+    display: none;
 }
