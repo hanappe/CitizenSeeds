@@ -1305,11 +1305,11 @@ function SensorDataViewer(observer, data)
 
             infoDiv = document.createElement("DIV");
             infoDiv.className = "SensorDataInfo";
-            infoDiv.innerHTML = ("Moyenne lumière instantannée (<a href='https://p2pfoodlab.net/wiki/index.php/Mesurer_la_lumi%C3%A8re'>PAR</a>) : "
+            infoDiv.innerHTML = ("Moyenne lumière instantannée (<a href='https://p2pfoodlab.net/wiki/index.php/Mesurer_la_lumi%C3%A8re' target='_blank'>PAR</a>) : "
                                  + this.formatValue(this.data.sunlight.avg)
-                                 + " <a href='https://p2pfoodlab.net/wiki/index.php/Mesurer_la_lumi%C3%A8re'>μmol/m2/s</a><br>" 
+                                 + " <a href='https://p2pfoodlab.net/wiki/index.php/Mesurer_la_lumi%C3%A8re' target='_blank'>μmol/m2/s</a><br>" 
                                  + "Max : " + this.formatValue(this.data.sunlight.max) + " μmol/m2/s " + this.formatDate(this.data.sunlight.maxTime) + "<br>" 
-                                 + "Moyenne lumière accumulée par jour (<a href='https://p2pfoodlab.net/wiki/index.php/Mesurer_la_lumi%C3%A8re'>DLI</a>) : "
+                                 + "Moyenne lumière accumulée par jour (<a href='https://p2pfoodlab.net/wiki/index.php/Mesurer_la_lumi%C3%A8re' target='_blank'>DLI</a>) : "
                                  + this.formatValue(this.data.sunlight.dli, 2) + " mol/m2/j");
             this.div.appendChild(infoDiv);
             
