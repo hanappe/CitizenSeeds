@@ -1405,6 +1405,23 @@ function logout(req, res)
 }
 
 
+function reload(req, res)
+{
+    logger.debug("Reloading DB");
+    var key1 = req.params.key;
+    if (!key1)
+        return sendError(res, { "success": false, "message": "Bad request." });
+    var key2 = config.reloadKey;
+    if (!key2)
+        return sendError(res, { "success": false, "message": "Server configuration error." });
+    if (key1 != key2) 
+        return sendError(res, { "success": false, "message": "Not authorized." });
+
+    res.writeHead(200, {"Content-Type": "application/json"});
+    res.end(JSON.stringify({ "success": true }));
+}
+
+
 /*
  * Authentication
  */
@@ -1482,6 +1499,10 @@ app.get("/login",
         passport.authenticate('basic', { session: true }),
         login);
 app.get("/logout", logout);
+
+app.get("/reload", 
+        passport.authenticate('basic', { session: true }),
+        reload);
 
 app.get("/", sendIndex);
 
