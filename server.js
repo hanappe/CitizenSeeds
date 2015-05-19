@@ -203,6 +203,7 @@ function sendObservers(req, res)
                      "date": obs.date,
                      "locationId": location.id,
                      "locationName": location.name,
+                     "deviceId": location.device,
                      "plantId": plant.id,
                      "plantFamily": plant.family,
                      "plantVariety": plant.variety,
@@ -788,6 +789,18 @@ function createObservation(req, res)
     getObservationExif(res, p, basedir, observation);
 }
 
+
+/*
+ * SensorData
+ */
+
+function sendSensorData(req, res)
+{
+    logger.debug("Request: sendSensorData");
+    res.writeHead(200, {"Content-Type": "application/json"});
+    res.end(JSON.stringify(database.getSensorData()));
+}
+
 /*
  * Datastreams
  */      
@@ -939,29 +952,6 @@ function sendPlants(req, res)
     logger.debug("Request: sendPlants");
     res.writeHead(200, {"Content-Type": "application/json"});
     res.end(JSON.stringify(database.getPlants()));
-}
-
-function sendPlantLocations(req, res)
-{
-    logger.debug("Request: sendPlantLocations");
-    var list = [];
-    var id = req.params.id;
-    var locations = database.getPlantLocations();
-    for (var i = 0; i < locations.length; i++) {
-	if (locations[i].plant == id) {
-	    var location = database.getLocation(locations[i].location);
-	    if (!location) continue; // FIXME
-	    var account = database.getAccount(location.account);
-	    if (!account) continue; // FIXME
-	    list.push({"id": location.id, 
-		       "name": location.name,
-		       "accountId": account.id,
-		       "accountGroup": account.group,
-		       "deviceId": location.device });
-	}
-    }
-    res.writeHead(200, {"Content-Type": "application/json"});
-    res.end(JSON.stringify(list));
 }
 
 
@@ -1472,6 +1462,8 @@ app.delete("/observations/:id(\\d+)",
            passport.authenticate('basic', { session: true }),
            deleteObservation);
 
+app.get("/sensordata.json", sendSensorData);
+
 app.get("/datastreams/:id(\\d+).json", sendDatastream);
 app.get("/datastreams/:id(\\d+)/datapoints.json", sendDatapoints);
 
@@ -1483,7 +1475,6 @@ app.post("/locations",
          createLocation);
 
 app.get("/plants.json", sendPlants);
-app.get("/plants/:id(\\d+)/locations.json", sendPlantLocations);
 app.post("/accounts", captcha.check, createAccount);
 app.get("/accounts/:id", sendAccount);
 app.get("/whoami", sendWhoami);

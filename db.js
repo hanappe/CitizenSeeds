@@ -161,7 +161,8 @@ function getAccounts()
 function getAccount(id)
 {
     for (var i = 0; i < _db.accounts.length; i++) {
-        if (_db.accounts[i].id == id)
+        if (_db.accounts[i].id == id
+            || _db.accounts[i].email == id)
             return _db.accounts[i];
     }
     return undefined;
@@ -254,6 +255,7 @@ function getDevices()
 function insertDevice(device)
 {
     device.id = newId("devices");
+    console.log("Insert device : " + JSON.stringify(device));
     _db.devices.push(device);
     saveTable("devices");
     return device;
@@ -270,19 +272,21 @@ function getDevice(id)
 
 function updateDevice(device)
 {
+    console.log("Update device device=" + JSON.stringify(device));
     var d = getDevice(device.id);
     d.account = device.account;
     d.name = device.name;
     d.datastreams = device.datastreams;
     d.type = device.type;
     if (d.type == "flowerpower") {
-        d.flowerpower = {};
+        if (!d.flowerpower) d.flowerpower = {};
         d.flowerpower.username = device.flowerpower.username;
         d.flowerpower.password = device.flowerpower.password;
         d.flowerpower.serial = device.flowerpower.serial;
         d.flowerpower.location = device.flowerpower.location;
         d.flowerpower.nickname = device.flowerpower.nickname;
     }
+    console.log("Update device d=" + JSON.stringify(device));
     saveTable("devices");
     return account;
 }
@@ -452,9 +456,31 @@ function getPlant(id)
 
 //------------------------------------------
 
-function getPlantLocations()
+function getSensorData()
 {
-    return _db.plantlocations;
+    return _db.sensordata;
+}
+
+function getSensorDatum(id)
+{
+    for (var i = 0; i < _db.sensordata.length; i++) {
+        if (_db.sensordata[i].id == id)
+            return _db.sensordata[i];
+    }
+    return undefined;
+}
+
+function insertSensorDatum(datum)
+{
+    _db.sensordata.push(datum);
+    saveTable("sensordata");
+    return datum;
+}
+
+function updateSensorDatum(datum)
+{
+    saveTable("sensordata");
+    return datum;
 }
 
 //------------------------------------------
@@ -503,5 +529,8 @@ module.exports = {
     getPlants: getPlants,
     getPlant: getPlant,
 
-    getPlantLocations: getPlantLocations
+    getSensorData: getSensorData,
+    getSensorDatum: getSensorDatum,
+    insertSensorDatum: insertSensorDatum,
+    updateSensorDatum: updateSensorDatum
 }
