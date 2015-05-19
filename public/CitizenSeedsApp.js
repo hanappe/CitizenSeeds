@@ -713,10 +713,27 @@ function ExperimentView(experiment)
     var matrices = experiment.matrices;
 
     for (var i = 0; i < matrices.length; i++) {
+        _prof.start("new ObservationMatrixView[" + i + "]");
         var view = new ObservationMatrixView(matrices[i],
                                              experiment.viewStart,
                                              experiment.numWeeks);
+        _prof.stop("new ObservationMatrixView[" + i + "]");
         this.addComponent(view);
+        _prof.mark("add ObservationMatrixView[" + i + "]");
+    }
+
+    this.updateView = function() {
+        for (var i = 0; i < this.components.length; i++) {
+            if (this.components[i].matrix)
+                this.components[i].updateView();
+        }
+    }
+
+    this.updateSensorData = function() {
+        for (var i = 0; i < this.components.length; i++) {
+            if (this.components[i].matrix)
+                this.components[i].updateSensorData();
+        }
     }
 
     this.getMatrixView = function(matrix) {
@@ -755,6 +772,16 @@ function ObservationMatrixView(matrix, viewStart, numWeeks)
         this.matrixView.addComponent(row);
     }
 
+    this.updateView = function() {
+        for (var i = 0; i < this.rows.length; i++)
+            this.rows[i].updateView();
+    }
+
+    this.updateSensorData = function() {
+        for (var i = 0; i < this.rows.length; i++)
+            this.rows[i].updateSensorData();
+    }
+
     this.getObservationView = function(location, col) {
         for (var i = 0; i < this.rows.length; i++) {
             if (this.rows[i].observer.locationId == location)
@@ -765,14 +792,16 @@ function ObservationMatrixView(matrix, viewStart, numWeeks)
     
     this.buildView = function() {
         this.header = new ObservationHeaderView();
+
         var text = this.matrix.plant.family;
         if (this.matrix.plant.variety)
             text += " - " + this.matrix.plant.variety;
         if (this.matrix.plant.note)
             text += "  - " + this.matrix.plant.note;
-        this.header.setText(text);
-            
+        this.header.setText(text);            
         this.addComponent(this.header);
+
+        _prof.mark("new ObservationHeaderView");
 
         this.matrixView = new ObservationTableView();
         this.addComponent(this.matrixView);
@@ -795,8 +824,11 @@ function ObservationMatrixView(matrix, viewStart, numWeeks)
     this.showObservationRows = function() {
         this.clear();
         this.matrixView.addComponent(new ObservationWeekView(viewStart, numWeeks));
+        _prof.mark("new ObservationWeekView");
         for (var i = 0; i < matrix.observers.length; i++) {
+            _prof.start("new ObservationRowView[" + i + "]");
             this.addObservationRow(this.matrix.observers[i], this.matrix.observations[i]);
+            _prof.stop("new ObservationRowView[" + i + "]");
         }
     }
     
@@ -856,25 +888,34 @@ function ObservationRowView(observer, observations)
     this.locationView.moveTo(0, 0);
     this.cells = [];
     
-    for (var i = 0; i < observations.length; i++) {
-        this.cells[i] = new ObservationView(this,
-                                            observer,
-                                            observations[i], i, null); // FIXME: add sensor data
-        //                                       { "temperature": 20,
-        //                                         "humidity": 70,
-        //                                         "sunlight": 10000,
-        //                                         "water": 40 });
-        this.addComponent(this.cells[i]);
-        this.cells[i].moveTo(120 + i * 90, 0);
+    this.buildView = function() {
+        for (var i = 0; i < observations.length; i++) {
+            this.cells[i] = new ObservationView(this, observer, observations[i], i);
+            _prof.mark("new ObservationView[" + i + "]");
+            this.addComponent(this.cells[i]);
+            this.cells[i].moveTo(120 + i * 90, 0);
+        }
     }
     
     this.getObservationView = function(col) {
         return this.cells[col];
     }
+    
+    this.updateView = function() {
+        for (var i = 0; i < this.cells.length; i++)
+            this.cells[i].updateView();
+    }
+    
+    this.updateSensorData = function() {
+        for (var i = 0; i < this.cells.length; i++)
+            this.cells[i].updateSensorData();
+    }
 
     this.updateObservationView = function(col) {
         this.cells[col].updateObservation();
     }
+
+    this.buildView();
 }
 ObservationRowView.prototype = new UIComponent();
 
@@ -901,15 +942,18 @@ function PhotoViewer(observations)
 }
 PhotoViewer.prototype = new UIComponent();
 
-function ObservationView(row, observer, observations, col, data)
+function ObservationView(row, observer, observations, col)
 {
     this.init("ObservationView", "ObservationView Column");
     this.row = row;
     this.col = col;
     this.observer = observer;
     this.observations = observations;
-    this.data = data;
-
+    this.startDate = new Date(_experiment.startDate.getFullYear(),
+                              _experiment.startDate.getMonth(),
+                              _experiment.startDate.getDate() + col * 7,
+                              0, 0, 0);
+    
     var self = this;
     
     this.setProgress = function (value) {
@@ -975,12 +1019,24 @@ function ObservationView(row, observer, observations, col, data)
                                       }));
     }
 
+    this.updateView = function () {
+        this.updateObservation();
+    }
+
+    this.updateSensorData = function () {
+        if (this.observer.deviceId) {
+            var id = "" + this.observer.deviceId + "-" + toDate(this.startDate);
+            this.sensordata = _experiment.sensordata[id];
+            this.updateObservation();
+        }
+    }
+    
     this.updateObservation = function () {
         this.removeComponents();
         this.progress = undefined;
 
-        if (this.data) 
-            this.addComponent(new DataView(this.data));
+        if (this.sensordata) 
+            this.addComponent(new DataView(this.observer, this.sensordata));
         else 
             this.addComponent(new EmptyDataView());
 
@@ -1036,43 +1092,52 @@ function ProgressBar()
 ProgressBar.prototype = new UIComponent();
 
 
-function DataView(data)
+function DataView(observer, data)
 {
     this.init("DataView", "DataView");
-
+    this.observer = observer;
+    
     var icon;
     var level;
-    level = Math.floor(data.temperature / 3);
+    var self = this;
+    
+    level = Math.floor(data.temperature.avg / 3);
     if (level < 0) level = 0;
     if (level > 11) level = 11;
-    icon = new DataIcon("Température", data.temperature, level, "TempValue");
+    icon = new DataIcon("Température", level, "TempValue");
     icon.moveTo(0, 4);
     this.addComponent(icon);
-
-    level = Math.floor(data.humidity / 9);
-    if (level < 0) level = 0;
+    
+    //level = Math.floor(2 * Math.log(data.sunlight.avg) / Math.LN10)
+    //if (level < 0) level = 0;
+    //if (level > 11) level = 11;
+    //icon = new DataIcon("Soleil", data.sunlight.avg, level, "SunValue");
+    level = data.sunlight.dli;
     if (level > 11) level = 11;
-    icon = new DataIcon("Humidité", data.humidity, level, "HumidityValue");
+    icon = new DataIcon("Soleil", level, "SunValue");
     icon.moveTo(22, 4);
     this.addComponent(icon);
 
-    level = Math.floor(2 * Math.log(data.sunlight) / Math.LN10)
-    if (level < 0) level = 0;
-    if (level > 11) level = 11;
-    icon = new DataIcon("Soleil", data.sunlight, level, "SunValue");
+    // From Parrot (https://flowerpowerdev.parrot.com/projects/flower-power-web-service-api/wiki/How_Flower_Power_works)
+    //
+    // The typical soil moisture range is between 8 (very dry) to 45
+    // (saturated). Generally, most plants require watering when the
+    // soil moisture is in the range of 12 to 18. If the soil moisture
+    // stays > 40 for too long, this may be harmful to some plants.
+    level = data.soilhumidity.avg;
+    if (level < 8) level = 0;
+    else if (level > 45) level = 11;
+    else level = 11.0 * (data.soilhumidity.avg - 8.0) / 37.0;
+    icon = new DataIcon("Humidité du sol", level, "SoilValue");
     icon.moveTo(44, 4);
     this.addComponent(icon);
 
-    level = Math.floor(data.water / 9);
-    if (level < 0) level = 0;
-    if (level > 11) level = 11;
-    icon = new DataIcon("Humidité du sol", data.water, level, "SoilValue");
-    icon.moveTo(66, 4);
-    this.addComponent(icon);
+    setEventHandler(this.div, "click", function() {
+        _curtain.show(new SensorDataViewer(observer, data)); });
 }
 DataView.prototype = new UIComponent();
 
-function DataIcon(name, value, level, style)
+function DataIcon(name, level, style)
 {
     this.init("DataIcon", "DataIcon " + style);
     this.valueView = new UIComponent().init("DataValue", "DataValue");
@@ -1110,10 +1175,171 @@ function ObservationOps(parent)
 ObservationOps.prototype = new UIComponent();
 
 
+function SensorDataViewer(observer, data)
+{
+    var self = this;
+    
+    this.init("SensorDataViewer", "SensorDataViewer");
+    this.observer = observer;
+    this.data = data;
+    this.graphs = [ null, null, null ];
+
+    this.dataUrl = function(id) {
+        return "datastreams/" + id + "/datapoints.json?from=" + this.data.from + "&to=" + this.data.to;
+    }
+    
+    this.showTemperature = function() {
+        _server.getJSON(this.dataUrl(data.temperature.datastreamId)).then(function(e) {
+            if (e.error) alert(e.message);
+            else {
+                var data = [];
+                for (var i = 0; i < e.length; i++)
+                    data.push([new Date(e[i].date), e[i].value]);
+                var graph = new Dygraph(self.temperatureDiv,
+                                data, 
+                                { labels: [ "Date", self.data.temperature.datastreamDescription + " (" + self.data.temperature.datastreamUnit + ")" ],
+                                  includeZero: true });
+                self.graphs[0] = graph;
+            }
+        });
+    }
+
+    this.showSoilHumidity = function() {
+        _server.getJSON(this.dataUrl(data.soilhumidity.datastreamId)).then(function(e) {
+            if (e.error) alert(e.message);
+            else {
+                var data = [];
+                for (var i = 0; i < e.length; i++)
+                    data.push([new Date(e[i].date), e[i].value]);
+                var graph = new Dygraph(self.soilhumidityDiv,
+                                data, 
+                                { labels: [ "Date", self.data.soilhumidity.datastreamDescription + " (" + self.data.soilhumidity.datastreamUnit + ")" ],
+                                  includeZero: true });
+                self.graphs[0] = graph;
+            }
+        });
+    }
+
+    this.showSunlight = function() {
+        _server.getJSON(this.dataUrl(data.sunlight.datastreamId)).then(function(e) {
+            if (e.error) alert(e.message);
+            else {
+                var data = [];
+                for (var i = 0; i < e.length; i++)
+                    data.push([new Date(e[i].date), e[i].value]);
+                var graph = new Dygraph(self.sunlightDiv,
+                                data, 
+                                { labels: [ "Date", self.data.sunlight.datastreamDescription + " (" + self.data.sunlight.datastreamUnit + ")" ],
+                                  includeZero: true });
+                self.graphs[0] = graph;
+            }
+        });
+    }
+
+    this.showDate = function(date) {
+        var id = "" + this.observer.deviceId + "-" + date;
+        this.data = _experiment.sensordata[id];
+        this.buildView();
+    }
+
+    this.formatValue = function(value, digits) {
+        if (digits) n = Math.pow(10, digits);
+        else n = 10;
+        return Math.round(value * n) / n;
+    }
+
+    this.formatDate = function(date) {
+        var d = new Date(date);
+        return "le " + pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + " à " + d.getHours() + "h" + pad(d.getMinutes());
+    }
+
+    this.buildView = function() {
+        this.removeComponents();
+        
+        this.addEventImage(_server.root + "/media/close.png", "Fermer les graphiques", "",
+                           function() { _curtain.finished(); } );
+
+        var dates = [{ "iso": "2015-05-02", "short": "02/05" }, // FIXME
+                     { "iso": "2015-05-09", "short": "09/05" },
+                     { "iso": "2015-05-16", "short": "16/05" },
+                     { "iso": "2015-05-23", "short": "23/05" },
+                     { "iso": "2015-05-30", "short": "30/05" },
+                     { "iso": "2015-06-06", "short": "06/06" },
+                     { "iso": "2015-06-13", "short": "13/06" },
+                     { "iso": "2015-06-20", "short": "20/06" },
+                     { "iso": "2015-06-27", "short": "27/06" }
+                    ];
+        
+        var count = 0;
+        this.addText(" Semaine : ");
+        for (var i = 0; i < dates.length; i++) {
+            var id = "" + this.observer.deviceId + "-" + dates[i].iso;
+            if (_experiment.sensordata[id]) {
+                if (count > 0) this.addText(" - ");
+                this.addEventLink(dates[i].short, new function(d) { this.showDate = function() { self.showDate(d); }}(dates[i].iso).showDate);
+                count++;
+            }
+        }
+        if (this.data) {
+            this.temperatureDiv = document.createElement("DIV");
+            this.temperatureDiv.className = "SensorDataGraph";
+            this.div.appendChild(this.temperatureDiv);
+
+            var infoDiv = document.createElement("DIV");
+            infoDiv.className = "SensorDataInfo";
+            infoDiv.innerHTML = ("Température moyenne : " + this.formatValue(this.data.temperature.avg) + "&deg;C<br>" 
+                                 + "Min : " + this.formatValue(this.data.temperature.min) + "&deg;C " + this.formatDate(this.data.temperature.minTime) + " - " 
+                                 + "Max : " + this.formatValue(this.data.temperature.max) + "&deg;C " + this.formatDate(this.data.temperature.maxTime) + "<br>" 
+                                 + "Moyenne en journée : " + this.formatValue(this.data.temperature.avgDay) + "&deg;C - "
+                                 + "la nuit : " + this.formatValue(this.data.temperature.avgNight) + "&deg;C");
+            
+            this.div.appendChild(infoDiv);
+
+            this.soilhumidityDiv = document.createElement("DIV");
+            this.soilhumidityDiv.className = "SensorDataGraph";
+            this.div.appendChild(this.soilhumidityDiv);
+            
+            this.sunlightDiv = document.createElement("DIV");
+            this.sunlightDiv.className = "SensorDataGraph";
+            this.div.appendChild(this.sunlightDiv);
+
+            infoDiv = document.createElement("DIV");
+            infoDiv.className = "SensorDataInfo";
+            infoDiv.innerHTML = ("Moyenne lumière instantannée (<a href='https://p2pfoodlab.net/wiki/index.php/Mesurer_la_lumi%C3%A8re'>PAR</a>) : "
+                                 + this.formatValue(this.data.sunlight.avg)
+                                 + " <a href='https://p2pfoodlab.net/wiki/index.php/Mesurer_la_lumi%C3%A8re'>μmol/m2/s</a><br>" 
+                                 + "Max : " + this.formatValue(this.data.sunlight.max) + " μmol/m2/s " + this.formatDate(this.data.sunlight.maxTime) + "<br>" 
+                                 + "Moyenne lumière accumulée par jour (<a href='https://p2pfoodlab.net/wiki/index.php/Mesurer_la_lumi%C3%A8re'>DLI</a>) : "
+                                 + this.formatValue(this.data.sunlight.dli, 2) + " mol/m2/j");
+            this.div.appendChild(infoDiv);
+            
+            this.showTemperature();
+            this.showSoilHumidity();
+            this.showSunlight();
+
+        } else {
+            var div = document.createElement("DIV");
+            div.className = "SensorDataEmpty";
+            div.innerHTML = "Pas (encore) de données pour la semaine sélectionnée.";
+            this.div.appendChild(div);
+        }
+    }
+
+    this.buildView();
+}
+SensorDataViewer.prototype = new UIComponent();
+
 
 //--------------------------------------------------
 // Controller
 //--------------------------------------------------
+
+
+function pad(num)
+{
+    var norm = Math.abs(Math.floor(num));
+    return (norm < 10 ? "0" : "") + norm;
+}
 
 function ExperimentController(experiment)
 {
@@ -1124,6 +1350,14 @@ function ExperimentController(experiment)
         this.view = new ExperimentView(this.experiment);
     }
 
+    this.updateView = function() {
+        this.view.updateView();
+    }
+
+    this.updateSensorData = function() {
+        this.view.updateSensorData();
+    }
+    
     this.insertObservation = function(observation) {
         observation.date = new Date(observation.date);
         this.experiment.insertObservation(observation);
@@ -1516,7 +1750,38 @@ AccountPanel.prototype = new UIComponent();
 
 //--------------------------------------------------
 
-var _numWeeks = 12;
+function PerformanceProfile()
+{
+    this.startDate = new Date();
+    this.lastDate = new Date();
+    this.list = [];
+    this.stack = [ new Date() ];
+    
+    this.mark = function(label) {
+        var now = new Date();
+        var lastDate = this.stack.pop();
+        this.list.push({ "label": label,
+                         "time": (now.getTime() - this.startDate.getTime()) / 1000,
+                         "duration": (now.getTime() - lastDate.getTime()) / 1000,
+                       });
+        this.stack.push(now);
+    }
+
+    this.start = function(label) {
+        this.stack.push(new Date());
+    }
+
+    this.stop = function(label) {
+        this.stack.pop();
+        this.mark(label);
+    }
+}
+
+var _prof = new PerformanceProfile();
+
+//--------------------------------------------------
+
+var _numWeeks = 8;
 var _server = undefined;
 var _experiment = undefined;
 var _controller = undefined;
@@ -1531,16 +1796,13 @@ function showObservations(url, id)
 
     _server = new Server(url);
 
-    var start = new Date();
-    var prof = { };
-
     _accountPanel = new AccountPanel();
 
     // First, load all the data and construct the data structure, aka
     // the 'model'.
     _server.getJSON("experiments/" + id + ".json").then(function(e) {
 
-        prof.loadExperiment = (new Date().getTime() - start.getTime()) / 1000;
+        _prof.mark("loadExperiment");
             
         _experiment = new Experiment(e, _numWeeks);
 
@@ -1560,17 +1822,24 @@ function showObservations(url, id)
         _experiment.viewStart = viewStart;
         _experiment.viewEnd = viewEnd;
 
-        prof.handleExperiment = (new Date().getTime() - start.getTime()) / 1000;
+        _prof.mark("handleExperiment");
 
         return _server.getJSON("observers.json?experiment=" + id);
 
     }).then(function(obs) {
 
-        prof.loadObservers = (new Date().getTime() - start.getTime()) / 1000;
+        _prof.mark("loadObservers");
 
         _experiment.setObservers(obs);
 
-        prof.handleObservers = (new Date().getTime() - start.getTime()) / 1000;
+        _prof.mark("handleObservers");
+
+        // Now create the controller and build the view.
+        _controller = new ExperimentController(_experiment);
+        _controller.buildView();
+
+        _prof.mark("buildView");
+        
 
         return _server.getJSON("observations.json?"
                                + "experiment=" + id
@@ -1578,15 +1847,15 @@ function showObservations(url, id)
 			       + "&to=" + toDate(_experiment.viewEnd));
     }).then(function(obs) {
 
-        prof.loadObservations = (new Date().getTime() - start.getTime()) / 1000;
+        _prof.mark("loadObservations");
 
         _experiment.setObservations(obs);
 
-        prof.setObservations = (new Date().getTime() - start.getTime()) / 1000;
+        _prof.mark("setObservations");
 
-        // Now create the controller and build the view.
-        _controller = new ExperimentController(_experiment);
-        _controller.buildView();
+        _controller.updateView();
+
+        _prof.mark("updateView");
 
         // List of date selectors
         /*
@@ -1605,19 +1874,42 @@ function showObservations(url, id)
         }
         */
 
-        prof.buildView = (new Date().getTime() - start.getTime()) / 1000;
 
-        return _server.getJSON("whoami");
+        return _server.getJSON("sensordata.json");
 
     }).then(function(data) {
-        prof.getWhoami = (new Date().getTime() - start.getTime()) / 1000;
+        _prof.mark("getSensorData");
+
+        _experiment.sensordata = {};
+        for (var i = 0; i < data.length; i++) {
+            _experiment.sensordata[data[i].id] = data[i];
+        }
+
+        _prof.mark("handleSensorData");
+
+        _controller.updateSensorData();
+
+        _prof.mark("updateSensorData");
+
+        return _server.getJSON("whoami");
+        
+    }).then(function(data) {
+        _prof.mark("getWhoami");
 
         if (data.id) {
             _account = data;
             _accountPanel.update();
         }
-        
-        //alert(JSON.stringify(prof));
+
+        if (true) {
+            var body = document.getElementById("Body");
+            var div = document.createElement("DIV");
+            var pre = document.createElement("PRE");
+            pre.className = "PerformanceProfile";
+            pre.innerHTML = JSON.stringify(_prof.list, null, 4);
+            div.appendChild(pre);
+            body.appendChild(div);
+        }
     });
 }
 

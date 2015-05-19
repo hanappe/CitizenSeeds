@@ -489,6 +489,35 @@ div.ControlBox {
 }
 
 
+
+div.SensorDataViewer {
+    position: static;
+    margin: 4px auto;
+    display: table;
+    background-color: white;
+    border: solid 1px black;
+}
+
+div.SensorDataGraph {
+    width: 450px;
+    height: 120px;
+    border: solid 1px grey;
+    display: block;
+    margin: 10px;
+    margin-bottom: 4px;
+}
+
+div.SensorDataInfo {
+    margin: 10px;
+    margin-top: 0px;
+    margin-bottom: 4px;
+}
+
+div.SensorDataEmpty {
+    margin: 20px;
+    font-size: 150%;
+}
+
 a.Arrow:link {  
     font-size: 20px;
     text-align: center;
@@ -576,4 +605,10 @@ div.DateBox {
       padding-left: 20px;
       padding-right: 20px;
       color: black;
+}
+
+pre.PerformanceProfile {
+    background-color: white;
+    color: black;
+    display: hidden;
 }
