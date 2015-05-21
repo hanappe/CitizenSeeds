@@ -513,6 +513,8 @@ function Selector(selected, text, options, id, style)
 
 Selector.prototype = new UIComponent();
 
+
+
 /*
  * Curtain
  */
@@ -699,6 +701,14 @@ function toDayAndMonth(d)
     var day = d.getDate();
     if (day < 10) day = "0" + day;        
     return "" + day + "/" + m;
+}
+
+
+function formatValue(value, digits)
+{
+    if (digits) n = Math.pow(10, digits);
+    else n = 10;
+    return Math.round(value * n) / n;
 }
 
 //--------------------------------------------------
@@ -1107,6 +1117,11 @@ function DataView(observer, data)
     icon = new DataIcon("Température", level, "TempValue");
     icon.moveTo(0, 4);
     this.addComponent(icon);
+
+    this.div.title = ("Temp. moyen. " + formatValue(data.temperature.avg) + " deg. C\n"
+                      + "Hum. sol: " + formatValue(data.soilhumidity.avg)  + "%\n"
+                      + "Lum. moyen: " + formatValue(data.sunlight.dli) + " mol/m2/j\n"
+                      + "Cliquez pour les graphiques détaillées"); 
     
     //level = Math.floor(2 * Math.log(data.sunlight.avg) / Math.LN10)
     //if (level < 0) level = 0;
@@ -1242,12 +1257,6 @@ function SensorDataViewer(observer, data)
         this.buildView();
     }
 
-    this.formatValue = function(value, digits) {
-        if (digits) n = Math.pow(10, digits);
-        else n = 10;
-        return Math.round(value * n) / n;
-    }
-
     this.formatDate = function(date) {
         var d = new Date(date);
         return "le " + pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + " à " + d.getHours() + "h" + pad(d.getMinutes());
@@ -1287,11 +1296,11 @@ function SensorDataViewer(observer, data)
 
             var infoDiv = document.createElement("DIV");
             infoDiv.className = "SensorDataInfo";
-            infoDiv.innerHTML = ("Température moyenne : " + this.formatValue(this.data.temperature.avg) + "&deg;C<br>" 
-                                 + "Min : " + this.formatValue(this.data.temperature.min) + "&deg;C " + this.formatDate(this.data.temperature.minTime) + " - " 
-                                 + "Max : " + this.formatValue(this.data.temperature.max) + "&deg;C " + this.formatDate(this.data.temperature.maxTime) + "<br>" 
-                                 + "Moyenne en journée : " + this.formatValue(this.data.temperature.avgDay) + "&deg;C - "
-                                 + "la nuit : " + this.formatValue(this.data.temperature.avgNight) + "&deg;C");
+            infoDiv.innerHTML = ("Température moyenne : " + formatValue(this.data.temperature.avg) + "&deg;C<br>" 
+                                 + "Min : " + formatValue(this.data.temperature.min) + "&deg;C " + this.formatDate(this.data.temperature.minTime) + " - " 
+                                 + "Max : " + formatValue(this.data.temperature.max) + "&deg;C " + this.formatDate(this.data.temperature.maxTime) + "<br>" 
+                                 + "Moyenne en journée : " + formatValue(this.data.temperature.avgDay) + "&deg;C - "
+                                 + "la nuit : " + formatValue(this.data.temperature.avgNight) + "&deg;C");
             
             this.div.appendChild(infoDiv);
 
@@ -1306,11 +1315,11 @@ function SensorDataViewer(observer, data)
             infoDiv = document.createElement("DIV");
             infoDiv.className = "SensorDataInfo";
             infoDiv.innerHTML = ("Moyenne lumière instantannée (<a href='https://p2pfoodlab.net/wiki/index.php/Mesurer_la_lumi%C3%A8re' target='_blank'>PAR</a>) : "
-                                 + this.formatValue(this.data.sunlight.avg)
+                                 + formatValue(this.data.sunlight.avg)
                                  + " <a href='https://p2pfoodlab.net/wiki/index.php/Mesurer_la_lumi%C3%A8re' target='_blank'>μmol/m2/s</a><br>" 
-                                 + "Max : " + this.formatValue(this.data.sunlight.max) + " μmol/m2/s " + this.formatDate(this.data.sunlight.maxTime) + "<br>" 
+                                 + "Max : " + formatValue(this.data.sunlight.max) + " μmol/m2/s " + this.formatDate(this.data.sunlight.maxTime) + "<br>" 
                                  + "Moyenne lumière accumulée par jour (<a href='https://p2pfoodlab.net/wiki/index.php/Mesurer_la_lumi%C3%A8re' target='_blank'>DLI</a>) : "
-                                 + this.formatValue(this.data.sunlight.dli, 2) + " mol/m2/j");
+                                 + formatValue(this.data.sunlight.dli, 2) + " mol/m2/j");
             this.div.appendChild(infoDiv);
             
             this.showTemperature();

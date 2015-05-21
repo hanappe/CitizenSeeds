@@ -297,6 +297,8 @@ div.DataView {
 
 div.DataView:hover {
     opacity: 1.0;
+    cursor: pointer;
+    cursor: hand;
 }
 
 div.DataIcon {
