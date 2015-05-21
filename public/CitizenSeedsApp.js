@@ -1118,10 +1118,10 @@ function DataView(observer, data)
     icon.moveTo(0, 4);
     this.addComponent(icon);
 
-    this.div.title = ("Temp. moyen. " + formatValue(data.temperature.avg) + " deg. C\n"
-                      + "Hum. sol: " + formatValue(data.soilhumidity.avg)  + "%\n"
-                      + "Lum. moyen: " + formatValue(data.sunlight.dli) + " mol/m2/j\n"
-                      + "Cliquez pour les graphiques détaillées"); 
+    this.div.title = ("Température moyenne : " + formatValue(data.temperature.avg) + " deg. C\n"
+                      + "Humidité du sol : " + formatValue(data.soilhumidity.avg)  + "%\n"
+                      + "Lumière moyenne : " + formatValue(data.sunlight.dli) + " mol/m2/j\n"
+                      + "Cliquez pour voir les graphiques détaillées"); 
     
     //level = Math.floor(2 * Math.log(data.sunlight.avg) / Math.LN10)
     //if (level < 0) level = 0;
