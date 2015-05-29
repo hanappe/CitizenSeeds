@@ -13,7 +13,7 @@ function initProfilePage(baseUrl, id)
     jq("#viewProfile").click(function(){ viewProfile(); });
     jq("#filechooser").on("change", function(){ uploadImage(this.files[0]); });
 
-   jq('#description').wysiwyg();
+    jq('#description').wysiwyg({initialContent: ""});
 }
 
 function updateLocation(id, field, value)
