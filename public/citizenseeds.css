@@ -1,0 +1,31 @@
+body {
+  font-family: 'Raleway', sans-serif;
+  font-weight: 400;
+  margin-bottom: 50px;
+}
+.navbar-citizenseeds {
+  padding-bottom: 20px;
+}
+
+.experiment-title {
+    font-size: 56px;
+}
+
+.page-header {
+    border: 0px;
+}
+
+.top-margin { margin-top: 20px; }
+
+.profile {
+    margin-top: 20px; 
+    margin-bottom: 20px;
+}
+
+.image-lib-img {
+    padding-bottom: 10px;
+    padding-top: 10px;
+    border-bottom: solid 1px #eee;
+}
+
+.right-margin { margin-right: 10px; }

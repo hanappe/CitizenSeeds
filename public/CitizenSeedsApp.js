@@ -70,7 +70,9 @@ function UIComponent()
         this.id = id;
         this.div = (div)? div : document.createElement("DIV");
         this.div.id = id;
-        this.div.className = style;
+        if (this.div.className)
+            this.div.className += " " + style
+        else this.div.className = style;
         this.style = style;
         this.visible = true;
         this.parent = undefined;
@@ -776,12 +778,6 @@ function ObservationMatrixView(matrix, viewStart, numWeeks)
 
     this.rows = [];
     
-    this.addObservationRow = function (observer, observations) {
-        var row = new ObservationRowView(observer, observations);
-        this.rows.push(row);
-        this.matrixView.addComponent(row);
-    }
-
     this.updateView = function() {
         for (var i = 0; i < this.rows.length; i++)
             this.rows[i].updateView();
@@ -799,7 +795,13 @@ function ObservationMatrixView(matrix, viewStart, numWeeks)
         }
         return undefined;
     }
-    
+
+    this.addObservationRow = function (observer, observations) {
+        var row = new ObservationRowView(observer, observations);
+        this.rows.push(row);
+        this.matrixView.addComponent(row);
+    }
+
     this.buildView = function() {
         this.header = new ObservationHeaderView();
 
@@ -818,6 +820,7 @@ function ObservationMatrixView(matrix, viewStart, numWeeks)
 
         this.showObservationRows();
 
+        // FIXME
         this.button = new Button("createObserver_" + this.matrix.plant.id,
                                  "",
                                  "Rajouter une ligne pour mes photos.",
@@ -826,10 +829,7 @@ function ObservationMatrixView(matrix, viewStart, numWeeks)
         this.button.matrix = this.matrix;
         this.addComponent(this.button);
     }
-        
-    this.clear = function() {
-        this.matrixView.removeComponents();
-    }
+
 
     this.showObservationRows = function() {
         this.clear();
@@ -840,6 +840,10 @@ function ObservationMatrixView(matrix, viewStart, numWeeks)
             this.addObservationRow(this.matrix.observers[i], this.matrix.observations[i]);
             _prof.stop("new ObservationRowView[" + i + "]");
         }
+    }
+    
+    this.clear = function() {
+        this.matrixView.removeComponents();
     }
     
     this.matrix = matrix;
@@ -855,17 +859,17 @@ function ObservationTableView()
 }
 ObservationTableView.prototype = new UIComponent();
 
+
 function ObservationHeaderView()
 {
     this.init("ObservationHeaderView", "ObservationHeaderView");
-
+    
     this.setText = function(s) {
         this.removeComponents();
         this.addText(s);
     }
 }
 ObservationHeaderView.prototype = new UIComponent();
-
 
 function ObservationWeekView(date, numWeeks)
 {
@@ -886,7 +890,6 @@ function ObservationWeekView(date, numWeeks)
     }
 }
 ObservationWeekView.prototype = new UIComponent();
-
 
 function ObservationRowView(observer, observations)
 {
@@ -933,14 +936,15 @@ ObservationRowView.prototype = new UIComponent();
 function ObservationLocationView(observer)
 {
     this.init("ObservationLocationView", "ObservationLocationView Column");
-/*    this.addLink(observer.accountId,
-                 "https://p2pfoodlab.net/community/people/" + observer.accountId + "/notebook",
-                 "ObservationLocationView");*/
-    this.addText(observer.accountId);
+    this.addLink(observer.accountId,
+                 _server.root + "people/" + observer.accountId + ".html",
+                 "ObservationLocationView");
+    //this.addText(observer.accountId);
     this.addBreak();
     this.addText(observer.locationName, "ObservationLocationView");
 }
 ObservationLocationView.prototype = new UIComponent();
+
 
 function PhotoViewer(observations)
 {
@@ -1113,9 +1117,8 @@ function DataView(observer, data)
     
     level = Math.floor(data.temperature.avg / 3);
     if (level < 0) level = 0;
-    if (level > 11) level = 11;
+    if (level > 10) level = 10;
     icon = new DataIcon("Température", level, "TempValue");
-    icon.moveTo(0, 4);
     this.addComponent(icon);
 
     this.div.title = ("Température moyenne : " + formatValue(data.temperature.avg) + " deg. C\n"
@@ -1123,14 +1126,9 @@ function DataView(observer, data)
                       + "Lumière moyenne : " + formatValue(data.sunlight.dli) + " mol/m2/j\n"
                       + "Cliquez pour voir les graphiques détaillées"); 
     
-    //level = Math.floor(2 * Math.log(data.sunlight.avg) / Math.LN10)
-    //if (level < 0) level = 0;
-    //if (level > 11) level = 11;
-    //icon = new DataIcon("Soleil", data.sunlight.avg, level, "SunValue");
     level = 2 * data.sunlight.dli;
-    if (level > 11) level = 11;
+    if (level > 10) level = 10;
     icon = new DataIcon("Soleil", level, "SunValue");
-    icon.moveTo(22, 4);
     this.addComponent(icon);
 
     // From Parrot (https://flowerpowerdev.parrot.com/projects/flower-power-web-service-api/wiki/How_Flower_Power_works)
@@ -1141,10 +1139,9 @@ function DataView(observer, data)
     // stays > 40 for too long, this may be harmful to some plants.
     level = data.soilhumidity.avg;
     if (level < 8) level = 0;
-    else if (level > 45) level = 11;
-    else level = 11.0 * (data.soilhumidity.avg - 8.0) / 37.0;
+    else if (level > 45) level = 10;
+    else level = 10.0 * (data.soilhumidity.avg - 8.0) / 37.0;
     icon = new DataIcon("Humidité du sol", level, "SoilValue");
-    icon.moveTo(44, 4);
     this.addComponent(icon);
 
     setEventHandler(this.div, "click", function() {
@@ -1156,7 +1153,7 @@ function DataIcon(name, level, style)
 {
     this.init("DataIcon", "DataIcon " + style);
     this.valueView = new UIComponent().init("DataValue", "DataValue");
-    this.valueView.moveTo(0, 12 - level);
+    this.valueView.moveTo(0, 10 - level);
     this.valueView.resize(10, level);
     this.addComponent(this.valueView);
 }
@@ -1166,7 +1163,7 @@ DataIcon.prototype = new UIComponent();
 function EmptyDataView()
 {
     this.init("DataView", "DataView");
-    for (var i = 0; i < 4; i++) 
+    for (var i = 0; i < 3; i++) 
         this.addComponent(new EmptyDataIcon());
 }
 EmptyDataView.prototype = new UIComponent();
@@ -2164,10 +2161,13 @@ function NotebookObserverView(notebook, lindex, pindex)
                           "button NotebookObserverView u-full-width");
 
         var observation = this.notebook.observations[lindex][pindex];
-        if (observation) {
+        if (observation) 
             this.addImage(_server.root + "/" + observation.thumbnail,
-                          "" /*obs.date*/, "NotebookObservation");
-        }
+                          "", "NotebookObservation");
+//        else 
+//            this.addEventImage(_server.root + "/media/white.gif",
+//                               "", "NotebookObservation",
+//                               function() { self.takePicture(); } );
     }
 
     this.hideDialog = function() {

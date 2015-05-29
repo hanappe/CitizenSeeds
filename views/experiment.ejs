@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="Peter Hanappe">
+    <link rel="icon" href="<%= config.baseUrl %>/media/favicon.ico">
+
+    <title>P2P Food Lab - CitizenSeeds</title>
+
+    <link href='https://fonts.googleapis.com/css?family=Raleway:700,400' rel='stylesheet' type='text/css'>
+    <link href="<%= config.baseUrl %>/bootstrap.css" rel="stylesheet">
+    <link href="<%= config.baseUrl %>/citizenseeds.css" rel="stylesheet">
+    <link href="<%= config.baseUrl %>/CitizenSeeds.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <script src="<%= config.baseUrl %>/ie-emulation-modes-warning.js"></script>
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+
+  <body id="Body">
+
+    <div class="container-fluid">
+      <div class="page-header">
+        <h1 class="experiment-title"><%= experiment.name %></h1>
+      </div>
+    </div>
+
+    <div class="container-fluid">
+      <a href="<%= config.baseUrl %>/mobile/<%= experiment.id %>.html" class="btn btn-primary">Pour uploader vos photos avec votre téléphone portable ou avec votre tablette, essayez la page pour les mobiles.</a>
+    </div>
+    
+    <div class="container-fluid">
+      <p>Cette page a été testée
+        avec <a href="https://www.mozilla.org/fr/firefox/new/">Firefox</a>, <a href="http://www.chromium.org/Home">Chromium</a>/<a href="https://www.google.com/intl/fr/chrome/browser/desktop/index.html">Chrome</a>,
+        Internet Explorer (version 10 et plus), et Safari (version 8). Si vous rencontrez
+        des problèmes avec votre navigateur, envoyez-nous les détails
+        puis, si possible, utilisez un des navigateurs mentionnés
+        précédemment.</p>
+    </div>
+
+    <div id="ExperimentView" class="container-fluid"></div>
+
+    <!-- Bootstrap core JavaScript -->
+    <script src="<%= config.baseUrl %>/jquery.js"></script>
+    <script src="<%= config.baseUrl %>/bootstrap.js"></script>
+    <script src="<%= config.baseUrl %>/es6-promise-2.0.1.min.js"></script>
+    <script src="<%= config.baseUrl %>/CitizenSeedsApp.js"></script>
+    <script src="<%= config.baseUrl %>/CitizenSeedsServer.js"></script>
+    <script src="<%= config.baseUrl %>/dygraph-combined.js"></script>
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <script src="<%= config.baseUrl %>/ie10-viewport-bug-workaround.js"></script>
+
+    <script>setTimeout(function() { showObservations("<%= config.baseUrl %>", <%= experiment.id %>); }, 1);</script>
+
+  </body>
+</html>

@@ -34,11 +34,15 @@ var XRegExp = require("xregexp").XRegExp;
 var nodemailer = require("nodemailer");
 var passport = require('passport');
 var BasicStrategy = require('passport-http').BasicStrategy;
+var oauth2 = require('./oauth2');
 var gm = require('gm');
 var mkdirp = require('mkdirp');
 var exit = require('exit');
 var log4js = require('log4js');
 var ExifImage = require('exif').ExifImage;
+var ejs = require('ejs');
+var sanitizeHtml = require('sanitize-html');
+var mime = require('mime');
 
 mkdirp("log/", function(err) {
     if (err) {
@@ -392,10 +396,12 @@ function sendExperimentPage(req, res)
                   __line, __function);
 	return;
     }
-    var vars = { "experimentId": experiment.id, 
-	         "experimentName": experiment.prettyname,
-	         "baseUrl": config.baseUrl };    
-    new Template("experiment").generate(res, vars);
+    res.render('experiment', { "config": config, "experiment": experiment });
+    
+    //var vars = { "experimentId": experiment.id, 
+//	         "experimentName": experiment.prettyname,
+//	         "baseUrl": config.baseUrl };    
+  //  new Template("experiment").generate(res, vars);
 }
 
 function sendMobileApp(req, res)
@@ -410,10 +416,123 @@ function sendMobileApp(req, res)
                   __line, __function);
 	return;
     }
-    var vars = { "experimentId": experiment.id, 
-	         "experimentName": experiment.prettyname,
-	         "baseUrl": config.baseUrl };    
-    new Template("mobile").generate(res, vars);
+    res.render('mobile', { "config": config, "experiment": experiment });
+    //new Template("mobile").generate(res, vars);
+}
+
+
+/*
+ * Jpeg images
+ */      
+
+function saveJpegLarge(path, basedir, file,
+                       errCallback, doneCallback)
+{
+    var orig = basedir + "large/" + file.id + ".jpg";
+
+    mkdirp(basedir + "large/", function(err) { 
+	if (err) {
+            logger.error(err);
+	    errCallback(new Error("Failed to create the directories", __function, __line));
+	} else {
+	    gm(path).resize(1200, 800).write(orig, function(err) {
+		if (err)  {
+                    logger.error(err);
+		    errCallback(new Error("Failed to save large image", __function, __line));
+
+		} else {
+                    doneCallback(file);
+                }
+	    });
+        }
+    });
+}
+
+function saveJpegSmall(path, basedir, file,
+                       errCallback, doneCallback)
+{
+    var orig = basedir + "small/" + file.id + ".jpg";
+
+    mkdirp(basedir + "small/", function(err) { 
+	if (err) {
+            logger.error(err);
+	    errCallback(new Error("Failed to create the directories", __function, __line));
+	} else  {
+	    gm(path).resize(640, 480).write(orig, function(err) {
+		if (err)  {
+                    logger.error(err);
+		    errCallback(new Error("Failed to save small image", __function, __line));
+		} else {
+		    saveJpegLarge(path, basedir, file, errCallback, doneCallback);
+                }
+	    });
+        }
+    });
+}
+
+function saveJpegThumbnail(path, basedir, file,
+                           errCallback, doneCallback)
+{
+    var orig = basedir + "thumbnail/" + file.id + ".jpg";
+
+    mkdirp(basedir + "thumbnail/", function(err) { 
+	if (err) {
+            logger.error(err);
+	    errCallback(new Error("Failed to create the directories", __function, __line));
+	} else  {
+	    gm(path).resize(150, 100).write(orig, function(err) {
+		if (err)  {
+                    logger.error(err);
+		    errCallback(new Error("Failed to save thumbnail image", __function, __line));
+		} else {
+		    saveJpegSmall(path, basedir, file, errCallback, doneCallback);
+                }
+	    });
+        }
+    });
+}
+
+function saveJpegOrig(path, basedir, file,
+                      errCallback, doneCallback)
+{
+    var orig = basedir + "orig/" + file.id + ".jpg";
+
+    mkdirp(basedir + "orig/", function(err) { 
+	if (err) {
+            logger.error(err);
+	    errCallback(new Error("Failed to create the directories", __function, __line));
+	} else  {
+	    gm(path).write(orig, function(err) {
+		if (err) {
+                    logger.error(err);
+		    errCallback(new Error("Failed to save original image", __function, __line));
+		} else {
+		    saveJpegThumbnail(path, basedir, file, errCallback, doneCallback);
+                }
+	    });
+        }
+    });
+}
+
+function getJpegExif(path, file, errCallback, doneCallback)
+{
+    try {
+        new ExifImage({ image : path }, function (error, exifData) {
+            if (error)
+                errCallback(error);
+            else {
+                doneCallback(file, exifData);
+            }
+        });
+    } catch (error) {
+        errCallback(error);
+    }
+}
+
+function convertJpeg(path, basedir, file, 
+                     errCallback, doneCallback)
+{
+    saveJpegOrig(path, basedir, file, errCallback, doneCallback);
 }
 
 /*
@@ -552,138 +671,6 @@ function deleteObservation(req, res)
     res.end(JSON.stringify(formatObservation(observation)));    
 }
 
-function saveObservationLarge(res, path, basedir, observation)
-{
-    var orig = basedir + "large/" + observation.id + ".jpg";
-
-    mkdirp(basedir + "large/", function(err) { 
-	if (err) 
-	    sendError(res, { "message": "Failed to create the directories" },
-                          __line, __function);
-	else 
-	    gm(path).resize(1200, 800).write(orig, function(err) {
-		if (err)  {
-                    logger.error(err);
-		    sendError(res, { "message": "Failed to save large" },
-                              __line, __function);
-		} else {
-                    var location = database.getLocation(observation.location);
-                    var plant = database.getPlant(observation.plant);
-                    var copy = { "id": observation.id,
-                                 "date": observation.date,
-                                 "dateCreated": observation.dateCreated,
-                                 "experimentId": observation.experiment,
-                                 "locationId": location.id,
-                                 "locationName": location.name,
-                                 "plantId": plant.id,
-                                 "plantFamily": plant.family,
-                                 "plantVariety": plant.variety,
-                                 "accountId": location.account };
-        
-                    copy.orig = observationPath(observation, "orig");
-                    copy.small = observationPath(observation, "small");
-                    copy.thumbnail = observationPath(observation, "thumbnail");
-		    sendJson(res, copy);
-                }
-	    });
-    });
-}
-
-function saveObservationSmall(res, path, basedir, observation)
-{
-    var orig = basedir + "small/" + observation.id + ".jpg";
-
-    mkdirp(basedir + "small/", function(err) { 
-	if (err) 
-	    sendError(res, { "message": "Failed to create the directories" },
-                      __line, __function);
-	else 
-	    gm(path).resize(640, 480).write(orig, function(err) {
-		if (err)  {
-                    logger.error(err);
-		    sendError(res, { "message": "Failed to save small" },
-                              __line, __function);
-		} else 
-		    saveObservationLarge(res, path, basedir, observation);
-	    });
-    });
-}
-
-function saveObservationThumbnail(res, path, basedir, observation)
-{
-    var orig = basedir + "thumbnail/" + observation.id + ".jpg";
-
-    mkdirp(basedir + "thumbnail/", function(err) { 
-	if (err) 
-	    sendError(res, { "message": "Failed to create the directories" },
-                      __line, __function);
-	else 
-	    gm(path).resize(150, 100).write(orig, function(err) {
-		if (err)  {
-                    logger.error(err);
-		    sendError(res, { "message": "Failed to save thumbnail" },
-                              __line, __function);
-		} else 
-		    saveObservationSmall(res, path, basedir, observation);
-	    });
-    });
-}
-
-function saveObservationOrig(res, path, basedir, observation)
-{
-    var orig = basedir + "orig/" + observation.id + ".jpg";
-
-    mkdirp(basedir + "orig/", function(err) { 
-	if (err) 
-	    sendError(res, { "message": "Failed to create the directories" },
-                      __line, __function);
-	else 
-	    gm(path).write(orig, function(err) {
-		if (err) {
-                    logger.error(err);
-		    sendError(res, { "message": "Failed to save original photo" },
-                              __line, __function);
-		} else 
-		    saveObservationThumbnail(res, path, basedir, observation);
-	    });
-    });
-}
-
-function getObservationExif(res, path, basedir, observation)
-{
-    try {
-        new ExifImage({ image : path }, function (error, exifData) {
-            if (error)
-                logger.error(error);
-            else {
-                logger.debug(JSON.stringify(exifData));
-                if (exifData && exifData.exif && exifData.exif.CreateDate) {
-                    var d = convertExifDate(exifData.exif.CreateDate);
-                    observation.dateCreated = d.toISOString();
-                    var d2 = new Date(observation.date);
-                    // If the date of the exif photo capture is less
-                    // than 7 days different then the date of the
-                    // indicated by the participant, use the exif date
-                    // instead.
-                    var diff = (d2.getTime() - d.getTime()) / 24 / 60 / 60 / 1000;
-                    var exp = database.getExperiment(observation.experiment);
-                    var start = new Date(exp.startDate);
-                    var now = new Date();
-                    if (diff < 32
-                        && (d.getTime() < now.getTime())
-                        && (d.getTime() >= start.getTime()))
-                        observation.date = observation.dateCreated;
-                    database.updateObservation(observation);
-                }
-            }
-            saveObservationOrig(res, path, basedir, observation);
-        });
-    } catch (error) {
-        logger.error(error);
-        saveObservationOrig(res, path, basedir, observation);
-    }
-}
-
 function createObservation(req, res)
 {
     logger.debug(JSON.stringify(req.files));
@@ -784,11 +771,54 @@ function createObservation(req, res)
 
     var p = req.files.photo.path;
     var basedir = "public/observations/" + location.id + "/" + plant.id + "/";
-    
-    //saveObservationOrig(res, p, basedir, observation);
-    getObservationExif(res, p, basedir, observation);
+
+    getJpegExif(p, observation,
+                function(err) {
+                    logger.error(err);
+                    convertJpeg(p, basedir, observation,
+                                function(err) {
+                                    logger.error(err);
+	                            sendError(res, { "message": "Failed to save the image" }, __line, __function);
+                                },
+                                function(r) {
+                                    sendJson(res, formatObservation(observation));
+                                });
+                },
+                function(obs, exifData) {
+                    fixObservationDate(observation, exifData);
+                    convertJpeg(p, basedir, observation,
+                                function(err) {
+                                    logger.error(err);
+	                            sendError(res, { "message": "Failed to save the image" }, __line, __function);
+                                },
+                                function(r) {
+                                    sendJson(res, formatObservation(observation));
+                                });
+                });
 }
 
+function fixObservationDate(observation, exifData)
+{
+    logger.debug(JSON.stringify(exifData));
+    if (exifData && exifData.exif && exifData.exif.CreateDate) {
+        var d = convertExifDate(exifData.exif.CreateDate);
+        observation.dateCreated = d.toISOString();
+        var d2 = new Date(observation.date);
+        // If the date of the exif photo capture is less
+        // than 7 days different then the date of the
+        // indicated by the participant, use the exif date
+        // instead.
+        var diff = (d2.getTime() - d.getTime()) / 24 / 60 / 60 / 1000;
+        var exp = database.getExperiment(observation.experiment);
+        var start = new Date(exp.startDate);
+        var now = new Date();
+        if (diff < 32
+            && (d.getTime() < now.getTime())
+            && (d.getTime() >= start.getTime()))
+            observation.date = observation.dateCreated;
+        database.updateObservation(observation);
+    }
+}
 
 /*
  * SensorData
@@ -942,6 +972,60 @@ function createLocation(req, res)
     sendJson(res, location);
 }
 
+function updateLocation(req, res)
+{
+    logger.debug("updateProfile ", JSON.stringify(req.body));
+
+    var id = req.params.id;
+    var location = database.getLocation(id);
+    var account = req.user;
+    var field = req.body.field;
+    var value = req.body.value;
+    
+    if (!account) {
+	sendError(res, { "success": false, 
+			 "message": "Login failed" },
+                  __line, __function);
+	return;
+    }    
+    if (!location) {
+	sendError(res, { "success": false, 
+			 "message": "Bad location ID" },
+                  __line, __function);
+	return;
+    }    
+    if (location.account != account.id) {
+	sendError(res, { "success": false, 
+			 "message": "Unauthorized" },
+                  __line, __function);
+	return;
+    }        
+    if (!field) {
+	sendError(res, { "success": false, 
+			 "message": "No field" },
+                  __line, __function);    
+        return;
+    }
+
+    if (field == "name") {
+        if (!validLocationName(value)) {
+	    sendError(res, { "success": false, 
+			     "message": "Invalid name (we think...)" },
+                      __line, __function);    
+            return;
+        }
+        location.name = value;
+
+    } else {
+        sendError(res, { "success": false, 
+		         "message": "Unknown field: " + field },
+                  __line, __function);
+        return;
+    }
+    
+    database.updateLocation(location);
+    sendJson(res, { "success": true });
+}
 
 /*
  * Plants
@@ -1095,6 +1179,11 @@ function validDate(s)
     if (!s || !s.match(dateReg))
         return false;
     return true;
+}
+
+function validURL(s)
+{
+    return true; /// FIXME!
 }
 
 function createAccount(req, res)
@@ -1307,7 +1396,7 @@ function createAccount(req, res)
 
     logger.debug("createAccount @ 19");
 
-    var url = "https://p2pfoodlab.net/n/accounts/" + id + "?op=validate&token=" + account.emailValidationToken;
+    var url = "https://p2pfoodlab.net/CitizenSeeds/accounts/" + id + ".html?op=validate&token=" + account.emailValidationToken;
     
     sendMail(email,
              "[P2P Food Lab] Bienvenu !",
@@ -1350,7 +1439,127 @@ function validateAccount(req, res)
     return "La validation de votre adresse email a échouée.";
 }
 
-function sendAccount(req, res)
+function sendHomepage(req, res)
+{
+    var id = req.params.id;
+    var account = database.getAccount(id);
+    if (!account) {
+        sendError(res, { "success": false, "message": "Bad ID: " + req.params.id });
+        return;
+    }
+    var profile = database.getProfile(id);
+    if (!profile) profile = {};
+    res.render('homepage', { "config": config, "account": account, "profile": profile });
+}
+
+function sendProfile(req, res)
+{
+    var id = req.params.id;
+    var account = req.user;
+    if (!account) {
+	sendError(res, { "success": false, 
+			 "message": "Login failed" },
+                  __line, __function);
+	return;
+    }    
+    if (id != account.id) {
+	sendError(res, { "success": false, 
+			 "message": "Unauthorized" },
+                  __line, __function);
+	return;
+    }    
+    var profile = database.getProfile(id);
+    if (!profile) profile = {};
+    var locations = database.selectLocations({ "account": id });
+    var files = database.selectFiles({ "account": id });
+
+    res.render('profile', { "config": config,
+                            "account": account,
+                            "profile": profile,
+                            "locations": locations,
+                            "files": files
+                          });
+}
+
+function updateProfile(req, res)
+{
+    logger.debug("updateProfile ", JSON.stringify(req.body));
+
+    var id = req.params.id;
+    var account = req.user;
+    var field = req.body.field;
+    var value = req.body.value;
+    
+    if (!account) {
+	sendError(res, { "success": false, 
+			 "message": "Login failed" },
+                  __line, __function);
+	return;
+    }    
+    if (id != account.id) {
+	sendError(res, { "success": false, 
+			 "message": "Unauthorized" },
+                  __line, __function);
+	return;
+    }        
+    if (!field) {
+	sendError(res, { "success": false, 
+			 "message": "No field" },
+                  __line, __function);    
+        return;
+    }
+
+    var insert = false;
+    var profile = database.getProfile(id);
+    if (!profile) {
+        profile = database.insertProfile({ "id": id });
+    }
+
+    if (field == "city") {
+        if (value && !validTown(value)) {
+	    sendError(res, { "success": false, 
+			     "message": "Invalid city name (we think...)" },
+                      __line, __function);    
+            return;
+        }
+        profile.city = value;
+
+    } else if (field == "country") {
+        if (value && !validCountry(value)) {
+	    sendError(res, { "success": false, 
+			     "message": "Invalid country name (we think...)" },
+                      __line, __function);    
+            return;
+        }
+        profile.country = value;
+
+    } else if (field == "description") {
+        if (value)
+            profile.description = sanitizeHtml(value, {
+                allowedTags: sanitizeHtml.defaults.allowedTags.concat([ 'img' ]) });
+        else profile.description = "";
+        
+    } else if (field == "url") {
+        if (value && !validURL(value)) {
+	    sendError(res, { "success": false, 
+			     "message": "Invalid HTML code for description." },
+                      __line, __function);    
+            return;
+        }
+        profile.url = value;
+
+    } else {
+        sendError(res, { "success": false, 
+		         "message": "Unknown field: " + field },
+                  __line, __function);
+        return;
+    }
+    
+    database.updateProfile(profile);
+    sendJson(res, { "success": true });
+}
+
+function sendAccountInfo(req, res)
 {
     logger.debug(JSON.stringify(req.session));
 
@@ -1440,6 +1649,79 @@ passport.deserializeUser(function(id, done) {
     done(null, account);
 });
 
+
+/*
+ * Files
+ */
+
+function createFile(req, res)
+{
+    logger.debug(JSON.stringify(req.files));
+    logger.debug(JSON.stringify(req.body));
+    logger.debug("Account ", JSON.stringify(req.user));
+
+    if (!req.files.bits) {
+	sendError(res, { "success": false, 
+			 "message": "No data" },
+                  __line, __function);
+	return;
+    }
+
+    if (mime.lookup(req.files.bits.path) != "image/jpeg") {
+	sendError(res, { "success": false, 
+			 "message": "Only JPG images are supported for now. Sorry." },
+                  __line, __function);
+	return;
+    }
+    
+    var account = req.user;
+    var date = new Date().toISOString();
+
+    var file = database.insertFile({ 
+	"account": account.id, 
+	"type": "image", 
+	"mime": "image/jpeg", 
+        "date": date,
+        "dateUpload": date
+    });
+
+    var p = req.files.bits.path;
+    var basedir = "public/files/" + account.id + "/";
+
+    convertJpeg(p, basedir, file,
+                function(err) {
+                    logger.error(err);
+	            sendError(res, { "message": "Failed to save the image" }, __line, __function);
+                },
+                function(r) {
+                    file.orig = "files/" + account.id + "/orig/" + file.id + ".jpg";
+                    file.small = "files/" + account.id + "/small/" + file.id + ".jpg";
+                    file.thumbnail = "files/" + account.id + "/thumbnail/" + file.id + ".jpg";
+                    database.updateFile(file);
+                    sendJson(res, file);
+                });
+}
+
+function deleteFile(req, res)
+{
+    var id = req.params.id;
+    var account = req.user;
+
+    logger.debug("deleteFile: " + id);
+    
+    var file = database.getFile(id);
+    if (!file) {
+	sendError(res, { "message": "Bad ID" }, __line, __function);
+        return;
+    }
+    if (file.account != account.id) {
+	sendError(res, { "message": "Unauthorized" }, __line, __function);
+        return;
+    }
+    database.deleteFile(file);
+    sendJson(res, { "success": true });    
+}
+
 /*
  * App
  */
@@ -1489,10 +1771,20 @@ app.get("/locations.json", sendLocations);
 app.post("/locations",
          passport.authenticate('basic', { session: true }),
          createLocation);
+app.post("/locations/:id",
+         passport.authenticate('basic', { session: true }),
+         updateLocation);
 
 app.get("/plants.json", sendPlants);
 app.post("/accounts", captcha.check, createAccount);
-app.get("/accounts/:id", sendAccount);
+app.get("/accounts/:id.json", sendAccountInfo);
+app.get("/people/:id.html", sendHomepage);
+app.get("/people/:id/profile.html",
+        passport.authenticate('basic', { session: true }),
+        sendProfile);
+app.post("/people/:id/profile",
+         passport.authenticate('basic', { session: true }),
+         updateProfile);
 app.get("/whoami", sendWhoami);
 app.get("/login",
         passport.authenticate('basic', { session: true }),
@@ -1503,9 +1795,17 @@ app.get("/reload",
         passport.authenticate('basic', { session: true }),
         reload);
 
+app.post("/files",
+         passport.authenticate('basic', { session: true }),
+         createFile);
+app.delete("/files/:id(\\d+)",
+           passport.authenticate('basic', { session: true }),
+           deleteFile);
+
 app.get("/", sendIndex);
 
 app.use(express.static("public"));
+app.set('view engine', 'ejs');
 
 
 var config = { "port": 10201 };

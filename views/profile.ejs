@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="Peter Hanappe">
+    <link rel="icon" href="<%= config.baseUrl %>/media/favicon.ico">
+
+    <title>P2P Food Lab - CitizenSeeds - Profile</title>
+
+    <link href='https://fonts.googleapis.com/css?family=Raleway:700,400' rel='stylesheet' type='text/css'>
+    <link href="<%= config.baseUrl %>/bootstrap.css" rel="stylesheet">
+    <link href="<%= config.baseUrl %>/citizenseeds.css" rel="stylesheet">
+    <link href="<%= config.baseUrl %>/jwysiwyg/jquery.wysiwyg.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <script src="<%= config.baseUrl %>/ie-emulation-modes-warning.js"></script>
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+    <nav class="navbar navbar-default navbar-citizenseeds">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="https://p2pfoodlab.net">
+            <img alt="P2P Food Lab" src="<%= config.baseUrl %>/media/logo-small-blue.png" width="130px">
+          </a>
+        </div>
+      
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+          <ul class="nav navbar-nav">
+            <li><a href="<%= config.baseUrl %>/experiments/4.html">CitizenSeeds</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <div class="page-header">
+        <h1><%= account.id %></h1>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row row-margin">
+        <div class="col-lg-6">
+          <h2>Où suis-je ?  //  Where am I?</h2>
+          <form id="profileCity" method="">
+
+            <div class="input-group top-margin">
+              <span class="input-group-addon" id="sizing-addon1">Ma ville</span>
+              <input type="text" class="form-control" placeholder="..." id="city" value="<%= profile.city %>">
+              <span class="input-group-btn">
+                <button class="btn btn-default" type="button" id="updateCity">Changer</button>
+              </span>
+            </div><!-- /input-group -->
+
+            <div class="input-group top-margin">
+              <span class="input-group-addon" id="sizing-addon1">Pays</span>
+              <input type="text" class="form-control" placeholder="..." id="country" value="<%= profile.country %>">
+              <span class="input-group-btn">
+                <button class="btn btn-default" type="button" id="updateCountry">Changer</button>
+              </span>
+            </div><!-- /input-group -->
+
+          </form>
+        </div><!-- /.col-lg-6 -->
+      </div><!-- /.row -->
+
+      <div class="row top-margin">
+        <div class="col-lg-6">
+          <h2>Qui suis-je ?  //  Who am I?</h2>
+          <p>Fournissez plus d'info sur vous-même, sur votre parcelle,
+          sur pourquoi vous participez, votre site web perso... avec
+          l'éditeur ci-dessous. Ces informations seront affichées dans
+          votre page <a href="<%= config.baseUrl
+          %>/people/<%= account.id %>.html"><i>Profile</i></a>.</p>
+
+          <p>En dessous de l'éditeur vous pouvez uploader des images. Après le téléchargement, une
+          vignette de l'image sera affichée
+          ensemble avec des boutons cliquables. Ces boutons permettent
+          d'insérer l'image directement dans le texte.</p>
+
+          <p>N'oubliez pas de sauvegarder vos modifications avec le
+            bouton ... "Sauvegarder" !</p> <!-- ' -->
+
+          <hr>
+    
+          <p>Provide more information about yourself, about yout plot,
+            about why you participate, your personal web page
+            ... using the editor below. The information will be shown
+            in your <a href="<%= config.baseUrl
+            %>/people/<%= account.id %>.html"><i>Profile</i></a>
+            page.</p>
+
+          <p>Below the editor you can also upload images. After the
+          upload, a thumbnail will appear together with a set of
+          buttons that allow you to insert the image directly in the
+          text.</p>
+
+          <p>Don't forget the save your changes using the
+          "Sauvegarder" button!</p> <!-- ' -->
+        </div><!-- /.col-lg-6 -->
+      </div><!-- /.row -->
+
+      <div class="row top-margin">
+        <div class="col-lg-6">
+          <textarea id="description" style="width: 100%; height: 400px;"><%- profile.description %></textarea>
+
+          <button class="btn btn-primary" type="button" id="updateDescription">Sauvegarder</button>
+          <button class="btn btn-default" type="button" id="viewProfile">Voir</button>
+        </div><!-- /.col-lg-6 -->
+      </div><!-- /.row -->
+
+      <div class="row top-margin">
+        <div class="col-lg-6">
+          <div id="image-lib">
+          <p>Images :</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="row top-margin">
+        <div class="col-lg-6">
+          <p>Uploader une image (JPEG) :</p>
+          <form>
+            <input name="bits" type="file" id="filechooser" />
+          </form>
+        </div><!-- /.col-lg-6 -->
+      </div><!-- /.row -->
+      
+    </div>
+    
+    <div class="container">
+      <div class="row top-margin">
+        <div class="col-lg-6">
+          <h2>Mes parcelles</h2>
+          <form id="locationName">
+<% for (var i = 0; i < locations.length; i++) { %>      
+            <div class="input-group top-margin">
+              <span class="input-group-addon" id="sizing-addon1">Nom</span>
+              <input type="text" class="form-control" placeholder="..." id="name_<%= locations[i].id %>" value="<%= locations[i].name %>">
+              <span class="input-group-btn">
+                <button class="btn btn-default" type="button" id="updateLocationName_<%= locations[i].id %>">Changer</button>
+              </span>
+            </div><!-- /input-group -->
+<% } %>
+          </form>
+        </div><!-- /.col-lg-6 -->
+      </div><!-- /.row -->
+    </div><!-- /.row -->
+      
+
+    <!-- Bootstrap core JavaScript -->
+    <script src="<%= config.baseUrl %>/jquery.js"></script>
+    <script src="<%= config.baseUrl %>/bootstrap.js"></script>
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <script src="<%= config.baseUrl %>/ie10-viewport-bug-workaround.js"></script>
+    <script src="<%= config.baseUrl %>/jwysiwyg/jquery.wysiwyg.js" type="text/javascript"></script>
+    <script src="<%= config.baseUrl %>/jwysiwyg/controls/wysiwyg.image.js" type="text/javascript"></script>
+    <script src="<%= config.baseUrl %>/jwysiwyg/controls/wysiwyg.link.js" type="text/javascript"></script>
+    <script src="<%= config.baseUrl %>/profile.js" type="text/javascript"></script>
+    
+    <script>
+var jq = $.noConflict();
+jq(document).ready(function(){
+    initProfilePage("<%= config.baseUrl %>", "<%= account.id %>");
+
+<% for (var i = 0; i < locations.length; i++) { %>      
+    jq("#updateLocationName_<%= locations[i].id %>").click(function(){ updateLocation(<%= locations[i].id %>, "name", jq("#name_<%= locations[i].id %>").val()); });
+<% } %>
+
+<% for (var i = 0; i < files.length; i++) { %>
+    insertImageLib({ "id": <%= files[i].id %>, "thumbnail": "<%= files[i].thumbnail %>", "small": "<%= files[i].small %>", "orig": "<%= files[i].orig %>" });
+<% } %>
+});
+    </script>
+  </body>
+</html>

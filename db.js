@@ -47,6 +47,8 @@ function load()
     loadTable("plants");
     loadTable("plantlocations");
     loadTable("sensordata");
+    loadTable("profiles");
+    loadTable("files");
     
     return _db;
 }
@@ -410,7 +412,7 @@ function updateLocation(location)
     d.name = location.name;
     d.device = location.device;
     saveTable("locations");
-    return account;
+    return location;
 }
 
 //------------------------------------------
@@ -456,6 +458,82 @@ function updateSensorDatum(datum)
 {
     saveTable("sensordata");
     return datum;
+}
+
+//------------------------------------------
+
+function getProfile(id)
+{
+    for (var i = 0; i < _db.profiles.length; i++) {
+        if (_db.profiles[i].id == id)
+            return _db.profiles[i];
+    }
+    return undefined;
+}
+
+function updateProfile(profile)
+{
+    saveTable("profiles");
+    return profile;
+}
+
+function insertProfile(profile)
+{
+    if (!profile.id) return;
+    _db.profiles.push(profile);
+    saveTable("profiles");
+    return profile;
+}
+
+//------------------------------------------
+
+function getFile(id)
+{
+    for (var i = 0; i < _db.files.length; i++) {
+        if (_db.files[i].id == id)
+            return _db.files[i];
+    }
+    return undefined;
+}
+
+function selectFiles(filter)
+{
+    var files = [];
+    for (var i = 0; i < _db.files.length; i++) {
+        if (_db.files[i].deleted) // FIXME
+            continue;
+        if (filter.account &&
+            filter.account != _db.files[i].account)
+            continue;
+        if (filter.type &&
+            filter.type != _db.files[i].type)
+            continue;
+        if (filter.mime &&
+            filter.mime != _db.files[i].mime)
+            continue;
+        files.push(_db.files[i]);
+    }
+    return files;
+}
+
+function insertFile(file)
+{
+    file.id = newId("files"), 
+    _db.files.push(file);
+    saveTable("files");
+    return file;
+}
+
+function updateFile(file)
+{
+    saveTable("files"); // FIXME
+    return file;
+}
+
+function deleteFile(file)
+{
+    file.deleted = true; // FIXME
+    saveTable("files"); // FIXME
 }
 
 //------------------------------------------
@@ -508,5 +586,15 @@ module.exports = {
     getSensorData: getSensorData,
     getSensorDatum: getSensorDatum,
     insertSensorDatum: insertSensorDatum,
-    updateSensorDatum: updateSensorDatum
+    updateSensorDatum: updateSensorDatum,
+
+    getProfile: getProfile,
+    insertProfile: insertProfile,
+    updateProfile: updateProfile,
+
+    getFile: getFile,
+    selectFiles: selectFiles,
+    insertFile: insertFile,
+    updateFile: updateFile,
+    deleteFile: deleteFile
 }

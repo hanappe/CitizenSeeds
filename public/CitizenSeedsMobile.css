@@ -143,6 +143,12 @@ button.CancelPlantSelector:focus {
   border-color: black;
 }
 
+img.NotebookObservation {
+    width: 150px;
+    height: 100px;
+    border: solid 1px black;
+}
+
 div.UploadPanel {
     width: 300px;
     padding: 10px;

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="Peter Hanappe">
+    <link rel="icon" href="<%= config.baseUrl %>/media/favicon.ico">
+
+    <title>P2P Food Lab - CitizenSeeds - Account</title>
+
+    <link href='https://fonts.googleapis.com/css?family=Raleway:700,400' rel='stylesheet' type='text/css'>
+    <link href="<%= config.baseUrl %>/bootstrap.css" rel="stylesheet">
+    <link href="<%= config.baseUrl %>/citizenseeds.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <script src="<%= config.baseUrl %>/ie-emulation-modes-warning.js"></script>
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+    <nav class="navbar navbar-default navbar-citizenseeds">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="https://p2pfoodlab.net">
+            <img alt="P2P Food Lab" src="<%= config.baseUrl %>/media/logo-small-blue.png" width="130px">
+          </a>
+        </div>
+      
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+          <ul class="nav navbar-nav">
+            <li><a href="<%= config.baseUrl %>/experiments/4.html">CitizenSeeds</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class='container'>
+      <div class="span12">
+	<section id="header">
+	  <div class="page-header">
+	    <h1>Chez <%= account.id %></h1>
+            <% if (profile.city || profile.country) { %>
+            <p><% if (profile.city) { %> <%= profile.city %><% } %><% if (profile.city && profile.country) { %>, <% } %><% if (profile.country) { %><%= profile.country %><% } %></p>
+            <% } %>
+            <% if (profile.url) { %>
+            <p><a href="<%= profile.url %>">Page perso</a></p>
+            <% } %>
+	  </div>
+        </section>
+      </div>
+
+      <div class="span12">
+        <ul class="nav nav-tabs">
+          <li class="active"><a href="#profile" data-toggle="tab">Profile</a></li>
+          <!-- li><a href="#tab2" data-toggle="tab">Second</a></li -->
+        </ul>
+        
+        <div class="tab-content">
+          
+          <div class="tab-pane active" id="profile">
+	    <section id="nav">
+              <div class="profile">
+                <%- profile.description %>
+              </div>
+              <p><a href="<%= config.baseUrl %>/people/<%= account.id %>/profile.html" class="btn btn-default">Modifier mon profile</a></p>
+	    </section>
+          </div>
+          
+          <!-- div class="tab-pane" id="tab2">
+               <div id="location_xxx"></div>
+              </div -->
+        </div>	
+      </div>
+    </div>
+
+    
+    <!-- Bootstrap core JavaScript -->
+    <script src="<%= config.baseUrl %>/jquery.js"></script>
+    <script src="<%= config.baseUrl %>/bootstrap.js"></script>
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <script src="<%= config.baseUrl %>/ie10-viewport-bug-workaround.js"></script>
+    
+    <script>
+    </script>
+      
+  </body>
+</html>
