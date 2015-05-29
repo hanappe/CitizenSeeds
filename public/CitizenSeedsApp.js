@@ -939,9 +939,13 @@ function ObservationLocationView(observer)
     this.addLink(observer.accountId,
                  _server.root + "people/" + observer.accountId + ".html",
                  "ObservationLocationView");
-    //this.addText(observer.accountId);
     this.addBreak();
-    this.addText(observer.locationName, "ObservationLocationView");
+    var text = observer.locationName;
+    if (observer.locationCity)
+        text += ", " + observer.locationCity;
+    if (observer.locationCountry)
+        text += ", " + observer.locationCountry;
+    this.addText(text, "ObservationLocationData");
 }
 ObservationLocationView.prototype = new UIComponent();
 

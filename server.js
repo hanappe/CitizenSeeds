@@ -207,6 +207,8 @@ function sendObservers(req, res)
                      "date": obs.date,
                      "locationId": location.id,
                      "locationName": location.name,
+                     "locationCity": location.city,
+                     "locationCountry": location.country,
                      "deviceId": location.device,
                      "plantId": plant.id,
                      "plantFamily": plant.family,
@@ -1016,6 +1018,24 @@ function updateLocation(req, res)
         }
         location.name = value;
 
+    } else if (field == "city") {
+        if (!validTown(value)) {
+	    sendError(res, { "success": false, 
+			     "message": "Invalid name for a city (we think...)" },
+                      __line, __function);    
+            return;
+        }
+        location.city = value;
+
+    } else if (field == "country") {
+        if (!validCountry(value)) {
+	    sendError(res, { "success": false, 
+			     "message": "Invalid name for a country (we think...)" },
+                      __line, __function);    
+            return;
+        }
+        location.country = value;
+
     } else {
         sendError(res, { "success": false, 
 		         "message": "Unknown field: " + field },
@@ -1515,39 +1535,12 @@ function updateProfile(req, res)
         profile = database.insertProfile({ "id": id });
     }
 
-    if (field == "city") {
-        if (value && !validTown(value)) {
-	    sendError(res, { "success": false, 
-			     "message": "Invalid city name (we think...)" },
-                      __line, __function);    
-            return;
-        }
-        profile.city = value;
-
-    } else if (field == "country") {
-        if (value && !validCountry(value)) {
-	    sendError(res, { "success": false, 
-			     "message": "Invalid country name (we think...)" },
-                      __line, __function);    
-            return;
-        }
-        profile.country = value;
-
-    } else if (field == "description") {
+    if (field == "description") {
         if (value)
             profile.description = sanitizeHtml(value, {
                 allowedTags: sanitizeHtml.defaults.allowedTags.concat([ 'img' ]) });
         else profile.description = "";
         
-    } else if (field == "url") {
-        if (value && !validURL(value)) {
-	    sendError(res, { "success": false, 
-			     "message": "Invalid HTML code for description." },
-                      __line, __function);    
-            return;
-        }
-        profile.url = value;
-
     } else {
         sendError(res, { "success": false, 
 		         "message": "Unknown field: " + field },

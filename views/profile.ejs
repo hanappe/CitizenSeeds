@@ -57,31 +57,6 @@
     </div>
 
     <div class="container">
-      <div class="row row-margin">
-        <div class="col-lg-6">
-          <h2>Où suis-je ?  //  Where am I?</h2>
-          <form id="profileCity" method="">
-
-            <div class="input-group top-margin">
-              <span class="input-group-addon" id="sizing-addon1">Ma ville</span>
-              <input type="text" class="form-control" placeholder="..." id="city" value="<%= profile.city %>">
-              <span class="input-group-btn">
-                <button class="btn btn-default" type="button" id="updateCity">Changer</button>
-              </span>
-            </div><!-- /input-group -->
-
-            <div class="input-group top-margin">
-              <span class="input-group-addon" id="sizing-addon1">Pays</span>
-              <input type="text" class="form-control" placeholder="..." id="country" value="<%= profile.country %>">
-              <span class="input-group-btn">
-                <button class="btn btn-default" type="button" id="updateCountry">Changer</button>
-              </span>
-            </div><!-- /input-group -->
-
-          </form>
-        </div><!-- /.col-lg-6 -->
-      </div><!-- /.row -->
-
       <div class="row top-margin">
         <div class="col-lg-6">
           <h2>Qui suis-je ?  //  Who am I?</h2>
@@ -150,21 +125,51 @@
       <div class="row top-margin">
         <div class="col-lg-6">
           <h2>Mes parcelles</h2>
-          <form id="locationName">
-<% for (var i = 0; i < locations.length; i++) { %>      
-            <div class="input-group top-margin">
-              <span class="input-group-addon" id="sizing-addon1">Nom</span>
-              <input type="text" class="form-control" placeholder="..." id="name_<%= locations[i].id %>" value="<%= locations[i].name %>">
-              <span class="input-group-btn">
-                <button class="btn btn-default" type="button" id="updateLocationName_<%= locations[i].id %>">Changer</button>
-              </span>
-            </div><!-- /input-group -->
-<% } %>
-          </form>
         </div><!-- /.col-lg-6 -->
       </div><!-- /.row -->
-    </div><!-- /.row -->
       
+      <% for (var i = 0; i < locations.length; i++) { %>      
+         
+         <div class="row top-margin">
+           <div class="col-lg-6">
+             <div class="input-group top-margin">
+               <span class="input-group-addon" id="sizing-addon1">Nom</span>
+               <input type="text" class="form-control" placeholder="..." id="name_<%= locations[i].id %>" value="<%= locations[i].name %>">
+               <span class="input-group-btn">
+                 <button class="btn btn-default" type="button" id="updateLocationName_<%= locations[i].id %>">Changer</button>
+               </span>
+             </div><!-- /input-group -->
+           </div><!-- /.col-lg-6 -->
+         </div><!-- /.row -->
+         
+         <div class="row">
+           <div class="col-lg-6">
+             <div class="input-group top-margin">
+               <span class="input-group-addon" id="sizing-addon1">Ville</span>
+               <input type="text" class="form-control" placeholder="..." id="city_<%= locations[i].id %>" value="<%= locations[i].city %>">
+               <span class="input-group-btn">
+                 <button class="btn btn-default" type="button" id="updateLocationCity_<%= locations[i].id %>">Changer</button>
+               </span>
+             </div><!-- /input-group -->
+           </div><!-- /.col-lg-6 -->
+         </div><!-- /.row -->
+         
+         <div class="row">
+           <div class="col-lg-6">
+             <div class="input-group top-margin">
+               <span class="input-group-addon" id="sizing-addon1">Pays</span>
+               <input type="text" class="form-control" placeholder="..." id="country_<%= locations[i].id %>" value="<%= locations[i].country %>">
+               <span class="input-group-btn">
+                 <button class="btn btn-default" type="button" id="updateLocationCountry_<%= locations[i].id %>">Changer</button>
+               </span>
+             </div><!-- /input-group -->
+             <hr>
+           </div><!-- /.col-lg-6 -->
+         </div><!-- /.row -->
+         
+         <% } %>
+    </div><!-- /.container -->
+    
 
     <!-- Bootstrap core JavaScript -->
     <script src="<%= config.baseUrl %>/jquery.js"></script>
@@ -183,6 +188,8 @@ jq(document).ready(function(){
 
 <% for (var i = 0; i < locations.length; i++) { %>      
     jq("#updateLocationName_<%= locations[i].id %>").click(function(){ updateLocation(<%= locations[i].id %>, "name", jq("#name_<%= locations[i].id %>").val()); });
+    jq("#updateLocationCity_<%= locations[i].id %>").click(function(){ updateLocation(<%= locations[i].id %>, "city", jq("#city_<%= locations[i].id %>").val()); });
+    jq("#updateLocationCountry_<%= locations[i].id %>").click(function(){ updateLocation(<%= locations[i].id %>, "country", jq("#country_<%= locations[i].id %>").val()); });
 <% } %>
 
 <% for (var i = 0; i < files.length; i++) { %>

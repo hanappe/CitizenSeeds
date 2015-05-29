@@ -192,6 +192,11 @@ div.ObservationLocationView {
     border-bottom: 1px solid black;
 }
 
+span.ObservationLocationData {
+    font-size: 12px;
+    line-height: 1.1;
+}
+
 div.ObservationView {
     height: 65px;
     width: min-90px;

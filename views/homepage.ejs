@@ -54,12 +54,6 @@
 	<section id="header">
 	  <div class="page-header">
 	    <h1>Chez <%= account.id %></h1>
-            <% if (profile.city || profile.country) { %>
-            <p><% if (profile.city) { %> <%= profile.city %><% } %><% if (profile.city && profile.country) { %>, <% } %><% if (profile.country) { %><%= profile.country %><% } %></p>
-            <% } %>
-            <% if (profile.url) { %>
-            <p><a href="<%= profile.url %>">Page perso</a></p>
-            <% } %>
 	  </div>
         </section>
       </div>
@@ -88,7 +82,6 @@
       </div>
     </div>
 
-    
     <!-- Bootstrap core JavaScript -->
     <script src="<%= config.baseUrl %>/jquery.js"></script>
     <script src="<%= config.baseUrl %>/bootstrap.js"></script>
