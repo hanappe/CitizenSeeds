@@ -14,6 +14,8 @@ function initProfilePage(baseUrl, id)
     jq("#filechooser").on("change", function(){ uploadImage(this.files[0]); });
 
     jq('#description').wysiwyg({initialContent: ""});
+
+    setProgress(null, 0);
 }
 
 function updateLocation(id, field, value)
@@ -39,18 +41,46 @@ function viewProfile()
     if (win) win.focus();
 }
 
+function showProgress()
+{
+    jq('#progressbar').css('width','0%').attr('aria-valuenow', 0);
+    jq('#progressbar').show();
+}
+
+function hideProgress()
+{
+    jq('#progressbar').hide();
+}
+
+function setProgress(e, value)
+{
+    if (e && e.lengthComputable)
+        value = Math.round(100 * e.loaded / e.total);
+    jq('#progressbar').css('width', value+'%').attr('aria-valuenow', value);
+}
+
 function uploadImage(file)
 {
+    showProgress();
     var fd = new FormData();
     fd.append("bits", file);
     jq.ajax({
         url: _baseUrl + "/files",
+        xhr: function() {  // Custom XMLHttpRequest
+            var myXhr = jq.ajaxSettings.xhr();
+            if (myXhr.upload) { // Check if upload property exists
+                myXhr.upload.addEventListener('progress', setProgress, false); // For handling the progress of the upload
+            }
+            return myXhr;
+        },
+        type: "POST",
         data: fd,
+        beforeSend: function(e){ },
+        error: function(e){ alert(e); },
+        success: function(data){ insertImageLib(data); setProgress(null, 100); hideProgress(); },
         cache: false,
         contentType: false,
-        processData: false,
-        type: "POST",
-        success: function(data){ insertImageLib(data); }
+        processData: false
     });
 }
 
