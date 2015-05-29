@@ -976,7 +976,7 @@ function createLocation(req, res)
 
 function updateLocation(req, res)
 {
-    logger.debug("updateProfile ", JSON.stringify(req.body));
+    logger.debug("updateLocation ", JSON.stringify(req.body));
 
     var id = req.params.id;
     var location = database.getLocation(id);

@@ -58,8 +58,8 @@
 
     <div class="container">
       <div class="row top-margin">
-        <div class="col-lg-6">
-          <h2>Qui suis-je ?  //  Who am I?</h2>
+        <div class="col-lg-4">
+          <h2>Qui suis-je ?</h2>
           <p>Fournissez plus d'info sur vous-même, sur votre parcelle,
           sur pourquoi vous participez, votre site web perso... avec
           l'éditeur ci-dessous. Ces informations seront affichées dans
@@ -73,15 +73,17 @@
 
           <p>N'oubliez pas de sauvegarder vos modifications avec le
             bouton ... "Sauvegarder" !</p> <!-- ' -->
+        </div><!-- /.col-lg-4 -->
 
-          <hr>
+        <div class="col-lg-4">
+          <h2>Who am I?</h2>
     
-          <p>Provide more information about yourself, about yout plot,
-            about why you participate, your personal web page
-            ... using the editor below. The information will be shown
-            in your <a href="<%= config.baseUrl
-            %>/people/<%= account.id %>.html"><i>Profile</i></a>
-            page.</p>
+          <p>Provide more information about yourself, about your plot,
+            about why you participate, your personal web page and
+            anything you feel like sharing, using the editor below. The
+            information will be shown in
+            your <a href="<%= config.baseUrl %>/people/<%= account.id
+            %>.html"><i>Profile</i></a> page.</p>
 
           <p>Below the editor you can also upload images. After the
           upload, a thumbnail will appear together with a set of
@@ -90,11 +92,12 @@
 
           <p>Don't forget the save your changes using the
           "Sauvegarder" button!</p> <!-- ' -->
-        </div><!-- /.col-lg-6 -->
+        </div><!-- /.col-lg-4 -->
+
       </div><!-- /.row -->
 
       <div class="row top-margin">
-        <div class="col-lg-6">
+        <div class="col-lg-8">
           <textarea id="description" style="width: 100%; height: 400px;"><%- profile.description %></textarea>
 
           <button class="btn btn-primary" type="button" id="updateDescription">Sauvegarder</button>
