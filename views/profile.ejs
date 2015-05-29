@@ -101,7 +101,7 @@
           <textarea id="description" style="width: 100%; height: 400px;"><%- profile.description %></textarea>
 
           <button class="btn btn-primary" type="button" id="updateDescription">Sauvegarder</button>
-          <button class="btn btn-default" type="button" id="viewProfile">Voir</button>
+          <a class="btn btn-default" type="button" id="viewProfile" href="<%= config.baseUrl %>/people/<%= account.id %>/profile.html">Voir</a>
         </div><!-- /.col-lg-6 -->
       </div><!-- /.row -->
 
@@ -123,11 +123,11 @@
       </div><!-- /.row -->
       <div class="row">
         <div class="col-lg-3">
-<div class="progress">
-  <div class="progress-bar" role="progressbar" id="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width: 60%;">
-    <span class="sr-only">60% Complete</span>
-  </div>
-</div>
+          <div class="progress">
+            <div class="progress-bar" role="progressbar" id="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
+              <span class="sr-only">0% Complete</span>
+            </div>
+          </div>
         </div><!-- /.col-lg-3 -->
       </div><!-- /.row -->
       

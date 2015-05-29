@@ -10,7 +10,6 @@ function initProfilePage(baseUrl, id)
     jq("#updateCountry").click(function(){ updateProfile(id, "country", jq("#country").val()); });
     jq("#updateUrl").click(function(){ updateProfile(id, "url", jq("#url").val()); });
     jq("#updateDescription").click(function(){ updateProfile(id, "description", jq("#description").val()); });
-    jq("#viewProfile").click(function(){ viewProfile(); });
     jq("#filechooser").on("change", function(){ uploadImage(this.files[0]); });
 
     jq('#description').wysiwyg({initialContent: ""});
@@ -36,8 +35,7 @@ function updateProfile(id, field, value)
 
 function viewProfile()
 {
-    var win = window.open(_baseUrl + "/people/" + _accountId + ".html",
-                          "p2pfoodlab_profile_" + _accountId);
+    var win = window.open(_baseUrl + "/people/" + _accountId + ".html");
     if (win) win.focus();
 }
 
