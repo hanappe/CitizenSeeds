@@ -44,6 +44,7 @@
     "node-flower-power": "*",
     "nodemailer": "*",
     "nodemailer-smtp-transport": "*",
+    "oauth2": "0.0.1",
     "oauth2orize": "^1.0.1",
     "passport": "*",
     "passport-http": "*",
