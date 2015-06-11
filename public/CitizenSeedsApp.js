@@ -2183,7 +2183,7 @@ function ForumViewer(forum)
     this.createThread = function() {
         this.newThread = new Thread(randomString(12), this.forum.experimentId);
         this.forum.addThread(this.newThread);
-        var v = new ThreadViewer(thread, true);        
+        var v = new ThreadViewer(this.newThread, true);        
         this.div.insertBefore(v.div, this.button);
     }
 
