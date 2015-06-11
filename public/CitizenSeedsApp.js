@@ -137,20 +137,63 @@ function UIComponent()
         }
     }
 
-    this.addText = function(text, style) {
+    this.addText = function(text, style, parent) {
+        var e;
         if (!style) {
-            this.div.appendChild(document.createTextNode(text));
-
+            e = document.createTextNode(text);
         } else {
-            var span = document.createElement("SPAN");
-            span.className = style;
-            span.innerHTML = text;
-            this.div.appendChild(span);
+            var e = document.createElement("SPAN");
+            e.className = style;
+            e.innerHTML = text;
         }
+        if (parent) parent.appendChild(e);
+        else this.div.appendChild(e);
     }
 
+    this.addGlyphButton = function(glyphname, types, callback) {
+        var a = this.addGlyph(glyphname, callback);
+        a.className = "btn btn-default " + types;
+        return a;
+    }
+
+    this.addGlyph = function(glyphname, callback, parent, className) {
+        var a = document.createElement("A");
+        a.setAttribute("href", "javascript:void(0)");
+        a.onclick = function() { return false; }
+        a.onmousedown = function() { return false; }
+        setEventHandler(a, "click", callback);
+        var span = document.createElement("SPAN");
+        span.className = "glyphicon " + glyphname;
+        if (className) span.className = "glyphicon " + glyphname + " " + className;
+        else span.className = "glyphicon " + glyphname;
+        a.appendChild(span);
+        if (parent) parent.appendChild(a);
+        else this.div.appendChild(a);
+        return a;
+    }
+
+    this.setGlyph = function(a, glyphname, callback, className) {
+        if (className) a.firstChild.className = "glyphicon " + glyphname + " " + className;
+        else a.firstChild.className = "glyphicon " + glyphname;
+        setEventHandler(a, "click", callback);
+    }
+    
     this.addBreak = function() {
         this.div.appendChild(document.createElement("BR"));
+    }
+
+    this.addButton = function(text, callback, type, parent) {
+        var a = document.createElement("A");
+        a.setAttribute("href", "javascript:void(0)");
+        a.onclick = function() { return false; }
+        a.onmousedown = function() { return false; }
+        a.appendChild(document.createTextNode(text));
+        setEventHandler(a, "click", callback);
+        if (type) a.className = "btn " + type;
+        else a.className = "btn btn-default";
+        if (parent) parent.appendChild(a);
+        else this.div.appendChild(a);
+        return a;
     }
 
     this.addLink = function(anchorText, href, className) {
@@ -162,7 +205,7 @@ function UIComponent()
         return a;
     }
 
-    this.addEventLink = function(anchorText, handler, className) {
+    this.addEventLink = function(anchorText, handler, className, parent) {
         var a = document.createElement("A");
         a.className = className;
         a.setAttribute("href", "javascript:void(0)");
@@ -170,7 +213,8 @@ function UIComponent()
         a.onclick = function() { return false; }
         a.onmousedown = function() { return false; }
         setEventHandler(a, "click", handler);
-        this.div.appendChild(a);
+        if (parent) parent.appendChild(a);
+        else this.div.appendChild(a);
         return a;
     }
 
@@ -705,12 +749,38 @@ function toDayAndMonth(d)
     return "" + day + "/" + m;
 }
 
+function pad(num)
+{
+    var norm = Math.abs(Math.floor(num));
+    return (norm < 10 ? "0" : "") + norm;
+}
 
 function formatValue(value, digits)
 {
     if (digits) n = Math.pow(10, digits);
     else n = 10;
     return Math.round(value * n) / n;
+}
+
+function formatDateHour(date)
+{
+    return pad(date.getDate()) + "/" + pad(date.getMonth() + 1) + " à " + date.getHours() + "h" + pad(d.getMinutes());
+}
+
+function formatDate(date)
+{
+    return pad(date.getDate()) + "/" + pad(date.getMonth() + 1) + "/" + date.getFullYear();
+}
+
+function randomString(length)
+{
+    var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz";
+    var randomstring = '';
+    for (var i = 0; i < length; i++) {
+	var rnum = Math.floor(Math.random() * chars.length);
+	randomstring += chars.substring(rnum, rnum + 1);
+    }
+    return randomstring;
 }
 
 //--------------------------------------------------
@@ -728,7 +798,8 @@ function ExperimentView(experiment)
         _prof.start("new ObservationMatrixView[" + i + "]");
         var view = new ObservationMatrixView(matrices[i],
                                              experiment.viewStart,
-                                             experiment.numWeeks);
+                                             experiment.numWeeks,
+                                             i > 0);
         _prof.stop("new ObservationMatrixView[" + i + "]");
         this.addComponent(view);
         _prof.mark("add ObservationMatrixView[" + i + "]");
@@ -756,7 +827,6 @@ function ExperimentView(experiment)
         return undefined;
     }
 
-
     this.getObservationView = function(plant, location, col) {
         for (var i = 0; i < this.components.length; i++) {
             if (this.components[i].matrix && (this.components[i].matrix.plant.id == plant))
@@ -772,9 +842,10 @@ function ExperimentView(experiment)
 ExperimentView.prototype = new UIComponent();
 
 
-function ObservationMatrixView(matrix, viewStart, numWeeks)
+function ObservationMatrixView(matrix, viewStart, numWeeks, collapsed)
 {
-    this.init("ObservationMatrixView", "ObservationMatrixView");
+    var self = this;
+    this.init("ObservationMatrixView", "container-fluid ObservationMatrixView");
 
     this.rows = [];
     
@@ -796,14 +867,8 @@ function ObservationMatrixView(matrix, viewStart, numWeeks)
         return undefined;
     }
 
-    this.addObservationRow = function (observer, observations) {
-        var row = new ObservationRowView(observer, observations);
-        this.rows.push(row);
-        this.matrixView.addComponent(row);
-    }
-
-    this.buildView = function() {
-        this.header = new ObservationHeaderView();
+    this.buildHeader = function(collapsed) {
+        this.header = new ObservationHeaderView(this, collapsed);
 
         var text = this.matrix.plant.family;
         if (this.matrix.plant.variety)
@@ -812,26 +877,15 @@ function ObservationMatrixView(matrix, viewStart, numWeeks)
             text += "  - " + this.matrix.plant.note;
         this.header.setText(text);            
         this.addComponent(this.header);
-
-        _prof.mark("new ObservationHeaderView");
-
-        this.matrixView = new ObservationTableView();
-        this.addComponent(this.matrixView);
-
-        this.showObservationRows();
-
-        // FIXME
-        this.button = new Button("createObserver_" + this.matrix.plant.id,
-                                 "",
-                                 "Rajouter une ligne pour mes photos.",
-                                 "createObserver");
-        this.button.addListener(_controller);
-        this.button.matrix = this.matrix;
-        this.addComponent(this.button);
     }
 
+    this.addObservationRow = function (observer, observations) {
+        var row = new ObservationRowView(observer, observations);
+        this.rows.push(row);
+        this.matrixView.addComponent(row);
+    }
 
-    this.showObservationRows = function() {
+    this.buildObservationRows = function() {
         this.clear();
         this.matrixView.addComponent(new ObservationWeekView(viewStart, numWeeks));
         _prof.mark("new ObservationWeekView");
@@ -842,14 +896,69 @@ function ObservationMatrixView(matrix, viewStart, numWeeks)
         }
     }
     
+    this.buildMatrixView = function() {
+        this.matrixView = new ObservationTableView();
+        this.addComponent(this.matrixView);
+        this.buildObservationRows();
+        // FIXME
+        this.button = new Button("createObserver_" + this.matrix.plant.id,
+                                 "",
+                                 "Rajouter une ligne pour mes photos.",
+                                 "createObserver");
+        this.button.addListener(_controller);
+        this.button.matrix = this.matrix;
+        this.addComponent(this.button);
+    }
+
+    this.buildPlaceHolder = function() {
+        this.placeholder = document.createElement("DIV");
+        this.placeholder.className = "matrix-collapsed";
+        this.placeholder.innerHTML = "Cliquez sur <span class='glyphicon glyphicon-chevron-down'></span> pour voir les images";
+        this.div.appendChild(this.placeholder);
+    }
+    
+    this.buildViewCollapsed = function() {
+        this.buildHeader(true);
+        this.buildPlaceHolder();
+    }
+    
+    this.buildViewExpanded = function() {
+        this.buildHeader(false);
+        this.buildMatrixView();
+    }
+    
     this.clear = function() {
         this.matrixView.removeComponents();
+    }
+    
+    this.collapse = function() {
+        if (this.matrixView) {
+            this.matrixView.setVisible(false);
+            this.button.setVisible(false);
+        }
+        if (!this.placeholder) {
+            this.buildPlaceHolder();
+        }
+        this.placeholder.className = "matrix-collapsed visible";
+    }
+    
+    this.expand = function() {
+        if (!this.matrixView) {
+            this.buildMatrixView();
+        }
+        this.matrixView.setVisible(true);
+        this.button.setVisible(true);
+
+        if (this.placeholder)
+            this.placeholder.className = "matrix-collapsed hidden";
     }
     
     this.matrix = matrix;
     this.viewStart = viewStart;
     this.numWeeks = numWeeks;
-    this.buildView();
+
+    if (collapsed) this.buildViewCollapsed();
+    else this.buildViewExpanded();
 }
 ObservationMatrixView.prototype = new UIComponent();
 
@@ -860,14 +969,52 @@ function ObservationTableView()
 ObservationTableView.prototype = new UIComponent();
 
 
-function ObservationHeaderView()
+function ObservationHeaderView(parent, collapsed)
 {
-    this.init("ObservationHeaderView", "ObservationHeaderView");
-    
-    this.setText = function(s) {
-        this.removeComponents();
-        this.addText(s);
+    var self = this;
+    this.init("ObservationHeaderView", "row");
+        
+    this.collapse = function() {
+        parent.collapse();
+        this.setGlyph(this.glyph,
+                      "glyphicon-chevron-down",
+                      function() { self.expand(); },
+                      "white");
     }
+    
+    this.expand = function() {
+        parent.expand();
+        this.setGlyph(this.glyph,
+                      "glyphicon-chevron-up",
+                      function() { self.collapse(); },
+                      "white");
+    }
+
+    this.setText = function(s) {
+        this.title.innerHTML = s;
+    }
+
+    this.cols = document.createElement("DIV");
+    this.cols.className = "col-sm-12";
+    this.div.appendChild(this.cols);
+
+    this.content = document.createElement("DIV");
+    this.content.className = "matrix-header";
+    this.cols.appendChild(this.content);
+
+    if (collapsed)
+        this.glyph = this.addGlyph("glyphicon-chevron-down",
+                                   function() { self.expand(); },
+                                   this.content,
+                                   "white");
+    else
+        this.glyph = this.addGlyph("glyphicon-chevron-up",
+                                   function() { self.collapse(); },
+                                   this.content,
+                                   "white");
+    
+    this.title = document.createElement("SPAN");
+    this.content.appendChild(this.title);
 }
 ObservationHeaderView.prototype = new UIComponent();
 
@@ -1259,15 +1406,16 @@ function SensorDataViewer(observer, data)
     }
 
     this.formatDate = function(date) {
-        var d = new Date(date);
-        return "le " + pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + " à " + d.getHours() + "h" + pad(d.getMinutes());
+        return "le " + formatDateHour(new Date(date));
     }
 
     this.buildView = function() {
         this.removeComponents();
+
+        this.addGlyph("glyphicon-remove", function() { _curtain.finished(); } );
         
-        this.addEventImage(_server.root + "/media/close.png", "Fermer les graphiques", "",
-                           function() { _curtain.finished(); } );
+        //this.addEventImage(_server.root + "/media/close.png", "Fermer les graphiques", "",
+        //                   function() { _curtain.finished(); } );
 
         var dates = [{ "iso": "2015-05-02", "short": "02/05" }, // FIXME
                      { "iso": "2015-05-09", "short": "09/05" },
@@ -1344,12 +1492,6 @@ SensorDataViewer.prototype = new UIComponent();
 // Controller
 //--------------------------------------------------
 
-
-function pad(num)
-{
-    var norm = Math.abs(Math.floor(num));
-    return (norm < 10 ? "0" : "") + norm;
-}
 
 function ExperimentController(experiment)
 {
@@ -1679,11 +1821,16 @@ function Slideshow(observations)
     }
     
     this.createShow = function() {
+        this.addGlyph("glyphicon-remove", function() { _curtain.finished(); } );
+        this.addGlyphButton("glyphicon-trash", "pull-right", function() { self.deleteObservation() } );
+
+        /*
         this.addEventImage(_server.root + "/media/close.png", "Fermer le slideshow", "SlideshowClose FloatLeft",
                            function() { _curtain.finished(); } );
 
         this.addEventImage(_server.root + "/media/trash.png", "Jeter à la poubelle", "FloatRight",
                            function() { self.deleteObservation() } );
+        */
         
         var slideshow = document.createElement("DIV");
         slideshow.className = "Slideshow_Slideshow";
@@ -1760,6 +1907,334 @@ AccountPanel.prototype = new UIComponent();
 
 //--------------------------------------------------
 
+function Thread(id, expId)
+{
+    this.id = id;
+    this.experimentId = expId;
+    this.messages = [];
+
+    this.length = function() {
+        return this.messages.length;
+    }
+
+    this.message = function(i) {
+        return this.messages[i];
+    }
+    
+    this.importMessage = function(message) {
+        message.date = new Date(message.date);
+        if (!this.startDate
+            || this.startDate.getTime() > message.date.getTime())
+            this.startDate = message.date;
+        if (!this.lastUpdate
+            || this.lastUpdate.getTime() < message.date.getTime())
+            this.lastUpdate = message.date;
+        this.messages.push(message);
+    }
+}
+
+function Forum(expId)
+{
+    this.threads = [];
+    this.experimentId = expId;
+    
+    this.length = function() {
+        return this.threads.length;
+    }
+
+    this.thread = function(i) {
+        return this.threads[i];
+    }
+
+    this.findThread = function(id) {
+        for (var i = 0; i < this.threads.length; i++) {
+            if (this.threads[i].id == id)
+                return this.threads[i];
+        }
+        return null;
+    }
+
+    this.addThread = function(thread) {
+        this.threads.push(thread);
+    }
+    
+    this.importMessage = function(message) {
+        var thread = this.findThread(message.thread);
+        if (!thread) {
+            thread = new Thread(message.thread, expId);
+            this.threads.push(thread);
+        }
+        thread.importMessage(message);
+    }
+    
+    this.importMessages = function(list) {
+        for (var i = 0; i < list.length; i++)
+            this.importMessage(list[i]);
+    }
+
+    this.sortRecentUpdateFirst = function() {
+        this.threads.sort(function(a,b) { return b.lastUpdate.getTime() - a.lastUpdate.getTime(); });
+    }
+}
+
+function MessageViewer(parent, thread, index, collapsed)
+{
+    var self = this;
+    this.init("MessageViewer", "row");
+    this.thread = thread;
+    this.message = thread.message(index);
+
+    this._createGlyph = function(div, glyphname, callback) {
+        var a = document.createElement("A");
+        a.className = "forum-collexp";
+        a.setAttribute("href", "javascript:void(0)");
+        a.onclick = function() { return false; }
+        a.onmousedown = function() { return false; }
+        setEventHandler(a, "click", callback);
+        var span = document.createElement("SPAN");
+        span.className = "glyphicon " + glyphname;
+        a.appendChild(span);
+        div.appendChild(a);
+        return a;
+    }
+    
+    this.buildView = function() {
+        this.removeComponents();
+        var message = this.thread.message(index);
+
+        var lmargin = document.createElement("DIV");
+        lmargin.className = "col-sm-1";
+        if (index == 0) {
+            if (collapsed) 
+                this._createGlyph(lmargin, "glyphicon-plus", function() { parent.buildViewExpanded(); });
+            else
+                this._createGlyph(lmargin, "glyphicon-minus", function() { parent.buildViewCollapsed(); });
+        }
+        this.div.appendChild(lmargin);
+
+        var cols = document.createElement("DIV");
+        if (index == 0 && collapsed) cols.className = "col-sm-6";
+        else cols.className =  "col-sm-10";
+        this.div.appendChild(cols);
+
+        var text = document.createElement("DIV");
+        if (index == 0) text.className = "message-body forum-message";
+        else text.className =  "message-body forum-reply";
+        cols.appendChild(text);
+
+        if (collapsed)
+            text.appendChild(document.createTextNode(message.shorttext));
+        else
+            text.appendChild(document.createTextNode(message.text));
+
+        if (index == 0 && collapsed) {
+            text = document.createElement("DIV");
+            text.className = "col-sm-4";
+            this.div.appendChild(text);
+        }
+        
+        p = document.createElement("P");
+        text.appendChild(p);
+        p.className = "message-meta";
+        p.appendChild(document.createTextNode("par ")); 
+        var a = document.createElement("A");
+        a.setAttribute("href", _server.root + "/people/" + message.account + ".html");
+        a.appendChild(document.createTextNode(message.account));
+        p.appendChild(a);
+        p.appendChild(document.createTextNode(" le " + formatDate(message.date)));
+
+        var rmargin = document.createElement("DIV");
+        rmargin.className = "col-sm-1";
+        if (index == 0 && thread.length() > 1) {
+            var span = document.createElement("SPAN");
+            span.className = "label label-primary";
+            span.innerHTML = "" + (thread.length() - 1);
+            rmargin.appendChild(span);
+        }
+        this.div.appendChild(rmargin);
+    }
+
+    this.buildView();
+}
+MessageViewer.prototype = new UIComponent();
+
+
+function MessageInputPanel(parent, options)
+{
+    var self = this;
+    this.init("MessageInputPanel", "row");
+    
+    this.buildView = function() {
+        this.removeComponents();
+
+        var lmargin = document.createElement("DIV");
+        lmargin.className = "col-sm-1";
+        this.div.appendChild(lmargin);
+
+        var cols = document.createElement("DIV");
+        cols.className = "col-sm-10";
+        this.div.appendChild(cols);
+
+        var formholder = document.createElement("DIV");
+        formholder.className = "forum-reply-input";
+        cols.appendChild(formholder);
+
+        if (options.title) {
+            formholder.appendChild(document.createTextNode(options.title));
+            formholder.appendChild(document.createElement("BR"));
+        }
+    
+        var textarea = document.createElement("TEXTAREA");
+        textarea.className = "forum-reply-textarea";
+        textarea.setAttribute("name", "forum-reply-textarea");
+        formholder.appendChild(textarea);
+
+        formholder.appendChild(document.createElement("BR"));
+        this.addButton("Envoi",
+                       function() { parent.sendMessage(textarea); },
+                       "btn-default btn-sm",
+                       formholder);
+
+        var rmargin = document.createElement("DIV");
+        rmargin.className = "col-sm-1";
+        this.div.appendChild(rmargin);
+    }
+
+    this.buildView();
+}
+MessageInputPanel.prototype = new UIComponent();
+
+function ThreadViewer(thread, expanded)
+{
+    var self = this;
+    this.init("ThreadViewer", "panel panel-default forum-panel");
+    this.thread = thread;
+
+    this.buildViewExpanded = function() {
+        this.removeComponents();
+        var panelbody = document.createElement("DIV");
+        panelbody.className = "panel-body forum-thread";
+        this.div.appendChild(panelbody);
+
+        for (var i = 0; i < thread.length(); i++) {
+            var v = new MessageViewer(this, thread, i, false);
+            panelbody.appendChild(v.div);
+        }
+        var title = thread.length()? "Répondre" : "Message";
+        panelbody.appendChild(new MessageInputPanel(this, { "title": title }).div);
+    }
+
+    this.buildViewCollapsed = function() {
+        this.removeComponents();
+        var panelbody = document.createElement("DIV");
+        panelbody.className = "panel-body forum-thread";
+        this.div.appendChild(panelbody);
+
+        var v = new MessageViewer(this, thread, 0, true);
+        panelbody.appendChild(v.div);
+    }
+
+    this.sendMessage = function(textarea) {
+        if (!textarea.value) return;
+        
+        var message = { "text": textarea.value,
+                        "thread": this.thread.id,
+                        "experiment": this.thread.experimentId };
+
+        _server.postJSON("messages", message).then(function (r) {
+            if (r.error) alert(r.message);
+            else {
+                self.thread.importMessage(r);
+                self.buildViewExpanded();
+            }
+        }); 
+    }
+
+    if (expanded) this.buildViewExpanded();
+    else this.buildViewCollapsed();
+}
+ThreadViewer.prototype = new UIComponent();
+
+function ForumViewer(forum)
+{
+    var self = this;
+    this.init("ForumViewer", "", document.getElementById("ForumViewer"));
+    this.forum = forum;
+    this.curPage = 0;
+    this.pageSize = 5;
+    this.newThread = null;
+    
+    this.sendMessage = function(textarea) {
+        if (!textarea.value) return;
+        
+        var message = { "text": textarea.value,
+                        "thread": randomString(12),
+                        "experiment": this.forum.experimentId };
+
+        _server.postJSON("messages", message).then(function (r) {
+            if (r.error) alert(r.message);
+            else {
+                self.forum.importMessage(r);
+                self.buildView();
+            }
+        }); 
+    }
+
+    this.createThread = function() {
+        this.newThread = new Thread(randomString(12), this.forum.experimentId);
+        this.forum.addThread(this.newThread);
+        var v = new ThreadViewer(thread, true);        
+        this.div.insertBefore(v.div, this.button);
+    }
+
+    this.selectPage = function(i) {
+        if (this.newThread && this.newThread.length() == 0) {
+            // Remove the empty thread
+        }
+        this.curPage = i;
+        this.buildView();
+    }
+    
+    this.buildPageSelector = function(nav, i) {
+        this.addEventLink("" + (i+1),
+                          function() { self.selectPage(i); },
+                          "forum-page-selector",
+                          nav);
+    }
+    
+    this.buildView = function() {
+        this.removeComponents();
+        this.forum.sortRecentUpdateFirst();
+        var div = document.createElement("DIV");
+        div.className = "forum-header";
+        div.innerHTML = "Forum";
+        this.div.appendChild(div);
+        
+        for (var i = this.curPage * this.pageSize, j = 0; i < forum.length() && j < this.pageSize; i++, j++) {
+            this.addComponent(new ThreadViewer(forum.thread(i)));
+        }
+        this.button = this.addButton("Commencer une nouvelle discussion",
+                                     function() { self.createThread(); },
+                                     "btn-default btn-sm");
+        var pages = Math.floor((this.forum.length() + 4) / 5);
+        if (pages > 1) {
+            var nav = document.createElement("NAV");
+            nav.className = "forum-pager";
+            this.div.appendChild(nav);
+            this.addText("Page : ", null, nav);
+            for (var i = 0; i < pages; i++) {
+                if (i == this.curPage) this.addText(""+(i+1), "forum-page-selector", nav);
+                else this.buildPageSelector(nav, i);
+            }
+        }
+    }
+    
+    this.buildView();
+}
+ForumViewer.prototype = new UIComponent();
+
+//--------------------------------------------------
+
 function PerformanceProfile()
 {
     this.startDate = new Date();
@@ -1798,13 +2273,12 @@ var _controller = undefined;
 var _curtain = undefined;
 var _account = undefined;
 var _accountPanel = undefined;
+var _forum = undefined;
 
-function showObservations(url, id)
+function showObservations(id)
 {
     _curtain = new Curtain();
     document.getElementById("Body").appendChild(_curtain.div);
-
-    _server = new Server(url);
 
     _accountPanel = new AccountPanel();
 
@@ -1923,6 +2397,15 @@ function showObservations(url, id)
     });
 }
 
+function initForum(id)
+{
+    _server.getJSON("messages?experiment=" + id).then(function(data) {
+        _forum = new Forum(id);
+        _forum.importMessages(data);
+        _forumView = new ForumViewer(_forum);
+    });
+}
+
 //--------------------------------------------------
 
 var _notebookController = undefined;
@@ -1992,7 +2475,7 @@ function NotebookController(notebook)
 }
 
 function NotebookView(notebook)
-{
+{ 
     var self = this;
     this.init("NotebookView", "NotebookView container");
     this.notebook = notebook;

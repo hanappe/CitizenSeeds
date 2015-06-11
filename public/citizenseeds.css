@@ -3,6 +3,11 @@ body {
   font-weight: 400;
   margin-bottom: 50px;
 }
+
+.white, .white a {
+  color: #fff;
+}
+
 .navbar-citizenseeds {
   padding-bottom: 20px;
 }
@@ -28,4 +33,79 @@ body {
     border-bottom: solid 1px #eee;
 }
 
-.right-margin { margin-right: 10px; }
+.message-reply {
+    border-top: solid 1px grey;
+}
+
+.forum-container {
+    margin-bottom: 20px;
+}
+
+.forum-header {
+    padding: 4px;
+    font-size: 24px;
+    border-bottom: 1px solid black;
+    background-color: black;
+    color: white;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.forum-panel {
+    margin-bottom: 5px;
+    padding: 0;
+}
+
+.forum-thread {
+    margin: 2px;
+    padding: 0;
+}
+
+.forum-message {
+}
+
+.forum-reply {
+    padding-top: 4px;    
+    border-top: solid 1px #DDD;
+    border-left: solid 1px #DDD;
+    padding-left: 30px;
+}
+
+.forum-reply-input {
+}
+
+.forum-reply-textarea {
+    width: 100%;
+}
+
+.message-body {
+    white-space: pre-wrap;
+}
+
+.message-meta {
+    color: #BBB;
+}
+
+
+.matrix-header {
+    padding: 4px;
+    background-color: black;
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.matrix-collapsed {
+    border: solid 1px black;
+    height: 30px;
+    padding: 4px;
+}
+
+nav.forum-pager {
+    display: inline;
+    padding-left: 20px;
+}
+
+.forum-page-selector {
+    padding-right: 8px;
+}

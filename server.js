@@ -1716,6 +1716,91 @@ function deleteFile(req, res)
 }
 
 /*
+ * Messages
+ */
+
+function sendMessages(req, res)
+{
+    logger.debug("Request: sendMessages");
+    logger.debug("Account: " + JSON.stringify(req.user));
+
+    var experiment = (req.query.experiment)? req.query.experiment : undefined;
+    var account = (req.query.account)? req.query.account : undefined;
+    var thread = (req.query.thread)? req.query.thread : undefined;
+
+    var messages = database.selectMessages({ "experiment": experiment,
+                                             "account": account,
+                                             "thread": thread });
+    /*for (var i = 0; i < messages.length; i++) {
+        //messages[i].text = messages[i].text.replace(/^\s+|\s+$/gm, '');
+        messages[i].shorttext = messages[i].text.substr(0, 42).replace(/[\n\r]/g, " ");
+        console.log(messages[i].shorttext);
+    }
+    database.saveTable("messages");
+    */
+    
+    res.writeHead(200, {"Content-Type": "application/json"});
+    res.end(JSON.stringify(messages));
+}
+
+function createMessage(req, res)
+{
+    logger.debug(JSON.stringify(req.body));
+    logger.debug("Account ", JSON.stringify(req.user));
+
+    var text = req.body.text;
+    if (!text) {
+	sendError(res, { "success": false, 
+			 "message": "No data" },
+                  __line, __function);
+	return;
+    }
+    /*text = text.replace(/^\s+|\s+$/gm, '');
+    if (!text) {
+	sendError(res, { "success": false, 
+			 "message": "No data" },
+                  __line, __function);
+	return;
+    }
+    */
+    
+    var account = req.user;
+    var date = new Date().toISOString();
+    var shorttext = text.substr(0, 42).replace(/[\n\r]/g, " ");
+    
+    var message = database.insertMessage({ 
+	"account": account.id, 
+        "date": date,
+	"thread": req.body.thread, 
+	"experiment": req.body.experiment, 
+        "text": text,
+        "shorttext": shorttext
+    });
+
+    sendJson(res, message);        
+}
+
+function deleteMessage(req, res)
+{
+    var id = req.params.id;
+    var account = req.user;
+
+    logger.debug("deleteMessage: " + id);
+    
+    var message = database.getMessage(id);
+    if (!message) {
+	sendError(res, { "message": "Bad ID" }, __line, __function);
+        return;
+    }
+    if (message.account != account.id) {
+	sendError(res, { "message": "Unauthorized" }, __line, __function);
+        return;
+    }
+    database.deleteMessage(message);
+    sendJson(res, { "success": true });    
+}
+
+/*
  * App
  */
 
@@ -1794,6 +1879,11 @@ app.post("/files",
 app.delete("/files/:id(\\d+)",
            passport.authenticate('basic', { session: true }),
            deleteFile);
+
+app.get("/messages", sendMessages);
+app.post("/messages",
+         passport.authenticate('basic', { session: true }),
+         createMessage);
 
 app.get("/", sendIndex);
 

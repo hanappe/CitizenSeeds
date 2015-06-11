@@ -35,19 +35,29 @@
     </div>
 
     <div class="container-fluid">
-      <a href="<%= config.baseUrl %>/mobile/<%= experiment.id %>.html" class="btn btn-primary">Pour uploader vos photos avec votre téléphone portable ou avec votre tablette, essayez la page pour les mobiles.</a>
+      <div class="row">
+        <div class="col-sm-12">
+          <a href="<%= config.baseUrl %>/mobile/<%= experiment.id %>.html" class="btn btn-primary">Pour uploader vos photos avec votre téléphone portable ou avec votre tablette, essayez la page pour les mobiles.</a>
+        </div>
+      </div>
     </div>
     
     <div class="container-fluid">
-      <p>Cette page a été testée
-        avec <a href="https://www.mozilla.org/fr/firefox/new/">Firefox</a>, <a href="http://www.chromium.org/Home">Chromium</a>/<a href="https://www.google.com/intl/fr/chrome/browser/desktop/index.html">Chrome</a>,
-        Internet Explorer (version 10 et plus), et Safari (version 8). Si vous rencontrez
-        des problèmes avec votre navigateur, envoyez-nous les détails
-        puis, si possible, utilisez un des navigateurs mentionnés
-        précédemment.</p>
+      <div class="row">
+        <div class="col-sm-12">
+          <p style="padding: 20px; padding-left: 0px">Cette page a été testée
+            avec <a href="https://www.mozilla.org/fr/firefox/new/">Firefox</a>, <a href="http://www.chromium.org/Home">Chromium</a>/<a href="https://www.google.com/intl/fr/chrome/browser/desktop/index.html">Chrome</a>,
+            Internet Explorer (version 10 et plus), et Safari (version
+            8). Si vous rencontrez des problèmes avec votre
+            navigateur, envoyez-nous les détails puis, si possible,
+            utilisez un des navigateurs mentionnés précédemment.</p>
+        </div>
+      </div>
     </div>
 
-    <div id="ExperimentView" class="container-fluid"></div>
+    <div id="ForumViewer" class="container-fluid forum-container"></div>
+
+    <div id="ExperimentView"></div>
 
     <!-- Bootstrap core JavaScript -->
     <script src="<%= config.baseUrl %>/jquery.js"></script>
@@ -58,8 +68,17 @@
     <script src="<%= config.baseUrl %>/dygraph-combined.js"></script>
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
     <script src="<%= config.baseUrl %>/ie10-viewport-bug-workaround.js"></script>
+    <script src="<%= config.baseUrl %>/jquery.lazyload-any.min.js"></script>
+    
+    <script>
+var jq = $.noConflict();
+jq(document).ready(function(){
+    _server = new Server("<%= config.baseUrl %>");
+    showObservations(<%= experiment.id %>);
+    initForum(<%= experiment.id %>);
+})
 
-    <script>setTimeout(function() { showObservations("<%= config.baseUrl %>", <%= experiment.id %>); }, 1);</script>
+setTimeout(function() { showObservations("<%= config.baseUrl %>", <%= experiment.id %>); }, 1);</script>
 
   </body>
 </html>

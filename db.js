@@ -49,6 +49,7 @@ function load()
     loadTable("sensordata");
     loadTable("profiles");
     loadTable("files");
+    loadTable("messages");
     
     return _db;
 }
@@ -538,6 +539,57 @@ function deleteFile(file)
 
 //------------------------------------------
 
+function getMessage(id)
+{
+    for (var i = 0; i < _db.messages.length; i++) {
+        if (_db.messages[i].id == id)
+            return _db.messages[i];
+    }
+    return undefined;
+}
+
+function selectMessages(filter)
+{
+    var messages = [];
+    for (var i = 0; i < _db.messages.length; i++) {
+        if (_db.messages[i].deleted) // FIXME
+            continue;
+        if (filter.experiment &&
+            filter.experiment != _db.messages[i].experiment)
+            continue;
+        if (filter.thread &&
+            filter.thread != _db.messages[i].thread)
+            continue;
+        if (filter.account &&
+            filter.account != _db.messages[i].account)
+            continue;
+        messages.push(_db.messages[i]);
+    }
+    return messages;
+}
+
+function insertMessage(message)
+{
+    message.id = newId("messages"), 
+    _db.messages.push(message);
+    saveTable("messages");
+    return message;
+}
+
+function updateMessage(message)
+{
+    saveTable("messages"); // FIXME
+    return message;
+}
+
+function deleteMessage(message)
+{
+    message.deleted = true; // FIXME
+    saveTable("messages"); // FIXME
+}
+
+//------------------------------------------
+
 module.exports = {
     init: init,
     reload: reload,
@@ -596,5 +648,11 @@ module.exports = {
     selectFiles: selectFiles,
     insertFile: insertFile,
     updateFile: updateFile,
-    deleteFile: deleteFile
+    deleteFile: deleteFile,
+
+    getMessage: getMessage,
+    selectMessages: selectMessages,
+    insertMessage: insertMessage,
+    updateMessage: updateMessage,
+    deleteMessage: deleteMessage
 }
