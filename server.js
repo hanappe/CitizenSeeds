@@ -1889,6 +1889,7 @@ app.post("/messages",
 
 app.get("/", sendIndex);
 
+/*
 var plotter = require('./plotter');
 function sendGraph(req, res)
 {
@@ -1896,6 +1897,7 @@ function sendGraph(req, res)
     res.end(plotter.plotGraph(null));
 }
 app.get("/graphs", sendGraph);
+*/
 
 app.use(express.static("public"));
 app.set('view engine', 'ejs');
