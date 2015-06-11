@@ -1778,6 +1778,8 @@ function createMessage(req, res)
     });
 
     sendJson(res, message);        
+
+    sendMail("peter@hanappe.com", account.id + " posted a message", text);
 }
 
 function deleteMessage(req, res)
@@ -1886,6 +1888,14 @@ app.post("/messages",
          createMessage);
 
 app.get("/", sendIndex);
+
+var plotter = require('./plotter');
+function sendGraph(req, res)
+{
+    res.writeHead(200, {"Content-Type": "image/svg+xml"});
+    res.end(plotter.plotGraph(null));
+}
+app.get("/graphs", sendGraph);
 
 app.use(express.static("public"));
 app.set('view engine', 'ejs');
