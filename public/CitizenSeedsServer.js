@@ -49,7 +49,7 @@ function Server(root)
                 else {
                     // Otherwise reject with the status text
                     // which will hopefully be a meaningful error
-                    reject(Error(req.statusText));
+                    reject(Error(url + ": " + req.statusText));
                 }
             };
 
@@ -82,7 +82,7 @@ function Server(root)
                 else {
                     // Otherwise reject with the status text
                     // which will hopefully be a meaningful error
-                    reject(Error(req.statusText));
+                    reject(Error(url + ": " + req.statusText));
                 }
             };
 
@@ -118,7 +118,7 @@ function Server(root)
                 else {
                     // Otherwise reject with the status text
                     // which will hopefully be a meaningful error
-                    reject(Error(req.statusText));
+                    reject(Error(url + ": " + req.statusText));
                 }
             };
 
@@ -170,7 +170,7 @@ function Server(root)
                 else {
                     // Otherwise reject with the status text
                     // which will hopefully be a meaningful error
-                    reject(Error(req.statusText));
+                    reject(Error(url + ": " + req.statusText));
                 }
             };
 
