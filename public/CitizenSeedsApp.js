@@ -2166,7 +2166,7 @@ function MessageInputPanel(parent, options)
 
         formholder.appendChild(document.createElement("BR"));
         this.addButton("Envoi",
-                       function() { parent.sendMessage(self.subject.value,
+                       function() { parent.sendMessage((self.subject)? self.subject.value : null,
                                                        self.textarea.value); },
                        "btn-default btn-sm",
                        formholder);
