@@ -161,7 +161,7 @@ function UIComponent()
         a.setAttribute("href", "javascript:void(0)");
         a.onclick = function() { return false; }
         a.onmousedown = function() { return false; }
-        setEventHandler(a, "click", callback);
+        if (callback) setEventHandler(a, "click", callback);
         var span = document.createElement("SPAN");
         span.className = "glyphicon " + glyphname;
         if (className) span.className = "glyphicon " + glyphname + " " + className;
@@ -1957,6 +1957,10 @@ function Forum(expId)
     this.addThread = function(thread) {
         this.threads.push(thread);
     }
+
+    this.removeThread = function(thread) {
+        this.threads.pop();
+    }
     
     this.importMessage = function(message) {
         var thread = this.findThread(message.thread);
@@ -2022,11 +2026,18 @@ function MessageViewer(parent, thread, index, collapsed)
         else text.className =  "message-body forum-reply";
         cols.appendChild(text);
 
-        if (collapsed)
-            text.appendChild(document.createTextNode(message.shorttext));
-        else
-            text.appendChild(document.createTextNode(message.text));
-
+        if (collapsed) {
+            if (message.subject)
+                text.appendChild(document.createTextNode(message.subject));
+            else 
+                text.appendChild(document.createTextNode(message.shorttext));
+        } else {
+            if (message.subject)
+                text.appendChild(document.createTextNode(message.subject + "\n\n" + message.text));
+            else
+                text.appendChild(document.createTextNode(message.text));
+        }
+        
         if (index == 0 && collapsed) {
             text = document.createElement("DIV");
             text.className = "col-sm-4";
@@ -2062,42 +2073,108 @@ MessageViewer.prototype = new UIComponent();
 function MessageInputPanel(parent, options)
 {
     var self = this;
-    this.init("MessageInputPanel", "row");
+    this.init("MessageInputPanel", "message-panel");
+
+    this.type = "message";
     
     this.buildView = function() {
         this.removeComponents();
 
+        if (options.subject) {
+            var row = document.createElement("DIV");
+            row.className = "row";
+            this.div.appendChild(row);
+            
+            var lmargin = document.createElement("DIV");
+            lmargin.className = "col-sm-1";
+            row.appendChild(lmargin);
+
+            var cols = document.createElement("DIV");
+            cols.className = "col-sm-10";
+            row.appendChild(cols);
+
+            var formholder = document.createElement("DIV");
+            formholder.className = "forum-thread-title";
+            cols.appendChild(formholder);
+
+            formholder.appendChild(document.createTextNode("Subject / Topic:"));
+            formholder.appendChild(document.createElement("BR"));
+
+            this.subject = document.createElement("INPUT");
+            this.subject.setAttribute("type", "text");
+            this.subject.setAttribute("name", "title");
+            this.subject.setAttribute("size", 72);
+            formholder.appendChild(this.subject);
+
+            if (0) {
+                formholder.appendChild(document.createElement("BR"));
+
+                var buttons = document.createElement("DIV");
+                buttons.className = "btn-group";
+                buttons.setAttribute("role", "group");
+                formholder.appendChild(buttons);
+
+                this.qbutton = document.createElement("BUTTON");
+                this.qbutton.className = "btn btn-default btn-xs active";
+                this.addGlyph("glyphicon-question-sign", "", this.qbutton, "");
+                this.qbutton.appendChild(document.createTextNode(" Question"));
+                buttons.appendChild(this.qbutton);
+
+                this.ibutton = document.createElement("BUTTON");
+                this.ibutton.className = "btn btn-default btn-xs";
+                this.addGlyph("glyphicon-info-sign", "", button, "");
+                this.ibutton.appendChild(document.createTextNode(" Conseil/Tip"));
+                buttons.appendChild(this.ibutton);
+
+                this.mbutton = document.createElement("BUTTON");            
+                this.mbutton.className = "btn btn-default btn-xs";
+                this.addGlyph("glyphicon-comment", "", this.mbutton, "");
+                this.mbutton.appendChild(document.createTextNode(" Message"));
+                buttons.appendChild(this.mbutton);
+            }
+            
+            var rmargin = document.createElement("DIV");
+            rmargin.className = "col-sm-1";
+            row.appendChild(rmargin);
+        }
+        
+        var row = document.createElement("DIV");
+        row.className = "row";
+        this.div.appendChild(row);
+
         var lmargin = document.createElement("DIV");
         lmargin.className = "col-sm-1";
-        this.div.appendChild(lmargin);
+        row.appendChild(lmargin);
 
         var cols = document.createElement("DIV");
         cols.className = "col-sm-10";
-        this.div.appendChild(cols);
+        row.appendChild(cols);
 
         var formholder = document.createElement("DIV");
         formholder.className = "forum-reply-input";
         cols.appendChild(formholder);
 
-        if (options.title) {
-            formholder.appendChild(document.createTextNode(options.title));
+        if (options.label) {
+            formholder.appendChild(document.createTextNode(options.label));
             formholder.appendChild(document.createElement("BR"));
         }
     
-        var textarea = document.createElement("TEXTAREA");
-        textarea.className = "forum-reply-textarea";
-        textarea.setAttribute("name", "forum-reply-textarea");
-        formholder.appendChild(textarea);
+        this.textarea = document.createElement("TEXTAREA");
+        this.textarea.className = "forum-reply-textarea";
+        this.textarea.setAttribute("name", "forum-reply-textarea");
+        formholder.appendChild(this.textarea);
 
         formholder.appendChild(document.createElement("BR"));
         this.addButton("Envoi",
-                       function() { parent.sendMessage(textarea); },
+                       function() { parent.sendMessage(self.subject.value,
+                                                       self.textarea.value); },
                        "btn-default btn-sm",
                        formholder);
 
         var rmargin = document.createElement("DIV");
         rmargin.className = "col-sm-1";
-        this.div.appendChild(rmargin);
+        row.appendChild(rmargin);
+
     }
 
     this.buildView();
@@ -2121,7 +2198,8 @@ function ThreadViewer(thread, expanded)
             panelbody.appendChild(v.div);
         }
         var title = thread.length()? "Répondre" : "Message";
-        panelbody.appendChild(new MessageInputPanel(this, { "title": title }).div);
+        var subject = thread.length()? false : true;
+        panelbody.appendChild(new MessageInputPanel(this, { "label": title, "subject": subject }).div);
     }
 
     this.buildViewCollapsed = function() {
@@ -2134,10 +2212,11 @@ function ThreadViewer(thread, expanded)
         panelbody.appendChild(v.div);
     }
 
-    this.sendMessage = function(textarea) {
-        if (!textarea.value) return;
+    this.sendMessage = function(subject, text) {
+        if (!text) return;
         
-        var message = { "text": textarea.value,
+        var message = { "subject": subject,
+                        "text": text,
                         "thread": this.thread.id,
                         "experiment": this.thread.experimentId };
 
@@ -2190,6 +2269,8 @@ function ForumViewer(forum)
     this.selectPage = function(i) {
         if (this.newThread && this.newThread.length() == 0) {
             // Remove the empty thread
+            this.forum.removeThread(this.newThread);
+            this.newThread = null;
         }
         this.curPage = i;
         this.buildView();

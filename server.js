@@ -1764,6 +1764,7 @@ function createMessage(req, res)
     }
     */
     
+    var subject = req.body.subject;
     var account = req.user;
     var date = new Date().toISOString();
     var shorttext = text.substr(0, 42).replace(/[\n\r]/g, " ");
@@ -1773,6 +1774,7 @@ function createMessage(req, res)
         "date": date,
 	"thread": req.body.thread, 
 	"experiment": req.body.experiment, 
+        "subject": subject,
         "text": text,
         "shorttext": shorttext
     });
