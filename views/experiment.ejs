@@ -69,15 +69,14 @@
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
     <script src="<%= config.baseUrl %>/ie10-viewport-bug-workaround.js"></script>
     
-    <script>
+<script>
 var jq = $.noConflict();
 jq(document).ready(function(){
     _server = new Server("<%= config.baseUrl %>");
     showObservations(<%= experiment.id %>);
     initForum(<%= experiment.id %>);
 })
-
-setTimeout(function() { showObservations("<%= config.baseUrl %>", <%= experiment.id %>); }, 1);</script>
+</script>
 
   </body>
 </html>
