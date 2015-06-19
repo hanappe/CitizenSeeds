@@ -1912,7 +1912,8 @@ function Thread(id, expId)
     this.id = id;
     this.experimentId = expId;
     this.messages = [];
-
+    this.questionnaire = null; // FIXME: hack
+    
     this.length = function() {
         return this.messages.length;
     }
@@ -1930,6 +1931,8 @@ function Thread(id, expId)
             || this.lastUpdate.getTime() < message.date.getTime())
             this.lastUpdate = message.date;
         this.messages.push(message);
+        if (message.questionnaire)
+            this.questionnaire = message.questionnaire;
     }
 }
 
@@ -2069,6 +2072,133 @@ function MessageViewer(parent, thread, index, collapsed)
 }
 MessageViewer.prototype = new UIComponent();
 
+function RadishHarvest()
+{
+    var self = this;
+
+    this.init("RadishHarvest", "message-panel");
+    build();
+   
+    function build() {
+        var row = document.createElement("DIV");
+        row.className = "row";
+        self.div.appendChild(row);
+
+        var lmargin = document.createElement("DIV");
+        lmargin.className = "col-sm-1";
+        row.appendChild(lmargin);
+
+        var cols = document.createElement("DIV");
+        cols.className = "col-sm-10 questionnaire-radish-harvest";
+        row.appendChild(cols);
+
+        // Harvest
+        
+        var h4 = document.createElement("H4");
+        cols.appendChild(h4);
+        var span = document.createElement("SPAN");
+        h4.appendChild(span);
+        span.className = "label label-primary right-margin";
+        span.appendChild(document.createTextNode("Avez-vous récolté des radis ?"));
+
+        span = document.createElement("SPAN");
+        h4.appendChild(span);
+        span.className = "label label-primary";
+        span.appendChild(document.createTextNode("Did you harvest any radishes?"));
+        
+        options = [
+            { "value": "", "text": "-" }, 
+            { "value": "", "text": "Oui, j'ai récolté des radis !" },
+            { "value": "", "text": "Non, je ne les ai pas semés..." },
+            { "value": "", "text": "Non, les radis ne sont pas sortie de terre, ou ils sont restés tout petit !" },
+            { "value": "", "text": "Non, les radis sont montés en graines." },
+            { "value": "", "text": "Non, les radis ont été mangés par nos amis les limaces." },
+            { "value": "", "text": "Non, les radis sont tombés malades." } ];
+
+        self.harvest = document.createElement("SELECT");
+        self.harvest.id = "harvest";
+        self.harvest.className = "";
+        cols.appendChild(self.harvest);
+        
+        for (var i = 0; i < options.length; i++) {
+            var option = document.createElement("OPTION");
+            option.value = options[i].value;
+            option.text = options[i].text;
+            self.harvest.appendChild(option);
+        }
+        cols.appendChild(document.createElement("BR"));
+
+
+        // Quantity
+
+        h4 = document.createElement("H4");
+        cols.appendChild(h4);
+        span = document.createElement("SPAN");
+        h4.appendChild(span);
+        span.className = "label label-primary right-margin";
+        span.appendChild(document.createTextNode("Si oui, combien de radis ?"));
+
+        span = document.createElement("SPAN");
+        h4.appendChild(span);
+        span.className = "label label-primary";
+        span.appendChild(document.createTextNode("If yes, how many radishes did you harvest?"));
+
+        self.quantity = document.createElement("SELECT");
+        self.quantity.id = "quantity";
+        self.quantity.className = "";
+        cols.appendChild(self.quantity);
+
+        for (var i = 0; i < 30; i++) {
+            var option = document.createElement("OPTION");
+            option.value = "" + i;
+            option.text = (i==0)? "-" : "" + i;
+            self.quantity.appendChild(option);
+        }
+        cols.appendChild(document.createElement("BR"));
+        
+        // Weight
+        
+        h4 = document.createElement("H4");
+        cols.appendChild(h4);
+        span = document.createElement("SPAN");
+        h4.appendChild(span);
+        span.className = "label label-primary right-margin";
+        span.appendChild(document.createTextNode("Quel poids, si connu ?"));
+
+        span = document.createElement("SPAN");
+        h4.appendChild(span);
+        span.className = "label label-primary";
+        span.appendChild(document.createTextNode("The weight of the radishes, if known?"));
+
+        self.weight = document.createElement("INPUT");
+        self.weight.className = "TextField";
+        self.weight.setAttribute("type", "text");
+        self.weight.setAttribute("name", "weight");
+        self.weight.setAttribute("size", "4");
+        cols.appendChild(self.weight);
+        cols.appendChild(document.createTextNode("grammes"));
+        cols.appendChild(document.createElement("BR"));
+        
+        var rmargin = document.createElement("DIV");
+        rmargin.className = "col-sm-1";
+        row.appendChild(rmargin);
+    }
+
+    this.response = function() {
+        var text = "";
+        var index = this.harvest.selectedIndex;
+        text += this.harvest.options[index].text + "\n";
+        if (index == 1) {
+            index = this.quantity.selectedIndex;
+            if (index > 0) text += this.quantity.options[index].text + " radis.\n";
+        }
+        if (self.weight.value)
+            text += "Poids :" + self.weight.value + "g\n";
+        return text;
+    }
+    
+}
+RadishHarvest.prototype = new UIComponent();
 
 function MessageInputPanel(parent, options)
 {
@@ -2197,9 +2327,17 @@ function ThreadViewer(thread, expanded)
             var v = new MessageViewer(this, thread, i, false);
             panelbody.appendChild(v.div);
         }
-        var title = thread.length()? "Répondre" : "Message";
+
+        if (thread.questionnaire) {
+            var fun = window[thread.questionnaire];
+            this.questionnaire = new fun();
+            panelbody.appendChild(this.questionnaire.div);
+        }
+
+        var title = this.questionnaire? "Info supplémentaire // Additional info:" : thread.length()? "Répondre" : "Message";
         var subject = thread.length()? false : true;
         panelbody.appendChild(new MessageInputPanel(this, { "label": title, "subject": subject }).div);
+
     }
 
     this.buildViewCollapsed = function() {
@@ -2213,7 +2351,10 @@ function ThreadViewer(thread, expanded)
     }
 
     this.sendMessage = function(subject, text) {
-        if (!text) return;
+        if (this.questionnaire) {
+            if (text) text = this.questionnaire.response() + "\nCommentaire :\n" + text;
+            else text = this.questionnaire.response();
+        } else if (!text) return;
         
         var message = { "subject": subject,
                         "text": text,

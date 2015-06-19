@@ -21,6 +21,7 @@ body {
 }
 
 .top-margin { margin-top: 20px; }
+.right-margin { margin-right: 20px; }
 
 .profile {
     margin-top: 20px; 
@@ -93,6 +94,11 @@ body {
     color: white;
     font-size: 24px;
     font-weight: bold;
+}
+
+.questionnaire-radish-harvest {
+    border-top: solid 2px black;
+    padding-top: 8px;
 }
 
 .matrix-collapsed {
