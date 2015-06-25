@@ -764,7 +764,7 @@ function formatValue(value, digits)
 
 function formatDateHour(date)
 {
-    return pad(date.getDate()) + "/" + pad(date.getMonth() + 1) + " à " + date.getHours() + "h" + pad(d.getMinutes());
+    return pad(date.getDate()) + "/" + pad(date.getMonth() + 1) + " à " + date.getHours() + "h" + pad(date.getMinutes());
 }
 
 function formatDate(date)
