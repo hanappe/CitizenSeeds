@@ -2488,7 +2488,7 @@ var _prof = new PerformanceProfile();
 
 //--------------------------------------------------
 
-var _numWeeks = 8;
+var _numWeeks = 10;
 var _server = undefined;
 var _experiment = undefined;
 var _controller = undefined;
