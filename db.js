@@ -337,6 +337,32 @@ function getObservation(id)
     return undefined;
 }
 
+function selectObservations(filter)
+{
+    var observations = [];
+    for (var i = 0; i < _db.observations.length; i++) {
+        if (filter.location &&
+            filter.location != _db.observations[i].location)
+            continue;
+        if (filter.plant &&
+            filter.plant != _db.observations[i].plant)
+            continue;
+        if (filter.experiment &&
+            filter.experiment != _db.observations[i].experiment)
+            continue;
+        var date = null;
+        if (filter.from || filter.to) date = new Date(_db.observations[i].date); // FIXME
+        if (filter.from &&
+            filter.from.getTime() > date.getTime())
+            continue;
+        if (filter.to &&
+            filter.to.getTime() < date.getTime())
+            continue;
+        observations.push(_db.observations[i]);
+    }
+    return observations;
+}
+
 function newObservationId()
 {
     var id = 1;
@@ -622,6 +648,7 @@ module.exports = {
     selectObservers: selectObservers,
     
     getObservations: getObservations,
+    selectObservations: selectObservations,
     getObservation: getObservation,
     insertObservation: insertObservation,
     updateObservation: updateObservation,
