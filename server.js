@@ -650,7 +650,7 @@ function sendObservations(req, res)
 
 function validSize(s)
 {
-    return (s == "small" || s == "orig" || s = "thumbnail");
+    return (s == "small" || s == "orig" || s == "thumbnail");
 }
 
 function sendObservationImage(req, res)
