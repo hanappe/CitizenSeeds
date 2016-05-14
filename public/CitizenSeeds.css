@@ -56,7 +56,7 @@ div.Curtain {
     bottom: 0;
     z-index: 100;
     overflow: scroll;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.2);
 }
 
 div.AccountPanel {
@@ -66,7 +66,8 @@ div.AccountPanel {
 
 div.UploadPanel {
     width: 300px;
-    border: solid 1px black;
+    //border: solid 1px black;
+    box-shadow: 3px 3px 3px #444444;
     background-color: white;
     padding: 20px;
     margin: auto;
@@ -425,7 +426,9 @@ div.Slideshow {
     margin: 4px auto;
     display: table;
     background-color: white;
-    border: solid 1px black;
+    //border: solid 1px black;
+    box-shadow: 6px 6px 5px black;
+    width: 640px;
 }
 
 div.PictureBox {
@@ -440,8 +443,8 @@ img.SlideshowClose {
 div.CaptionBox {
       margin: 0 auto;
       text-align: center;
-      height: 24px;
-      line-height: 22px;
+      //height: 24px;
+      line-height: 20px;
       padding: 2px;
       padding-top: 2px;
       padding-left: 10px;

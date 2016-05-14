@@ -34,6 +34,7 @@
       </div>
     </div>
 
+    <!--
     <div class="container-fluid">
       <div class="row">
         <div class="col-sm-12">
@@ -41,7 +42,8 @@
         </div>
       </div>
     </div>
-    
+    -->
+
     <div class="container-fluid">
       <div class="row">
         <div class="col-sm-12">
@@ -56,6 +58,8 @@
     </div>
 
     <div id="ForumViewer" class="container-fluid forum-container"></div>
+
+    <div id="ActivityViewer" class="container-fluid forum-container"></div>
 
     <div id="ExperimentView"></div>
 
@@ -73,8 +77,9 @@
 var jq = $.noConflict();
 jq(document).ready(function(){
     _server = new Server("<%= config.baseUrl %>");
-    showObservations(<%= experiment.id %>);
+    showObservations(<%= experiment.id %>, "<%= startAt %>");
     initForum(<%= experiment.id %>);
+    showRecentActivity(<%= experiment.id %>);
 })
 </script>
 

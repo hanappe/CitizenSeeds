@@ -740,6 +740,24 @@ function toDate(d)
     return "" + d.getFullYear() + "-" + m + "-" + day;
 }
 
+function toDateWithHMS(d)
+{
+/*
+    var m = 1 + d.getMonth();
+    if (m < 10) m = "0" + m;
+    var day = d.getDate();
+    if (day < 10) day = "0" + day;        
+    var H = date.getHours();
+    if (H < 10) H = "0" + H;        
+    var M = date.getMinutes();
+    if (M < 10) M = "0" + M;        
+    var S = date.getSeconds();
+    if (S < 10) S = "0" + S;        
+    S = "" + S + ".000Z";
+*/
+    return d.toISOString();
+}
+
 function toDayAndMonth(d)
 {
     var m = 1 + d.getMonth();
@@ -820,8 +838,20 @@ function ExperimentView(experiment)
     }
 
     this.getMatrixView = function(matrix) {
+        //alert("length=" + this.components.length);
         for (var i = 0; i < this.components.length; i++) {
+            //alert("ExperimentView, component " + i + ", found=" + (this.components[i].matrix == matrix) + ", matrix=" + JSON.stringify(matrix) + ", components.matrix=" + JSON.stringify(matrix));
             if (this.components[i].matrix && (this.components[i].matrix == matrix))
+                return this.components[i];
+        }
+        return undefined;
+    }
+
+    this.getMatrixViewByPlantId = function(id) {
+        for (var i = 0; i < this.components.length; i++) {
+            if (this.components[i].matrix 
+                && this.components[i].matrix.plant 
+                && (this.components[i].matrix.plant.id == id))
                 return this.components[i];
         }
         return undefined;
@@ -916,15 +946,24 @@ function ObservationMatrixView(matrix, viewStart, numWeeks, collapsed)
         this.placeholder.innerHTML = "Cliquez sur <span class='glyphicon glyphicon-chevron-down'></span> pour voir les images";
         this.div.appendChild(this.placeholder);
     }
-    
+
+    this.buildView = function() {
+        this.removeComponents();
+        if (this.collapsed) this.buildViewCollapsed();
+        else this.buildViewExpanded();
+    }
+
     this.buildViewCollapsed = function() {
         this.buildHeader(true);
         this.buildPlaceHolder();
+        this.placeholder.className = "matrix-collapsed visible";
     }
     
     this.buildViewExpanded = function() {
         this.buildHeader(false);
         this.buildMatrixView();
+        this.buildPlaceHolder();
+        this.placeholder.className = "matrix-collapsed hidden";
     }
     
     this.clear = function() {
@@ -936,10 +975,10 @@ function ObservationMatrixView(matrix, viewStart, numWeeks, collapsed)
             this.matrixView.setVisible(false);
             this.button.setVisible(false);
         }
-        if (!this.placeholder) {
+        if (!this.placeholder)
             this.buildPlaceHolder();
-        }
         this.placeholder.className = "matrix-collapsed visible";
+        this.collapsed = true;
     }
     
     this.expand = function() {
@@ -948,17 +987,17 @@ function ObservationMatrixView(matrix, viewStart, numWeeks, collapsed)
         }
         this.matrixView.setVisible(true);
         this.button.setVisible(true);
-
         if (this.placeholder)
             this.placeholder.className = "matrix-collapsed hidden";
+
+        this.collapsed = false;
     }
     
     this.matrix = matrix;
     this.viewStart = viewStart;
     this.numWeeks = numWeeks;
-
-    if (collapsed) this.buildViewCollapsed();
-    else this.buildViewExpanded();
+    this.collapsed = collapsed;
+    this.buildView();
 }
 ObservationMatrixView.prototype = new UIComponent();
 
@@ -1033,7 +1072,7 @@ function ObservationWeekView(date, numWeeks)
         date = new Date(date.getFullYear(),
                         date.getMonth(),
                         date.getDate() + 7,
-                        0, 0, 0);
+                        12, 0, 0);
     }
 }
 ObservationWeekView.prototype = new UIComponent();
@@ -1086,6 +1125,15 @@ function ObservationLocationView(observer)
     this.addLink(observer.accountId,
                  _server.root + "people/" + observer.accountId + ".html",
                  "ObservationLocationView");
+    if (observer.blog || observer.vlog) {
+        this.addBreak();
+        if (observer.blog)
+            this.addLink("blog", observer.blog, "observer-blog");
+        if (observer.blog && observer.vlog) 
+            this.addText(" - ", "");
+        if (observer.vlog)
+            this.addLink("videos", observer.vlog, "observer-blog");
+    }
     this.addBreak();
     var text = observer.locationName;
     if (observer.locationCity)
@@ -1117,7 +1165,7 @@ function ObservationView(row, observer, observations, col)
     this.startDate = new Date(_experiment.startDate.getFullYear(),
                               _experiment.startDate.getMonth(),
                               _experiment.startDate.getDate() + col * 7,
-                              0, 0, 0);
+                              12, 0, 0);
     
     var self = this;
     
@@ -1158,7 +1206,7 @@ function ObservationView(row, observer, observations, col)
                        "locationId": observer.locationId,
                        "plantId": observer.plantId,
                        "experimentId": observer.experimentId,
-                       "date": toDate(date) };
+                       "date": toDateWithHMS(date) };
         _curtain.show(new UploadPanel(hidden,
                                       function(data) {
                                           if (data.error) {
@@ -1487,6 +1535,95 @@ function SensorDataViewer(observer, data)
 }
 SensorDataViewer.prototype = new UIComponent();
 
+function LocationSelection(parent, location)
+{
+    var self = this;
+    this.parent = parent;
+    this.location = location;
+    this.handler = function() {
+        parent.createObserver(self.location.id, null);
+    }
+}
+
+function LocationSelector(ctrl, locations, experimentId, matrix)
+{
+    var self = this;
+
+    this.init("LocationSelector", "LocationSelector");
+    this.ctrl = ctrl;
+    this.locations = locations;
+    this.experimentId = experimentId;
+    this.matrix = matrix;
+    
+    this.buildView = function() {
+        var buttons = document.createElement("DIV");
+        buttons.className = "location-selector";
+        this.div.appendChild(buttons);
+
+        if (this.locations.length == 0) {
+            var p = document.createElement("p");
+            p.innerHTML = "Veuillez donner un nom à votre emplacement ('Mon bac', 'La terrasse'...)&nbsp;:";
+            buttons.appendChild(p);
+
+        } else {
+            var p = document.createElement("p");
+            p.innerHTML = "Sélectionnez l'emplacement :";
+            buttons.appendChild(p);
+
+            for (var i = 0; i < this.locations.length; i++) {
+                var button = document.createElement("BUTTON");
+                button.className = "btn btn-primary btn-block location-selector";
+                button.id = "location-" + locations[i].id;
+                button.appendChild(document.createTextNode(locations[i].name));
+                buttons.appendChild(button);
+                setEventHandler(button, 'click', new LocationSelection(this, this.locations[i]).handler);
+            }
+            var hr = document.createElement("HR");
+            buttons.appendChild(hr);
+
+            var p = document.createElement("p");
+            p.innerHTML = "Ou ajoutez un nouveau emplacement dans la liste&nbsp;:";
+            buttons.appendChild(p);
+        }
+
+        var span = document.createElement("span");
+        span.innerHTML = "Nom&nbsp;:";
+        buttons.appendChild(span);
+
+        var form = document.createElement("FORM");
+        buttons.appendChild(form);
+
+        this.text = document.createElement("INPUT");
+        this.text.setAttribute("type", "text");
+        this.text.setAttribute("name", "name");
+        this.text.setAttribute("size", "18");
+        this.text.setAttribute("maxlength", "40");
+        form.appendChild(this.text);
+
+        var button = document.createElement("BUTTON");
+        button.className = "btn btn-success btn-block location-selector";
+        button.appendChild(document.createTextNode("Créer"));
+        buttons.appendChild(button);
+        setEventHandler(button, 'click', function() { self.createObserver(null, self.text.value); });
+
+        var hr = document.createElement("HR");
+        buttons.appendChild(hr);
+
+        var button = document.createElement("BUTTON");
+        button.className = "btn btn-secondary-outline btn-block location-selector";
+        button.appendChild(document.createTextNode("Annuler"));
+        buttons.appendChild(button);
+        setEventHandler(button, 'click', function() { _curtain.finished(); });
+    }
+
+    this.createObserver = function(locationId, locationName) {
+        _curtain.finished();
+        ctrl.createObserver(this.matrix, locationId, locationName);
+    }
+
+    this.buildView();
+}
+LocationSelector.prototype = new UIComponent();
 
 //--------------------------------------------------
 // Controller
@@ -1540,21 +1677,35 @@ function ExperimentController(experiment)
             }});
     }
 
+    this.createObserver = function(matrix, locationId, locationName) {
+        var observer = {
+            "experimentId": this.experiment.id,
+            "plantId": matrix.plant.id,
+            "locationId": locationId,
+            "locationName": locationName
+        };
+        _server.postJSON("observers", observer).then(function (r) {
+            if (r.error) {
+                if (r.type && r.type == "select") {
+                    //alert(JSON.stringify(r.select));
+                    _curtain.show(new LocationSelector(self,
+                                                       r.select, 
+                                                       self.experiment.id, 
+                                                       matrix));
+                } else 
+                    alert(r.message);
+            } else {
+                matrix.addObserver(r);
+                var view = self.view.getMatrixViewByPlantId(matrix.plant.id);
+                //alert(view);
+                if (view) view.buildView();
+            }
+        }); 
+    }
+
     this.handleEvent = function(what, target) {
         if (what == "clicked" && target.action == "createObserver") {
-            var matrix = target.matrix;
-            var observer = {
-                "experimentId": this.experiment.id,
-                "plantId": matrix.plant.id
-            };
-            _server.postJSON("observers", observer).then(function (r) {
-                if (r.error) alert(r.message);
-                else {
-                    matrix.addObserver(r);
-                    var view = self.view.getMatrixView(matrix);
-                    if (view) view.showObservationRows();
-                }
-            }); 
+            self.createObserver(target.matrix, null,null);
         }
     }
 }
@@ -1613,7 +1764,8 @@ function ObservationMatrix(plant, cols)
     this.addObservation = function(obs) {
         var row = this.map[obs.locationId];
         var cell = row[obs.col];
-        cell.push(obs);
+	if (cell) cell.push(obs);
+	else /* alert(JSON.stringify(obs)) */;
     }
 }
 
@@ -1623,7 +1775,9 @@ function Experiment(e, numWeeks)
     this.plants = e.plants;
     this.name = e.name;
     this.prettyname = e.prettyname;
-    this.startDate = new Date(e.startDate);
+    //alert("startdate = " + e.startDate);
+    this.startDate = new Date(e.startDate.year, e.startDate.month-1, e.startDate.day);
+    //alert("converted startdate = " + this.startDate);
     this.numWeeks = numWeeks;
     this.matrices = [];
     this.map = {};
@@ -1654,6 +1808,8 @@ function Experiment(e, numWeeks)
     
     this.insertObservation = function(observation) {
         observation.col = this.getWeekNum(observation.date);
+	if (observation.col < 0)
+	    return;
         for (var i = 0; i < this.matrices.length; i++) {
             if (this.matrices[i].plant.id == observation.plantId) {
                 this.matrices[i].addObservation(observation);
@@ -1791,10 +1947,14 @@ function Slideshow(observations)
     this.displayCaption = function() {
         var observation = this.observations[this.curSlide];
         if (observation) {
-            var text = observation.plantFamily + ", ";
+            var text = "";
+            if (observation.comment) {
+                text += "<p class='comment'>" + observation.comment + "</p>";
+            }
+            text += "<p class='observation'>" + observation.plantFamily + ", ";
             if (observation.plantVariety)
                 text += observation.plantVariety + ", ";
-            text += observation.locationName + " - " + observation.accountId + ", " + toDate(observation.date);
+            text += observation.locationName + " - " + observation.accountId + ", " + toDate(observation.date) + "</p>";
             this.caption.innerHTML = text;
         }
     }
@@ -2457,6 +2617,60 @@ ForumViewer.prototype = new UIComponent();
 
 //--------------------------------------------------
 
+function ActivityViewer(id)
+{
+    var self = this;
+    this.init("ActivityViewer", "", document.getElementById("ActivityViewer"));
+
+    this.setObservations = function(obs) {
+        this.observations = obs;
+    }
+    
+    this.buildView = function() {
+        this.removeComponents();
+        var div = document.createElement("DIV");
+        div.className = "forum-header";
+        div.innerHTML = "Photos r&eacute;centes";
+        this.div.appendChild(div);        
+        
+        div = document.createElement("DIV");
+        div.className = "recent-photos";
+        
+        for (var i = this.observations.length-1, j = 0; i >= 0 && j < 27; i--, j++) {
+            var imgdiv = document.createElement("DIV");
+            imgdiv.className = "recent-photo";
+
+            var img = document.createElement("IMG");
+            img.src = _server.root + "/" + this.observations[i].thumbnail;
+            img.className = "recent-photo";
+            imgdiv.appendChild(img);
+/*
+            var br = document.createElement("BR");
+            imgdiv.appendChild(br);
+
+            var a = document.createElement("A");
+            a.className = "recent-photo";
+            a.setAttribute("href", _server.root + "people/" + this.observations[i].accountId + ".html");
+            a.appendChild(document.createTextNode(this.observations[i].accountId));
+            imgdiv.appendChild(a);
+*/
+            div.appendChild(imgdiv);
+        }
+        
+        this.div.appendChild(div);        
+    }
+    
+    _server.getJSON("observations.json?experiment=" + id 
+                    + "&days=21&sort=upload")
+        .then(function(obs) {
+            self.setObservations(obs);
+            self.buildView();
+        });
+}
+ActivityViewer.prototype = new UIComponent();
+
+//--------------------------------------------------
+
 function PerformanceProfile()
 {
     this.startDate = new Date();
@@ -2488,7 +2702,7 @@ var _prof = new PerformanceProfile();
 
 //--------------------------------------------------
 
-var _numWeeks = 10;
+var _numWeeks = 12;
 var _server = undefined;
 var _experiment = undefined;
 var _controller = undefined;
@@ -2497,7 +2711,7 @@ var _account = undefined;
 var _accountPanel = undefined;
 var _forum = undefined;
 
-function showObservations(id)
+function showObservations(id, startAt)
 {
     _curtain = new Curtain();
     document.getElementById("Body").appendChild(_curtain.div);
@@ -2512,13 +2726,27 @@ function showObservations(id)
             
         _experiment = new Experiment(e, _numWeeks);
 
-        var today = new Date();
-        var daysTillSunday = today.getDay() == 0? 7 : 7 - today.getDay();
-        var viewEnd = new Date(today.getFullYear(), today.getMonth(),
-                            today.getDate() + daysTillSunday, 0, 0, 0);
-        var viewStart = new Date(today.getFullYear(), today.getMonth(),
-                                 today.getDate() + daysTillSunday - _numWeeks * 7,
-                                 0, 0, 0);
+	var viewStart;
+	var viewEnd;
+
+	if (startAt && startAt == "beginning") {
+            viewStart = _experiment.startDate;
+            viewEnd = new Date(viewStart.getFullYear(), viewStart.getMonth(),
+                                viewStart.getDate() + 7 * _numWeeks, 23, 59, 59);
+        } else if (startAt && startAt != "today") {
+            viewStart = new Date(startAt);
+            viewEnd = new Date(viewStart.getFullYear(), viewStart.getMonth(),
+                                viewStart.getDate() + 7 * _numWeeks, 23, 59, 59);
+
+	} else {
+            var today = new Date();
+            var daysTillSunday = today.getDay() == 0? 7 : 7 - today.getDay();
+            var viewEnd = new Date(today.getFullYear(), today.getMonth(),
+				   today.getDate() + daysTillSunday, 0, 0, 0);
+            var viewStart = new Date(today.getFullYear(), today.getMonth(),
+                                     today.getDate() + daysTillSunday - _numWeeks * 7,
+                                     0, 0, 0);
+	}
 
         if (viewStart.getTime() < _experiment.startDate.getTime()) {
             viewStart = _experiment.startDate;
@@ -2627,6 +2855,12 @@ function initForum(id)
         _forumView = new ForumViewer(_forum);
     });
 }
+
+function showRecentActivity(id)
+{
+    new ActivityViewer(id);
+}
+
 
 //--------------------------------------------------
 

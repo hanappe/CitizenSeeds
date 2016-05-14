@@ -148,7 +148,7 @@ function getAccount(id)
 
 function insertAccount(account)
 {
-    _db.push(account);
+    _db.accounts.push(account);
     saveTable("accounts");
     return account;
 }

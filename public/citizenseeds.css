@@ -115,3 +115,34 @@ nav.forum-pager {
 .forum-page-selector {
     padding-right: 8px;
 }
+
+div.location-selector {
+    background: white;
+    background-color: white;
+    padding: 20px;
+    width: 300px;
+    //border: solid 1px black;
+    box-shadow: 3px 3px 3px #444444;
+    margin: auto;
+    margin-top: 20px;
+}
+
+a.observer-blog {
+    font-size: 10px;
+}
+
+div.recent-photo {
+    padding: 4px;
+    display: inline;
+}
+
+img.recent-photo {
+}
+
+p.comment {
+}
+
+p.observation {
+    color: #444;
+    font-style: italic;
+}

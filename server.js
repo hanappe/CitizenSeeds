@@ -203,6 +203,11 @@ function sendObservers(req, res)
         var plant = database.getPlant(obs.plant);
         //var account = database.getAccount(obs.account);
 
+        //logger.debug("Request: getting profile for " + obs.id);
+
+        var profile = database.getProfile(obs.account);
+        if (!profile) profile = {};
+
         var copy = { "id": obs.id,
                      "date": obs.date,
                      "locationId": location.id,
@@ -214,6 +219,8 @@ function sendObservers(req, res)
                      "plantFamily": plant.family,
                      "plantVariety": plant.variety,
                      "accountId": location.account,
+                     "blog": profile.blog,
+                     "vlog": profile.vlog,
                      "experimentId": obs.experiment };
 
         items.push(copy);
@@ -280,19 +287,27 @@ function createObserver(req, res)
                       __line, __function);
 	    return;
         }
-    } else {
-        var locations = database.selectLocations({ "account": account.id });
-        if (locations.length == 0) {
-            location = database.insertLocation({ "account": account.id, "name": "Ma parcelle" });
-        } else if (locations.length == 1) {
-            location = locations[0]; // easy
-        } else {
-            logger.debug("createObserver: locations: " + JSON.stringify(locations));
+    } else if (req.body.locationName) {
+        if (!validLocationName(req.body.locationName)) {
 	    sendError(res, { "success": false, 
-			     "message": "Can't handle multiple locations, yet" },
-                      __line, __function);
+			     "message": "Invalid name (we think...)" },
+                      __line, __function);    
             return;
         }
+        location = database.insertLocation({ "account": account.id, "name": req.body.locationName });
+    } else {
+        var locations = database.selectLocations({ "account": account.id });
+        /*if (locations.length == 0) {
+            location = database.insertLocation({ "account": account.id, "name": "Ma parcelle" });
+        } else if (locations.length >= 1) {*/
+            logger.debug("createObserver: locations: " + JSON.stringify(locations));
+	    sendError(res, { "success": false, 
+                             "type":  "select",
+                             "select":  locations,
+			     "message": "Please select or create a location" },
+                      __line, __function);
+            return;
+        //}
     }
     
     var observers = database.selectObservers({ "account": account.id,
@@ -350,6 +365,8 @@ function sendExperiment(req, res)
                   "note": exp.plants[i].note };
         e.plants.push(p);
     }
+
+    logger.debug("sendExperiment: Sending: " + JSON.stringify(e));
     
     res.writeHead(200, {"Content-Type": "application/json"});
     res.end(JSON.stringify(e));
@@ -398,7 +415,14 @@ function sendExperimentPage(req, res)
                   __line, __function);
 	return;
     }
-    res.render('experiment', { "config": config, "experiment": experiment });
+    //var startAt = "2015-05-02";
+    //var startAt = "today";
+    var startAt = "beginning";
+    logger.debug("startat: " + req.query.startat);
+    if (validDate(req.query.startat)) {
+	startAt = req.query.startat;
+    }
+    res.render('experiment', { "config": config, "experiment": experiment, "startAt": startAt });
     
     //var vars = { "experimentId": experiment.id, 
 //	         "experimentName": experiment.prettyname,
@@ -557,8 +581,10 @@ function formatObservation(obs)
 
     var copy = { "id": obs.id,
                  "date": obs.date,
+                 "dateUpload": obs.dateUpload,
                  "dateCreated": obs.dateCreated,
                  "experimentId": obs.experiment,
+                 "comment": obs.comment,
                  "locationId": loca.id,
                  "locationName": loca.name,
                  "plantId": pl.id,
@@ -580,12 +606,18 @@ function sendObservations(req, res)
 
     var fromDate = (req.query.from)? convertDate(req.query.from) : undefined;
     var toDate = (req.query.to)? convertDate(req.query.to) : undefined;
+    var days = (req.query.days)? req.query.days : undefined;
     var location = (req.query.location)? req.query.location : undefined;
     var plant = (req.query.plant)? req.query.plant : undefined;
     var experiment = (req.query.experiment)? req.query.experiment : undefined;
 
     var items = [];
     var observations = database.getObservations();
+
+    if (days) {
+        toDate = new Date();
+        fromDate = new Date(toDate.getTime() - days * 24 * 60 * 60 * 1000);
+    }
     
     for (var i = 0; i < observations.length; i++) {
         var obs = observations[i];
@@ -601,12 +633,16 @@ function sendObservations(req, res)
         items.push(formatObservation(obs));
     }
 
-    if (req.query.sort && req.query.sort == "plant")
-        items.sort(function(a,b) { return a.plant - b.plant; });
-    if (req.query.sort && req.query.sort == "location")
-        items.sort(function(a,b) { return a.locationName.localeCompare(b.locationName); });
-    if (req.query.sort && req.query.sort == "date")
-        items.sort(function(a,b) { return a.date.localeCompare(b.date); });
+    if (req.query.sort) {
+        if (req.query.sort == "plant")
+            items.sort(function(a,b) { return a.plant - b.plant; });
+        else if (req.query.sort == "location")
+            items.sort(function(a,b) { return a.locationName.localeCompare(b.locationName); });
+        else if (req.query.sort == "date")
+            items.sort(function(a,b) { return a.date.localeCompare(b.date); });
+        else if (req.query.sort == "upload")
+            items.sort(function(a,b) { return a.dateUpload.localeCompare(b.dateUpload); });
+    }
 
     res.writeHead(200, {"Content-Type": "application/json"});
     res.end(JSON.stringify(items));
@@ -812,12 +848,33 @@ function fixObservationDate(observation, exifData)
         // instead.
         var diff = (d2.getTime() - d.getTime()) / 24 / 60 / 60 / 1000;
         var exp = database.getExperiment(observation.experiment);
-        var start = new Date(exp.startDate);
+        var start = new Date(exp.startDate.year, exp.startDate.month-1, exp.startDate.day);
         var now = new Date();
-        if (diff < 32
+
+        var t = "Date EXIF: " + d + "\n";
+        t += "Date observation (user): " + d2 + "\n";
+        t += "Date now: " + now + "\n";
+        t += "Date start exp.: " + start + "\n";
+        t += "Diff (days): " + diff + "\n";
+        logger.debug(t);
+        sendMail("peter@hanappe.com", "New photo upload", t);
+
+        logger.debug("Math.abs(diff): " + (Math.abs(diff)));
+        logger.debug("d.getTime() : " + (d.getTime()));
+        logger.debug("now.getTime() : " + (now.getTime()));
+        logger.debug("start.getTime() : " + (start.getTime()));
+        logger.debug("Math.abs(diff) < 15: " + (Math.abs(diff) < 15));
+        logger.debug("d.getTime() < now.getTime() : " + (d.getTime() < now.getTime()));
+        logger.debug("d.getTime() >= start.getTime() : " + (d.getTime() >= start.getTime()));
+
+        if (Math.abs(diff) < 15
             && (d.getTime() < now.getTime())
-            && (d.getTime() >= start.getTime()))
+            && (d.getTime() >= start.getTime())) {
             observation.date = observation.dateCreated;
+            logger.debug("Changing observation date to EXIF data");
+        } else {
+            logger.debug("Keeping user's observation date");
+        }
         database.updateObservation(observation);
     }
 }
@@ -1210,6 +1267,7 @@ function createAccount(req, res)
 {
     logger.debug("Request: createAccount: body=" + JSON.stringify(req.body));
 
+    var experiment = req.body.experiment;
     var id = req.body.id;
     var email = req.body.email;
     var firstname = req.body.firstname;
@@ -1219,13 +1277,7 @@ function createAccount(req, res)
     var zipcode = req.body.zipcode;
     var town = req.body.town;
     var country = req.body.country;
-    var delivery = req.body.delivery;
     var flowerpower = req.body.flowerpower;
-    var soil = req.body.soil;
-    var participation = req.body.participation;
-    var groupId = req.body.groupId;
-    var groupName = req.body.groupName;
-    var groupAddress = req.body.groupAddress;
     var btdevice = req.body.btdevice;
     var btinfo = req.body.btinfo;
     var account = database.getAccount(id);
@@ -1311,65 +1363,13 @@ function createAccount(req, res)
 
     logger.debug("createAccount @ 10");
 
-    if (flowerpower !== true && flowerpower !== false)
+    if (flowerpower != "yes" && flowerpower != "no")
         return sendError(res, { "success": false,
                                 "field": "flowerpower",
                                 "message": "Valeur invalide pour le champs 'flowerpower'." },
                           __line, __function); 
 
     logger.debug("createAccount @ 11");
-
-    if (soil !== true && soil !== false)
-        return sendError(res, { "success": false,
-                                "field": "soil",
-                                "message": "Valeur invalide pour le champs 'soil'." },
-                         __line, __function); 
-
-    logger.debug("createAccount @ 12");
-
-    if (!validDelivery(delivery))
-        return sendError(res, { "success": false,
-                                "field": "soil",
-                                "message": "Valeur invalide pour le lieu de RDV." },
-                          __line, __function);     
-    
-    logger.debug("createAccount @ 13");
-
-    if (!validParticipation(participation))
-        return sendError(res, { "success": false,
-                                "field": "participation",
-                                "message": "Type de participation invalide." },
-                          __line, __function); 
-
-    logger.debug("createAccount @ 14");
-
-    if (participation == "join") {
-        group = database.getGroup(groupId);
-        if (!group)
-            return sendError(res, { "success": false,
-                                    "field": "group",
-                                    "message": "L'identifiant du groupe sélectionné semble érroné... Nos excuses. Merci de nous contacter." },
-                             __line, __function); 
-    } else if (participation == "create") {
-        if (!validGroupName(groupName))
-            return sendError(res, { "success": false,
-                                    "field": "groupname",
-                                    "message": "Le nom du groupe contient des caractères que nous ne gérons pas (encore). Merci de les substituer." },
-                             __line, __function); 
-        if (!validAddress(groupAddress))
-            return sendError(res, { "success": false,
-                                    "field": "groupaddress",
-                                    "message": "L'adresse du groupe contient des caractères que nous ne gérons pas (encore). Merci de les substituer." },
-                             __line, __function);
-
-        group = database.insertGroup({ "id": gid,
-                                       "name": groupName,
-                                       "address": groupAddress,
-                                       "contact":  id });
-    }
-
-    logger.debug("createAccount @ 15");    
-    logger.debug("createAccount @ 16");
 
     account = { "id": id,
                 "email": email,
@@ -1381,11 +1381,10 @@ function createAccount(req, res)
                 "town": town,
                 "country": country,
                 "flowerpower": flowerpower,
-                "soil": soil,
                 "password": randomstring.generate(8),
-                "emailValidationToken": randomstring.generate(16)
+                "emailValidationToken": randomstring.generate(16),
+                "experiment": experiment
               };
-    if (group) account.group = group.id;
 
     logger.debug("createAccount @ 17");
 
@@ -1401,27 +1400,17 @@ function createAccount(req, res)
 
     logger.debug("createAccount @ 1");
 
-    if (amount) {
-        r.cart = cart;
-        r.amount = amount;
-        r.button = button;
-        r.payment = account.payment;
-	//// DEBUG
-        if (testPaypal) r.testPaypal = testPaypal; 
-	//r.button = "VJ3UNF6ZUCC46";
-	//// DEBUG
-    }
     res.writeHead(200, {"Content-Type": "application/json"});
     res.end(JSON.stringify(r));
 
     logger.debug("createAccount @ 19");
 
-    var url = "https://p2pfoodlab.net/CitizenSeeds/accounts/" + id + ".html?op=validate&token=" + account.emailValidationToken;
+    var url = "https://p2pfoodlab.net/CitizenSeeds/people/" + id + ".html?op=validate&token=" + account.emailValidationToken;
     
     sendMail(email,
              "[P2P Food Lab] Bienvenu !",
              "Bonjour " + id + ",\n\n"
-             + "Nous sommes heureux que vous participez à l'expérience CitizenSeeds !\n\n"
+             + "Nous sommes heureux que vous participez à l'expérience CitizenSeeds '16 !\n\n"
              + "Pour valider votre compte, nous aimerions vérifier votre email.\n"
              + "Merci de suivre le lien suivant :\n" + url + "\n\n"
              + "Nous vous rappelons vos identifients : \n"
@@ -1434,8 +1423,7 @@ function createAccount(req, res)
 
     sendMail("peter@hanappe.com",
              "New registration for CitizenSeeds: " + id,
-             JSON.stringify({ "account": account, "participation": participation, "group": group }, undefined, 2));
-
+             JSON.stringify({ "account": account }, undefined, 2));
     
     logger.debug("Request: createAccount: success: " + JSON.stringify(r));
 }
@@ -1446,29 +1434,38 @@ function validateAccount(req, res)
     var account = database.getAccount(id);
     
     if (!req.query.token)
-        return "La clé de validation est manquante ?!";
+        return "Problème : la clé de validation est manquante ?! Si le problème persiste, écrivez-nous au contact@p2pfoodlab.net.";
     if (req.query.token == account.emailValidationToken) {
         if (account.emailValidated) {
-            return "Votre adresse email a déjà été validée.";
+            return "C'est bon, votre adresse email a déjà été validée.";
         } else {
             account.emailValidated = true;
             database.updateAccount(account);
-            return "Votre adresse email a été validée.";
+            return "Merci ! Votre adresse email a été validée.";
         }
     }
-    return "La validation de votre adresse email a échouée.";
+    return "Problème : la validation de votre adresse email a échouée. Si cela n'aurait pas du arriver, écrivez-nous au contact@p2pfoodlab.net.";
 }
 
 function sendHomepage(req, res)
 {
     var id = req.params.id;
+    logger.debug("sendHomepage id=", JSON.stringify(id));
     var account = database.getAccount(id);
     if (!account) {
         sendError(res, { "success": false, "message": "Bad ID: " + req.params.id });
         return;
     }
+    if (req.query.op && req.query.op == "validate") {
+        var message = validateAccount(req, res);
+        res.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
+        res.end(message);
+        return;
+    }
     var profile = database.getProfile(id);
+    logger.debug("sendHomepage ", JSON.stringify(profile));
     if (!profile) profile = {};
+    logger.debug("rendering homepage");
     res.render('homepage', { "config": config, "account": account, "profile": profile });
 }
 
@@ -1541,6 +1538,10 @@ function updateProfile(req, res)
                 allowedTags: sanitizeHtml.defaults.allowedTags.concat([ 'img' ]) });
         else profile.description = "";
         
+    } else if (field == "blog") {
+        profile.blog = value;
+    } else if (field == "vlog") {
+        profile.vlog = value;
     } else {
         sendError(res, { "success": false, 
 		         "message": "Unknown field: " + field },
@@ -1565,13 +1566,6 @@ function sendAccountInfo(req, res)
 	return;
     }
     
-    if (req.query.op && req.query.op == "validate") {
-        var message = validateAccount(req, res);
-        res.writeHead(200, {"Content-Type": "text/plain; charset=utf-8"});
-        res.end(message);
-        return;
-    }
-
     var copy = { "id": account.id };
     sendJson(res, copy);
 }

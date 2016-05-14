@@ -61,13 +61,22 @@
       <div class="span12">
         <ul class="nav nav-tabs">
           <li class="active"><a href="#profile" data-toggle="tab">Profile</a></li>
-          <!-- li><a href="#tab2" data-toggle="tab">Second</a></li -->
+          <!-- li><a href="#flowerpower" data-toggle="tab">Flower Power</a></li -->
         </ul>
         
         <div class="tab-content">
           
           <div class="tab-pane active" id="profile">
 	    <section id="nav">
+              
+              <% if (profile.blog || profile.vlog) { %>
+              <div class="profile">
+                <p>Mes aventures CitizenSeeds en ligne :</p>
+                <% if (profile.blog) { %><p><a href="<%= profile.blog %>" class="btn btn-primary">Voir mon blog</a></p><% } %>
+                <% if (profile.vlog) { %><p><a href="<%= profile.vlog %>" class="btn btn-primary">Voir mes videos</a></p><% } %>
+              </div>
+              <% } %>
+
               <div class="profile">
                 <%- profile.description %>
               </div>
@@ -75,9 +84,9 @@
 	    </section>
           </div>
           
-          <!-- div class="tab-pane" id="tab2">
-               <div id="location_xxx"></div>
-              </div -->
+          <div class="tab-pane" id="flowerpower">
+            <div id="location_xxx">Coming soon</div>
+          </div>
         </div>	
       </div>
     </div>
