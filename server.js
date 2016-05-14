@@ -736,7 +736,8 @@ function createObservation(req, res)
         return;
     }
 
-    if (!validDate(req.body.date)) {
+    logger.debug("Date ", req.body.date);
+    if (!validISODate(req.body.date)) {
 	sendError(res, { "success": false, 
 			 "message": "No date" },
                   __line, __function);    
@@ -1246,6 +1247,14 @@ function validLocationName(s)
 function validParticipation(s)
 {
     if (!s || (s != "individual" && s != "join" && s != "create"))
+        return false;
+    return true;
+}
+
+function validISODate(s)
+{
+    var dateReg = /(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+)|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d)|(\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d)/;
+    if (!s || !s.match(dateReg))
         return false;
     return true;
 }
