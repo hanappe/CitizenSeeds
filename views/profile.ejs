@@ -49,177 +49,180 @@
         </div>
       </div>
     </nav>
-
-    <div class="container">
-      <div class="page-header">
-        <h1><%= account.id %> <a href="<%= config.baseUrl %>/people/<%= account.id %>.html" class="btn btn-default">Voir</a></h1>
-      </div>
-    </div>
-
-    <hr>
-
-    <div class="container">
-      <div class="row top-margin">
-        <div class="col-lg-6">
-          <h2>Mes pages perso où je poste mes nouvelles sur CitizenSeeds :</h2>
-        </div><!-- /.col-lg-6 -->
-      </div><!-- /.row -->
-
-      <div class="row top-margin">
-        <div class="col-lg-6">
-          <div class="input-group top-margin">
-            <span class="input-group-addon" id="sizing-addon1">Blog</span>
-            <input type="text" class="form-control" placeholder="..." id="blog" value="<%= profile.blog %>">
-            <span class="input-group-btn">
-              <button class="btn btn-default" type="button" id="updateBlog">Changer</button>
-            </span>
-          </div><!-- /input-group -->
-        </div><!-- /.col-lg-6 -->
-      </div><!-- /.row -->
-
-      <div class="row top-margin">
-        <div class="col-lg-6">
-          <div class="input-group top-margin">
-            <span class="input-group-addon" id="sizing-addon1">Video blog</span>
-            <input type="text" class="form-control" placeholder="..." id="vlog" value="<%= profile.vlog %>">
-            <span class="input-group-btn">
-              <button class="btn btn-default" type="button" id="updateVlog">Changer</button>
-            </span>
-          </div><!-- /input-group -->
-        </div><!-- /.col-lg-6 -->
-      </div><!-- /.row -->
-
-    </div><!-- /.container -->
-
-    <hr>
-
-    <div class="container">
-      <div class="row top-margin">
-        <div class="col-lg-6">
-          <h2>Mes parcelles</h2>
-        </div><!-- /.col-lg-6 -->
-      </div><!-- /.row -->
-      
-      <% for (var i = 0; i < locations.length; i++) { %>      
-         
-         <div class="row top-margin">
-           <div class="col-lg-6">
-             <div class="input-group top-margin">
-               <span class="input-group-addon" id="sizing-addon1">Nom</span>
-               <input type="text" class="form-control" placeholder="..." id="name_<%= locations[i].id %>" value="<%= locations[i].name %>">
-               <span class="input-group-btn">
-                 <button class="btn btn-default" type="button" id="updateLocationName_<%= locations[i].id %>">Changer</button>
-               </span>
-             </div><!-- /input-group -->
-           </div><!-- /.col-lg-6 -->
-         </div><!-- /.row -->
-         
-         <div class="row">
-           <div class="col-lg-6">
-             <div class="input-group top-margin">
-               <span class="input-group-addon" id="sizing-addon1">Ville</span>
-               <input type="text" class="form-control" placeholder="..." id="city_<%= locations[i].id %>" value="<%= locations[i].city %>">
-               <span class="input-group-btn">
-                 <button class="btn btn-default" type="button" id="updateLocationCity_<%= locations[i].id %>">Changer</button>
-               </span>
-             </div><!-- /input-group -->
-           </div><!-- /.col-lg-6 -->
-         </div><!-- /.row -->
-         
-         <div class="row">
-           <div class="col-lg-6">
-             <div class="input-group top-margin">
-               <span class="input-group-addon" id="sizing-addon1">Pays</span>
-               <input type="text" class="form-control" placeholder="..." id="country_<%= locations[i].id %>" value="<%= locations[i].country %>">
-               <span class="input-group-btn">
-                 <button class="btn btn-default" type="button" id="updateLocationCountry_<%= locations[i].id %>">Changer</button>
-               </span>
-             </div><!-- /input-group -->
-             <hr>
-           </div><!-- /.col-lg-6 -->
-         </div><!-- /.row -->
-         
-         <% } %>
-    </div><!-- /.container -->
     
-    <hr>
-
-    <div class="container">
-      <div class="row top-margin">
-        <div class="col-lg-4">
-          <h2>Qui suis-je ?</h2>
-          <p>Fournissez plus d'info sur vous-même, sur votre parcelle,
-          sur pourquoi vous participez, votre site web perso... avec
-          l'éditeur ci-dessous. Ces informations seront affichées dans
-          votre page <a href="<%= config.baseUrl
-          %>/people/<%= account.id %>.html"><i>Profile</i></a>.</p>
-
-          <p>En dessous de l'éditeur vous pouvez uploader des images. Après le téléchargement, une
-          vignette de l'image sera affichée
-          ensemble avec des boutons cliquables. Ces boutons permettent
-          d'insérer l'image directement dans le texte.</p>
-
-          <p>N'oubliez pas de sauvegarder vos modifications avec le
-            bouton ... "Sauvegarder" !</p> <!-- ' -->
-        </div><!-- /.col-lg-4 -->
-
-        <div class="col-lg-4">
-          <h2>Who am I?</h2>
-    
-          <p>Provide more information about yourself, about your plot,
-            about why you participate, your personal web page and
-            anything you feel like sharing, using the editor below. The
-            information will be shown in
-            your <a href="<%= config.baseUrl %>/people/<%= account.id
-            %>.html"><i>Profile</i></a> page.</p>
-
-          <p>Below the editor you can also upload images. After the
-          upload, a thumbnail will appear together with a set of
-          buttons that allow you to insert the image directly in the
-          text.</p>
-
-          <p>Don't forget the save your changes using the
-          "Sauvegarder" button!</p> <!-- ' -->
-        </div><!-- /.col-lg-4 -->
-
-      </div><!-- /.row -->
-
-      <div class="row top-margin">
-        <div class="col-lg-8">
-          <textarea id="description" style="width: 100%; height: 400px;"><%- profile.description %></textarea>
-
-          <button class="btn btn-primary" type="button" id="updateDescription">Sauvegarder</button>
-          <a class="btn btn-default" type="button" id="viewProfile" href="<%= config.baseUrl %>/people/<%= account.id %>.html">Voir</a>
-        </div><!-- /.col-lg-6 -->
-      </div><!-- /.row -->
-
-      <div class="row top-margin">
-        <div class="col-lg-6">
-          <div id="image-lib">
-          <p>Images :</p>
-          </div>
-        </div>
+    <div class='container'>
+      <div class="span12">
+	<section id="header">
+	  <div class="page-header">
+	    <h1>Les onglets ci-dessous vous permettent de modifier votre profile&nbsp;:</h1>
+	  </div>
+        </section>
       </div>
 
-      <div class="row top-margin">
-        <div class="col-lg-6">
-          <p>Uploader une image (JPEG) :</p>
-          <form>
-            <input name="bits" type="file" id="filechooser" />
-          </form>
-        </div><!-- /.col-lg-6 -->
-      </div><!-- /.row -->
-      <div class="row">
-        <div class="col-lg-3">
-          <div class="progress">
-            <div class="progress-bar" role="progressbar" id="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
-              <span class="sr-only">0% Complete</span>
+      <div class="span12">
+        <ul class="nav nav-tabs">
+          <li class="active"><a href="#profile" data-toggle="tab">Profile</a></li>
+          <li><a href="#parcelles" data-toggle="tab">Parcelles</a></li>
+          <li><a href="#flowerpower" data-toggle="tab">Flower Power</a></li>
+        </ul>
+        
+        <div class="tab-content">
+          
+          <!-- Profile tab -->
+          <div class="tab-pane active" id="profile">
+            <h3>Mes pages perso où je poste mes nouvelles sur CitizenSeeds :</h3>
+
+            <!-- Blog address -->
+            <div class="input-group top-margin">
+              <span class="input-group-addon" id="sizing-addon1">Blog</span>
+              <input type="text" class="form-control" placeholder="..." id="blog" value="<%= profile.blog %>">
+              <span class="input-group-btn">
+                <button class="btn btn-default" type="button" id="updateBlog">Changer</button>
+              </span>
+            </div><!-- /input-group -->
+
+            <!-- Vlog address -->
+            <div class="input-group top-margin">
+              <span class="input-group-addon" id="sizing-addon1">Video blog</span>
+              <input type="text" class="form-control" placeholder="..." id="vlog" value="<%= profile.vlog %>">
+              <span class="input-group-btn">
+                <button class="btn btn-default" type="button" id="updateVlog">Changer</button>
+              </span>
+            </div><!-- /input-group -->
+
+
+            <h3>Qui suis-je ?</h3>
+            
+            <p>Fournissez plus d'info sur vous-même, sur votre parcelle,
+              sur pourquoi vous participez, votre site web perso... avec
+              l'éditeur ci-dessous. Ces informations seront affichées dans
+              votre page <a href="<%= config.baseUrl %>/people/<%= account.id %>.html"><i>Profile</i></a>.</p>
+
+            <p>En dessous de l'éditeur vous pouvez uploader des
+              images. Après le téléchargement, une vignette de l'image
+              sera affichée ensemble avec des boutons cliquables. Ces
+              boutons permettent d'insérer l'image directement dans le
+              texte.</p>
+
+            <p>N'oubliez pas de sauvegarder vos modifications avec le
+              bouton ... "Sauvegarder" !</p> <!-- ' -->
+
+
+            <textarea id="description" style="width: 100%; height: 400px;"><%- profile.description %></textarea>
+
+            <button class="btn btn-primary" type="button" id="updateDescription">Sauvegarder</button>
+            <a class="btn btn-default" type="button" id="viewProfile" href="<%= config.baseUrl %>/people/<%= account.id %>.html">Voir</a>
+
+            <div id="image-lib">
+              <h3>Images :</h3>
             </div>
-          </div>
-        </div><!-- /.col-lg-3 -->
-      </div><!-- /.row -->
-      
+
+            <h3>Uploader une image (JPEG) :</h3>
+
+            <form>
+              <input name="bits" type="file" id="filechooser" />
+            </form>
+
+            <div class="progress">
+              <div class="progress-bar" role="progressbar" id="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
+                <span class="sr-only">0% Complete</span>
+              </div>
+            </div>
+            
+          </div> <!-- End of tab content -->
+
+
+          <!-- Parcelles tab -->
+          <div class="tab-pane" id="parcelles">
+
+            <h2>Mes parcelles</h2>
+            
+            <% for (var i = 0; i < locations.length; i++) { %>      
+
+               <div class="parcelle">
+
+                 <div class="input-group top-margin">
+                   <span class="input-group-addon" id="sizing-addon1">Nom</span>
+                   <input type="text" class="form-control" placeholder="..." id="name_<%= locations[i].id %>" value="<%= locations[i].name %>">
+                   <span class="input-group-btn">
+                     <button class="btn btn-default" type="button" id="updateLocationName_<%= locations[i].id %>">Changer</button>
+                   </span>
+                 </div><!-- /input-group -->
+                 
+                 <div class="input-group top-margin">
+                   <span class="input-group-addon" id="sizing-addon1">Ville</span>
+                   <input type="text" class="form-control" placeholder="..." id="city_<%= locations[i].id %>" value="<%= locations[i].city %>">
+                   <span class="input-group-btn">
+                     <button class="btn btn-default" type="button" id="updateLocationCity_<%= locations[i].id %>">Changer</button>
+                   </span>
+                 </div><!-- /input-group -->
+                 
+                 <div class="input-group top-margin">
+                   <span class="input-group-addon" id="sizing-addon1">Pays</span>
+                   <input type="text" class="form-control" placeholder="..." id="country_<%= locations[i].id %>" value="<%= locations[i].country %>">
+                   <span class="input-group-btn">
+                     <button class="btn btn-default" type="button" id="updateLocationCountry_<%= locations[i].id %>">Changer</button>
+                   </span>
+                 </div><!-- /input-group -->
+                 
+               </div> <!-- parcelle -->
+               <% } %>
+
+          </div> <!-- End of tab content -->
+
+          
+          <!-- FlowerPower tab -->
+          <div class="tab-pane" id="flowerpower">
+
+            <h3>Flower Power</h3>
+
+            <% if (devices.length > 0) { %>
+            <table class="devices-table">
+              <tr>
+                <th>Appareils enregistrés (Nom FlowerPower - Nom plante)&nbsp;:</th>
+                <th></th>
+                <th></th>
+                <th></th>
+              </tr>
+              <% for (var i = 0; i < devices.length; i++) { %>
+                 <tr>
+                   <td><%= devices[i].flowerpower.nickname %> - <%= devices[i].name %></td>
+                   <td><span id="testResult_<%= devices[i].id %>" class="" aria-hidden="true"></span></td>
+                   <td><button class="btn btn-default" type="button" id="testDevice_<%= devices[i].id %>">Tester</button></td>
+                   <td><button class="btn btn-default" type="button" id="removeDevice_<%= devices[i].id %>">Oublier</button></td>
+                 </tr>
+                 <% } %>
+            </table>
+            <% } %>
+
+
+            <h3>Enregistrer un nouveau FlowerPower&nbsp;:</h3>
+
+            <div class="input-group top-margin">
+              <span class="input-group-addon" id="sizing-addon1">Votre identifiant FlowerPower</span>
+              <input type="text" class="form-control" placeholder="..." id="flowerpower_id" value="">
+            </div><!-- /input-group -->
+            
+            <div class="input-group top-margin">
+              <span class="input-group-addon" id="sizing-addon1">Votre mot de passe FlowerPower</span>
+              <input type="text" class="form-control" placeholder="..." id="flowerpower_pw" value="">
+            </div><!-- /input-group -->
+
+            <br>
+            
+            <button class="btn btn-primary" type="button" id="listFlowerPowers">Afficher les FlowerPowers</button>
+
+            <div id="ListFlowerPowers"></div>
+
+          
+          </div> <!-- End of tab content -->
+
+        </div>	
+      </div>
     </div>
+
+
+    <!--   -->
     
 
     <!-- Bootstrap core JavaScript -->
@@ -230,6 +233,9 @@
     <script src="<%= config.baseUrl %>/jwysiwyg/jquery.wysiwyg.js" type="text/javascript"></script>
     <script src="<%= config.baseUrl %>/jwysiwyg/controls/wysiwyg.image.js" type="text/javascript"></script>
     <script src="<%= config.baseUrl %>/jwysiwyg/controls/wysiwyg.link.js" type="text/javascript"></script>
+    <!-- CitizenSeeds -->
+    <script src="<%= config.baseUrl %>/CitizenSeedsServer.js"></script>
+    <script src="<%= config.baseUrl %>/CitizenSeedsApp.js"></script>
     <script src="<%= config.baseUrl %>/profile.js" type="text/javascript"></script>
     
     <script>
@@ -249,7 +255,18 @@ jq(document).ready(function(){
 <% for (var i = 0; i < files.length; i++) { %>
     insertImageLib({ "id": <%= files[i].id %>, "thumbnail": "<%= files[i].thumbnail %>", "small": "<%= files[i].small %>", "orig": "<%= files[i].orig %>" });
 <% } %>
+
+<% for (var i = 0; i < devices.length; i++) { %>
+    jq("#testDevice_<%= devices[i].id %>").click(function() { testDevice(<%= devices[i].id %>) });
+    jq("#removeDevice_<%= devices[i].id %>").click(function() { removeDevice(<%= devices[i].id %>) });
+<% } %>
+
+    jq("#listFlowerPowers").click(function() { listFlowerPowers() });
+
 });
+
+var _flowerpowers = [];
+var _server = new Server("<%= config.baseUrl %>");
     </script>
   </body>
 </html>

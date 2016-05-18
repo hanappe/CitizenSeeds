@@ -84,7 +84,7 @@ function UIComponent()
     this.addListener = function(listener) { 
         this.listeners.push(listener);
     }
-    
+
     this.callListeners = function(what) { 
         for (var i = 0; i < this.listeners.length; i++) {
             this.listeners[i].handleEvent(what, this);
@@ -104,7 +104,6 @@ function UIComponent()
     this.isVisible = function() {
         return this.visible;
     }
-
 
     this.toggleVisibility = function() {
         if (this.visible) {
@@ -258,6 +257,9 @@ function UIComponent()
     
     this.addComponent = function(c) {
         //alert("UIComponent.addComponent: " + this + ": " + c);
+        if (!c) {
+            c = null;
+        }
         this.components.push(c);
         this.div.appendChild(c.div);
         c.parent = this;
@@ -805,7 +807,7 @@ function randomString(length)
 // Views
 //--------------------------------------------------
 
-function ExperimentView(experiment)
+function ExperimentView(experiment, weekOffset, numWeeks)
 {
     this.init("ExperimentView", "ExperimentView",
               document.getElementById("ExperimentView"));
@@ -814,15 +816,13 @@ function ExperimentView(experiment)
 
     for (var i = 0; i < matrices.length; i++) {
         _prof.start("new ObservationMatrixView[" + i + "]");
-        var view = new ObservationMatrixView(matrices[i],
-                                             experiment.viewStart,
-                                             experiment.numWeeks,
-                                             i > 0);
+        var view = new ObservationMatrixView(matrices[i], weekOffset, numWeeks, i > 0);
         _prof.stop("new ObservationMatrixView[" + i + "]");
         this.addComponent(view);
         _prof.mark("add ObservationMatrixView[" + i + "]");
+        view.showHideRows(true);
     }
-
+    
     this.updateView = function() {
         for (var i = 0; i < this.components.length; i++) {
             if (this.components[i].matrix)
@@ -857,10 +857,10 @@ function ExperimentView(experiment)
         return undefined;
     }
 
-    this.getObservationView = function(plant, location, col) {
+    this.getObservationView = function(plant, location, weeknum) {
         for (var i = 0; i < this.components.length; i++) {
             if (this.components[i].matrix && (this.components[i].matrix.plant.id == plant))
-                return this.components[i].getObservationView(location, col);
+                return this.components[i].getObservationView(location, weeknum);
         }
         return undefined;
     }
@@ -872,13 +872,39 @@ function ExperimentView(experiment)
 ExperimentView.prototype = new UIComponent();
 
 
-function ObservationMatrixView(matrix, viewStart, numWeeks, collapsed)
+function ObservationMatrixView(matrix, weekOffset, numWeeks, collapsed)
 {
     var self = this;
     this.init("ObservationMatrixView", "container-fluid ObservationMatrixView");
 
     this.rows = [];
+    this.weekOffset = weekOffset;
+    this.numWeeks = numWeeks;
+
+    this.getColumnDate = function(column) {
+        return new Date(_experiment.startDate.getFullYear(),
+                        _experiment.startDate.getMonth(),
+                        _experiment.startDate.getDate() + (this.weekOffset + column) * 7,
+                        12, 0, 0); // FIXME
+    }
+
+    this.toWeek = function(column) {
+        return this.weekOffset + column;
+    }
+
+    this.toColumn = function(week) {
+        return week - this.weekOffset;
+    }
+
+    this.getObserver = function(row) {
+        return matrix.observers[row];
+    }
     
+    this.getObservations = function(row, col) {
+        var observationRow = matrix.observations[row];
+        return observationRow[this.weekOffset + col];
+    }
+
     this.updateView = function() {
         for (var i = 0; i < this.rows.length; i++)
             this.rows[i].updateView();
@@ -889,7 +915,8 @@ function ObservationMatrixView(matrix, viewStart, numWeeks, collapsed)
             this.rows[i].updateSensorData();
     }
 
-    this.getObservationView = function(location, col) {
+    this.getObservationView = function(location, weeknum) {
+        var col = this.toColumn(weeknum);
         for (var i = 0; i < this.rows.length; i++) {
             if (this.rows[i].observer.locationId == location)
                 return this.rows[i].getObservationView(col);
@@ -909,23 +936,49 @@ function ObservationMatrixView(matrix, viewStart, numWeeks, collapsed)
         this.addComponent(this.header);
     }
 
-    this.addObservationRow = function (observer, observations) {
-        var row = new ObservationRowView(observer, observations);
+    this.addObservationRow = function (row, observer, observations) {
+        var row = new ObservationRowView(row, numWeeks, this);
         this.rows.push(row);
         this.matrixView.addComponent(row);
     }
-
+    
     this.buildObservationRows = function() {
         this.clear();
-        this.matrixView.addComponent(new ObservationWeekView(viewStart, numWeeks));
+        this.weekView = new ObservationWeekView(this, numWeeks);
+        this.matrixView.addComponent(this.weekView);
         _prof.mark("new ObservationWeekView");
-        for (var i = 0; i < matrix.observers.length; i++) {
-            _prof.start("new ObservationRowView[" + i + "]");
-            this.addObservationRow(this.matrix.observers[i], this.matrix.observations[i]);
-            _prof.stop("new ObservationRowView[" + i + "]");
+        for (var row = 0; row < matrix.observers.length; row++) {
+            _prof.start("new ObservationRowView[" + row + "]");
+            this.addObservationRow(row, this.matrix.observers[row], this.matrix.observations[row]);
+            _prof.stop("new ObservationRowView[" + row + "]");
         }
     }
+
+    this.showHideRows = function() {
+        for (var i = 0; i < this.rows.length; i++)
+            this.rows[i].showHide();
+    }
+
+    this._updateWeekOffset = function() {
+        this.weekView.updateView();
+        for (var i = 0; i < this.rows.length; i++)
+            this.rows[i].updateView();
+    }
     
+    this.incrementWeekOffset = function() {
+        this.weekOffset++; // TODO: no limit?
+        this._updateWeekOffset();
+        this.showHideRows();
+    }
+
+    this.decrementWeekOffset = function() {
+        if (this.weekOffset > 0) {
+            this.weekOffset--;
+            this._updateWeekOffset();
+            this.showHideRows();
+        }
+    }
+
     this.buildMatrixView = function() {
         this.matrixView = new ObservationTableView();
         this.addComponent(this.matrixView);
@@ -987,6 +1040,8 @@ function ObservationMatrixView(matrix, viewStart, numWeeks, collapsed)
         }
         this.matrixView.setVisible(true);
         this.button.setVisible(true);
+        this.showHideRows();
+        
         if (this.placeholder)
             this.placeholder.className = "matrix-collapsed hidden";
 
@@ -994,7 +1049,7 @@ function ObservationMatrixView(matrix, viewStart, numWeeks, collapsed)
     }
     
     this.matrix = matrix;
-    this.viewStart = viewStart;
+    this.weekOffset = weekOffset;
     this.numWeeks = numWeeks;
     this.collapsed = collapsed;
     this.buildView();
@@ -1057,43 +1112,73 @@ function ObservationHeaderView(parent, collapsed)
 }
 ObservationHeaderView.prototype = new UIComponent();
 
-function ObservationWeekView(date, numWeeks)
+function ObservationWeekView(matrixview, numWeeks)
 {
+    var self = this;
     this.init("ObservationWeekView", "ObservationWeekView Row");
-
+    
     this.titleView = new UIComponent().init("WeekTitle", "WeekTitle Column");
     this.titleView.addText("La semaine du ");
-    this.addComponent(this.titleView);
-
-    for (var i = 0; i < numWeeks; i++) {
-        this.titleView = new UIComponent().init("WeekDate", "WeekDate Column");
-        this.titleView.addText(date.getDate() + "/" + (1+date.getMonth()));
+    this.titleView.addGlyphButton("glyphicon-chevron-left", "", function () { matrixview.decrementWeekOffset(); });
+    this.titleView.addGlyphButton("glyphicon-chevron-right", "", function () { matrixview.incrementWeekOffset(); });
+    
+    this.buildView = function () {
+        this.removeComponents();
         this.addComponent(this.titleView);
-        date = new Date(date.getFullYear(),
-                        date.getMonth(),
-                        date.getDate() + 7,
-                        12, 0, 0);
+        
+        for (var i = 0; i < numWeeks; i++) {
+            var date = matrixview.getColumnDate(i);
+            var header = new UIComponent().init("WeekDate", "WeekDate Column");
+            header.addText(date.getDate() + "/" + (1+date.getMonth()));
+            this.addComponent(header);
+        }
     }
+
+    this.updateView = function () {
+        this.buildView(numWeeks);
+    }
+    
+    this.buildView(numWeeks);
 }
 ObservationWeekView.prototype = new UIComponent();
 
-function ObservationRowView(observer, observations)
+function ObservationRowView(row, numWeeks, matrixview)
 {
     this.init("ObservationRowView", "ObservationRowView Row");
 
-    this.observer = observer;
-    this.locationView = new ObservationLocationView(observer);
+    this.row = row;
+    this.matrixview = matrixview;
+    this.observer = matrixview.getObserver(row);
+    this.numWeeks = numWeeks;
+    this.locationView = new ObservationLocationView(this.observer);
     this.addComponent(this.locationView);
     this.locationView.moveTo(0, 0);
     this.cells = [];
     
     this.buildView = function() {
-        for (var i = 0; i < observations.length; i++) {
-            this.cells[i] = new ObservationView(this, observer, observations[i], i);
-            _prof.mark("new ObservationView[" + i + "]");
-            this.addComponent(this.cells[i]);
-            this.cells[i].moveTo(120 + i * 90, 0);
+        for (var col = 0; col < numWeeks; col++) {
+            this.cells[col] = new ObservationView(row, col, this, matrixview);
+            _prof.mark("new ObservationView[" + col + "]");
+            this.addComponent(this.cells[col]);
+            this.cells[col].moveTo(120 + col * 90, 0);
         }
+    }
+
+    this.showHide = function(imm) {
+        var show = false;
+        for (var col = 0; col < numWeeks; col++) {
+            if (this.cells[col].hasObservations()) {
+                show = true;
+                break;
+            }
+        }
+/*        if (imm) {
+            if (show) jq(this.div).show();
+            else jq(this.div).hide();
+        } else { */
+            if (show) jq(this.div).fadeIn(1000).show();
+            else jq(this.div).fadeOut(1000).hide();
+        //}
     }
     
     this.getObservationView = function(col) {
@@ -1103,6 +1188,7 @@ function ObservationRowView(observer, observations)
     this.updateView = function() {
         for (var i = 0; i < this.cells.length; i++)
             this.cells[i].updateView();
+        this.showHide(true);
     }
     
     this.updateSensorData = function() {
@@ -1155,19 +1241,15 @@ function PhotoViewer(observations)
 }
 PhotoViewer.prototype = new UIComponent();
 
-function ObservationView(row, observer, observations, col)
+function ObservationView(row, col, parent, matrixview)
 {
+    var self = this;
     this.init("ObservationView", "ObservationView Column");
     this.row = row;
     this.col = col;
-    this.observer = observer;
-    this.observations = observations;
-    this.startDate = new Date(_experiment.startDate.getFullYear(),
-                              _experiment.startDate.getMonth(),
-                              _experiment.startDate.getDate() + col * 7,
-                              12, 0, 0);
-    
-    var self = this;
+    this.parent = parent;
+    this.matrixview = matrixview;
+    this.observer = matrixview.getObserver(row);
     
     this.setProgress = function (value) {
         if (!this.progress) {
@@ -1198,10 +1280,7 @@ function ObservationView(row, observer, observations, col)
     }
     
     this._uploadPhoto = function () {
-        var date = new Date(_controller.experiment.viewStart.getFullYear(),
-                            _controller.experiment.viewStart.getMonth(),
-                            _controller.experiment.viewStart.getDate() + col * 7,
-                            12, 0, 0); // FIXME
+        var date = matrixview.getColumnDate(this.col); // FIXME
         var hidden = { "accountId": observer.accountId,
                        "locationId": observer.locationId,
                        "plantId": observer.plantId,
@@ -1215,8 +1294,9 @@ function ObservationView(row, observer, observations, col)
                                               self.updateObservation();
                                           } else {
                                               _controller.insertObservation(data);
-                                              if (data.col != self.col)
-                                                  row.updateObservationView(data.col);
+                                              var _col = matrixview.toColumn(data.weeknum)
+                                              if (_col != self.col)
+                                                  parent.updateObservationView(_col);
                                               self.updateObservation();
                                           }
                                       },
@@ -1239,12 +1319,18 @@ function ObservationView(row, observer, observations, col)
 
     this.updateSensorData = function () {
         if (this.observer.deviceId) {
-            var id = "" + this.observer.deviceId + "-" + toDate(this.startDate);
+            var date = matrixview.getColumnDate(this.col);
+            var id = "" + this.observer.deviceId + "-" + toDate(date);
             this.sensordata = _experiment.sensordata[id];
             this.updateObservation();
         }
     }
-    
+
+    this.hasObservations = function (i) {
+        //if (i==0) alert(JSON.stringify(this.observations));
+        return this.observations && this.observations.length? true : false;
+    }
+
     this.updateObservation = function () {
         this.removeComponents();
         this.progress = undefined;
@@ -1254,8 +1340,10 @@ function ObservationView(row, observer, observations, col)
         else 
             this.addComponent(new EmptyDataView());
 
+        this.observations = matrixview.getObservations(this.row, this.col);
+
         var index = -1;
-        for (var i = 0; i < this.observations.length; i++) {
+        for (var i = 0; this.observations && i < this.observations.length; i++) {
             if (this.observations[i].thumbnail) {
                 index = i;
                 break;
@@ -1270,13 +1358,12 @@ function ObservationView(row, observer, observations, col)
                                                     _curtain.show(new Slideshow(self.observations));
                                                 else
                                                     _curtain.show(new Slideshow(self.observations));
-
                                             });
         } else {
             this.image = this.addImage(_server.root + "/media/white.gif", "",
                                        "EmptyObservationView");
         }
-        if (this.observations.length > 1) {
+        if (this.observations && this.observations.length > 1) {
             var count = document.createElement("DIV");
             count.className = "ObservationCount";
             count.innerHTML = "x" + this.observations.length;
@@ -1631,13 +1718,13 @@ LocationSelector.prototype = new UIComponent();
 //--------------------------------------------------
 
 
-function ExperimentController(experiment)
+function ExperimentController(experiment, weekOffset, numWeeks)
 {
     var self = this;
     this.experiment = experiment;
 
     this.buildView = function() {
-        this.view = new ExperimentView(this.experiment);
+        this.view = new ExperimentView(this.experiment, weekOffset, numWeeks);
     }
 
     this.updateView = function() {
@@ -1669,7 +1756,7 @@ function ExperimentController(experiment)
                         else {
                             r.date = new Date(r.date);
                             var index = self.experiment.removeObservation(r);
-                            var view = self.view.getObservationView(index.plant, index.location, index.col);
+                            var view = self.view.getObservationView(index.plant, index.location, index.weeknum);
                             if (view) view.updateObservation();
                             if (callback) callback();
                         }
@@ -1727,50 +1814,53 @@ function showWeek(s)
 // Model
 //--------------------------------------------------
 
-function Observation(observer, col)
+function Observation(observer, weeknum)
 {
     this.observer = observer;
-    this.col = col;
+    this.weeknum = weeknum;
 }
 
 function ObservationMatrix(plant, cols)
 {
     this.cols = cols;
     this.plant = plant;
-    this.observers = [];
-    this.observations = [];
+    this.observers = []; // Array of all observers of this plant
+    this.observations = []; // Array of arrays of arrays: observations[observer][column][observation]: each cell in the matrix (week) can have several obserations.
     this.map = {};
 
     this.addObserver = function(observer) {
+        this.observers.push(observer);
         var observations = [];
-        var row = this.observers.length;
         for (var col = 0; col < this.cols; col++)
             observations.push([]);
-        this.observers.push(observer);
         this.observations.push(observations);
         this.map[observer.locationId] = observations;
     }
 
     this.removeObservation = function(obs) {
         var row = this.map[obs.locationId];
-        var cell = row[obs.col];
+        var cell = row[obs.weeknum];
         for (var i = 0; i < cell.length; i++) {
             if (cell[i].id == obs.id) {
                 cell.splice(i, 1);
-                return { "plant": this.plant.id, "location": obs.locationId, "col": obs.col };
+                return { "plant": this.plant.id, "location": obs.locationId, "weeknum": obs.weeknum };
             }
         }
     }
     
     this.addObservation = function(obs) {
         var row = this.map[obs.locationId];
-        var cell = row[obs.col];
-	if (cell) cell.push(obs);
-	else /* alert(JSON.stringify(obs)) */;
+        var cell = row[obs.weeknum];
+        if (!cell) {
+            alert(JSON.stringify(obs));
+            alert(JSON.stringify(row));
+            alert(JSON.stringify(this.map));
+        }
+        cell.push(obs);
     }
 }
 
-function Experiment(e, numWeeks)
+function Experiment(e)
 {
     this.id = e.id;
     this.plants = e.plants;
@@ -1782,9 +1872,11 @@ function Experiment(e, numWeeks)
     this.numWeeks = numWeeks;
     this.matrices = [];
     this.map = {};
-    
+
+    var today = new Date();
+    var numWeeks = 1 + Math.floor((today.getTime() - this.startDate.getTime()) / (7 * 24 * 60 * 60 * 1000))
     for (var i = 0; i < this.plants.length; i++) {
-        var matrix = new ObservationMatrix(this.plants[i], this.numWeeks);
+        var matrix = new ObservationMatrix(this.plants[i], numWeeks);
         this.matrices.push(matrix);
         this.map[this.plants[i].id] = matrix;
     }
@@ -1797,8 +1889,12 @@ function Experiment(e, numWeeks)
         }
     }
 
+    this.getWeeknum = function(date) {
+ 	return Math.floor((date.getTime() - this.startDate.getTime()) / 604800000);            
+    }
+
     this.removeObservation = function(observation) {
-        observation.col = this.getWeekNum(observation.date);
+        observation.weeknum = this.getWeeknum(observation.date);
         for (var i = 0; i < this.matrices.length; i++) {
             if (this.matrices[i].plant.id == observation.plantId) {
                 return this.matrices[i].removeObservation(observation);
@@ -1808,9 +1904,7 @@ function Experiment(e, numWeeks)
     }
     
     this.insertObservation = function(observation) {
-        observation.col = this.getWeekNum(observation.date);
-	if (observation.col < 0)
-	    return;
+        observation.weeknum = this.getWeeknum(observation.date);
         for (var i = 0; i < this.matrices.length; i++) {
             if (this.matrices[i].plant.id == observation.plantId) {
                 this.matrices[i].addObservation(observation);
@@ -1818,16 +1912,12 @@ function Experiment(e, numWeeks)
         }
     }
     
-    this.getWeekNum = function(date) {
- 	return Math.floor((date.getTime() - this.viewStart.getTime()) / 604800000);            
-    }
-    
     this.setObservations = function(observations) {
         for (var i = 0; i < observations.length; i++) {
             var plantId = observations[i].plantId;
             var matrix = this.map[plantId];
             observations[i].date = new Date(observations[i].date);
- 	    observations[i].col = this.getWeekNum(observations[i].date);
+ 	    observations[i].weeknum = this.getWeeknum(observations[i].date);
             matrix.addObservation(observations[i]);
         }
     }
@@ -2725,7 +2815,13 @@ function showObservations(id, startAt)
 
         _prof.mark("loadExperiment");
             
-        _experiment = new Experiment(e, _numWeeks);
+        _experiment = new Experiment(e);
+
+        _prof.mark("handleExperiment");
+
+        return _server.getJSON("observers.json?experiment=" + id);
+
+    }).then(function(obs) {
 
 	var viewStart;
 	var viewEnd;
@@ -2752,34 +2848,18 @@ function showObservations(id, startAt)
         if (viewStart.getTime() < _experiment.startDate.getTime()) {
             viewStart = _experiment.startDate;
             viewEnd = new Date(viewStart.getFullYear(), viewStart.getMonth(),
-                                viewStart.getDate() + 7 * _numWeeks, 23, 59, 59);
+                               viewStart.getDate() + 7 * _numWeeks, 23, 59, 59);
+            weekOffset = 0;
         }
-        _experiment.viewStart = viewStart;
-        _experiment.viewEnd = viewEnd;
-
-        _prof.mark("handleExperiment");
-
-        return _server.getJSON("observers.json?experiment=" + id);
-
-    }).then(function(obs) {
-
-        _prof.mark("loadObservers");
-
-        _experiment.setObservers(obs);
-
-        _prof.mark("handleObservers");
 
         // Now create the controller and build the view.
-        _controller = new ExperimentController(_experiment);
+        _controller = new ExperimentController(_experiment, weekOffset, _numWeeks);
         _controller.buildView();
 
         _prof.mark("buildView");
         
+        return _server.getJSON("observations.json?experiment=" + id);
 
-        return _server.getJSON("observations.json?"
-                               + "experiment=" + id
-	                       + "&from=" + toDate(_experiment.viewStart)
-			       + "&to=" + toDate(_experiment.viewEnd));
     }).then(function(obs) {
 
         _prof.mark("loadObservations");
@@ -2791,24 +2871,6 @@ function showObservations(id, startAt)
         _controller.updateView();
 
         _prof.mark("updateView");
-
-        // List of date selectors
-        /*
-        var date = new Date(_experiment.startDate);
-        var div = document.getElementById("DateSelection");
-        for (var i = 0; i < 9; i++) {
-            var a = document.createElement("A");
-            a.className = "DateSelector";
-            a.setAttribute("href", "javascript:void(0)");
-            a.innerHTML = toDayAndMonth(date);
-            a.onclick = function() { return false; }
-            a.onmousedown = function() { return false; }
-            setEventHandler(a, "click", alert);  // TODO
-            div.appendChild(a);
-            date = new Date(date.getFullYear(), date.getMonth(),date.getDate() + 28);
-        }
-        */
-
 
         return _server.getJSON("sensordata.json");
 
@@ -3177,7 +3239,7 @@ function startMobileApp(url, id)
     // First, load all the data and construct the data structure, aka
     // the 'model'.
     _server.getJSON("experiments/" + id + ".json").then(function(e) {
-        _experiment = new Experiment(e, _numWeeks);
+        _experiment = new Experiment(e);
         return _server.getJSON("login");
     }).then(function(a) {
         _account = a;

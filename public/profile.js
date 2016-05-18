@@ -132,5 +132,112 @@ function insertImageLib(file)
 
 function insertImage(src)
 {
-  jq('#description').wysiwyg('insertImage', src);
+    jq('#description').wysiwyg('insertImage', src);
+}
+
+
+function testDevice(id)
+{
+    _server.getJSON("devices/" + id + "?op=test").then(function(e) {
+        if (e.error) {
+            jq("#testResult_" + id).addClass("glyphicon glyphicon-remove-circle flowerpower-test-failed");
+            alert(e.message);
+        } else {
+            jq("#testResult_" + id).addClass("glyphicon glyphicon-ok-circle flowerpower-test-succes");
+        }
+    });
+}
+
+function removeDevice(id)
+{
+    _server.deleteJSON("devices/" + id).then(function(e) {
+        if (e.error) {
+            alert(e.message);
+        } else {
+            alert("OK");
+        }
+    });
+}
+
+function listFlowerPowers()
+{
+    var email = jq("#flowerpower_id").val();
+    var pw = jq("#flowerpower_pw").val();
+    _server.getJSON("devices/flowerpowers.json?email=" + email + "&password=" + pw).then(function(e) {
+        if (e.error) {
+            alert(e.message);
+        } else {
+            displayFlowerPowers(e);
+        }
+    });
+}
+
+function deviceWrapper(device)
+{
+    var self = this;
+    this.device = device;
+
+    this.registerDevice = function() {
+        alert("Register " + JSON.stringify(device));
+        _server.postJSON("devices", device).then(function (r) {
+            if (r.error) alert(e.message);
+            else {
+                alert("OK"); // TODO
+            }
+        });
+    }
+}
+
+function displayFlowerPowers(list)
+{
+    _flowerpowers = list;
+
+    var div = document.getElementById("ListFlowerPowers");
+    while (div.hasChildNodes()) {
+        div.removeChild(div.firstChild);
+    }
+
+    var table = document.createElement("table");
+    table.className = "devices-table";
+    div.appendChild(table);
+
+    var tr = document.createElement("tr");
+    var td = document.createElement("th");
+    td.innerHTML = "Liste des FlowerPower disponibles (Nom du FlowerPower - Nom de la plante)";
+    tr.appendChild(td);
+    table.appendChild(tr);
+    td = document.createElement("th");
+    tr.appendChild(td);
+
+    if (!list || !list.length) {
+        tr = document.createElement("tr");
+        td = document.createElement("td");
+        td.innerHTML = "<i>Aucun FlowerPower n'a été trouvé...</i>";
+        tr.appendChild(td);
+        table.appendChild(tr);
+        return;
+    }
+
+    for (var i = 0; i < list.length; i++) {
+        tr = document.createElement("tr");
+        td = document.createElement("td");
+        td.innerHTML = list[i].name + " - " + list[i].flowerpower.plant_nickname;
+        tr.appendChild(td);
+
+        var button = document.createElement("button");
+        button.setAttribute("href", "javascript:void(0)");
+        button.className = "btn btn-primary";
+        button.type = "button";
+        button.innerHTML = "Ajouter";
+        button.onclick = function() { return false; }
+        button.onmousedown = function() { return false; }
+        setEventHandler(button, "click", new deviceWrapper(list[i]).registerDevice);
+
+        td = document.createElement("td");
+        td.appendChild(button);
+        tr.appendChild(td);
+
+        table.appendChild(tr);
+    }
+    
 }
