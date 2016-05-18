@@ -43,6 +43,8 @@ var ExifImage = require('exif').ExifImage;
 var ejs = require('ejs');
 var sanitizeHtml = require('sanitize-html');
 var mime = require('mime');
+var sys = require("sys");
+var FlowerPower = require('node-flower-power');
 
 mkdirp("log/", function(err) {
     if (err) {
@@ -1808,6 +1810,74 @@ function deleteMessage(req, res)
 }
 
 /*
+ *  FlowerPower
+ */
+
+function getSensor(sensors, id)
+{
+    for (var i = 0; i < sensors.length; i++) {
+        if (sensors[i].sensor_serial == id)
+            return sensors[i];
+    }
+    return null;
+}
+
+function listFlowerPowers(req, res)
+{
+    logger.debug("Request: listFlowerPowers");
+
+    var email = (req.query.email)? req.query.email : undefined;
+    var password = (req.query.password)? req.query.password : undefined;
+
+    logger.debug("Email: " + email);
+
+    if (!email || !password) {
+    	sendError(res, { "message": "Incomplete login info" }, __line, __function);
+        return;
+    }
+    
+    var auth = {
+	username: email,
+	password: password,
+	client_id: 'hanappe@csl.sony.fr',
+	client_secret: '9pqsuENHVHtgw13MBCNcr8s91Vsw73WB8RwR0ES5VZeXFTkx'
+    };
+
+    var api = new FlowerPower(auth, function(err, data) {
+	if (err) {
+	    logger.error(JSON.stringify(err));
+    	    sendError(res, { "message": "Failed to log into FlowerPower server" }, __line, __function);
+            return;
+	} else {
+	    logger.debug('Logged in');
+            api.getGarden(function(err, plants, sensors) {
+                logger.debug("Plants: " + JSON.stringify(plants));
+                if (err) {
+	            logger.error(JSON.stringify(err));
+    	            sendError(res, { "message": "Failed to obtain FlowerPower info" }, __line, __function);
+                    return;
+                }
+                var list = [];
+                for (var i = 0; i < plants.length; i++) {
+                    var sensor = getSensor(sensors, plants[i].sensor_serial);
+                    if (!sensor) continue;
+                    var flowerpower = {
+                        "serial": sensor.sensor_serial,
+                        "nickname": sensor.nickname,
+                        "location": plants[i].location_identifier,
+                        "plant_nickname": plants[i].plant_nickname
+                    };
+                    list.push(flowerpower);
+                }
+                logger.debug("List: " + JSON.stringify(list));
+                sendJson(res, list);    
+	    });
+        }
+    });
+}
+
+
+/*
  * App
  */
 
@@ -1891,6 +1961,8 @@ app.get("/messages", sendMessages);
 app.post("/messages",
          passport.authenticate('basic', { session: true }),
          createMessage);
+
+app.get("/devices/flowerpowers.json", listFlowerPowers);
 
 app.get("/", sendIndex);
 
