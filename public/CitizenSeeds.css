@@ -418,8 +418,16 @@ a.Redish {
     color: #ff2232;
 }
 
+div.SlideshowFrame {
+    width: 100%;
+}
 
+img.SlideshowImage {
+    margin: auto;
+}
 
+a.SlideshowImage {
+}
 
 div.Slideshow {
     position: static;
@@ -432,7 +440,7 @@ div.Slideshow {
 }
 
 div.PictureBox {
-      margin: auto auto;
+    width: 100%;
 }
 
 img.SlideshowClose {

@@ -28,7 +28,7 @@ var multer = require("multer");
 var locale = require("locale");
 var supported = [ "en", "fr" ];
 var session = require("express-session");
-var captcha = require("easy-captcha");
+//var captcha = require("easy-captcha");
 var randomstring = require("randomstring");
 var XRegExp = require("xregexp").XRegExp;
 var nodemailer = require("nodemailer");
@@ -973,8 +973,8 @@ function sendGroups(req, res)
     var groups = database.getGroups();
     for (var i = 0; i < groups.length; i++) {
         list.push({ "id": groups[i].id,
-                      "name": groups[i].name,
-                      "address": groups[i].address });
+                    "name": groups[i].name,
+                    "address": groups[i].address });
     }
     res.writeHead(200, {"Content-Type": "application/json"});
     res.end(JSON.stringify(list));
@@ -1304,12 +1304,13 @@ function createAccount(req, res)
 
     logger.debug("createAccount @ 2");
 
-    if (!req.session.captcha.valid) 
+/*    if (!req.session.captcha.valid) 
         return sendError(res, { "success": false,
                                 "field": "captcha",
                                 "message": "Captcha invalide. Veuillez vérifier votre saisie." },
                          __line, __function); 
-
+*/
+    
     logger.debug("createAccount @ 3");
 
     if (!validUsername(id))
@@ -1500,12 +1501,14 @@ function sendProfile(req, res)
     if (!profile) profile = {};
     var locations = database.selectLocations({ "account": id });
     var files = database.selectFiles({ "account": id });
+    var devices = database.selectDevices({"type": "flowerpower", "account": account.id})
 
     res.render('profile', { "config": config,
                             "account": account,
                             "profile": profile,
                             "locations": locations,
-                            "files": files
+                            "files": files,
+                            "devices": devices
                           });
 }
 
@@ -1810,7 +1813,7 @@ function deleteMessage(req, res)
 }
 
 /*
- *  FlowerPower
+ *  Devices
  */
 
 function getSensor(sensors, id)
@@ -1822,12 +1825,12 @@ function getSensor(sensors, id)
     return null;
 }
 
-function listFlowerPowers(req, res)
+function obtainFlowerPowerDevices(req, res)
 {
-    logger.debug("Request: listFlowerPowers");
+    logger.debug("Request: obtainFlowerPowerDevices");
 
-    var email = (req.query.email)? req.query.email : undefined;
-    var password = (req.query.password)? req.query.password : undefined;
+    var email = req.query.email;
+    var password = req.query.password;
 
     logger.debug("Email: " + email);
 
@@ -1861,13 +1864,19 @@ function listFlowerPowers(req, res)
                 for (var i = 0; i < plants.length; i++) {
                     var sensor = getSensor(sensors, plants[i].sensor_serial);
                     if (!sensor) continue;
-                    var flowerpower = {
-                        "serial": sensor.sensor_serial,
-                        "nickname": sensor.nickname,
-                        "location": plants[i].location_identifier,
-                        "plant_nickname": plants[i].plant_nickname
-                    };
-                    list.push(flowerpower);
+                    var device = {
+                        "account": "peter",
+                        "name": sensor.nickname,
+                        "type": "flowerpower",
+                        "flowerpower": {
+                            "username": email,
+                            "password": password,
+                            "serial": sensor.sensor_serial,
+                            "location": plants[i].location_identifier,
+                            "plant_nickname": plants[i].plant_nickname,
+                            "nickname": sensor.nickname
+                        }};
+                    list.push(device);
                 }
                 logger.debug("List: " + JSON.stringify(list));
                 sendJson(res, list);    
@@ -1876,6 +1885,192 @@ function listFlowerPowers(req, res)
     });
 }
 
+function testFlowerPowerDevice(req, res, device)
+{
+    var auth = {
+	username: device.flowerpower.username,
+	password: device.flowerpower.password,
+	client_id: 'hanappe@csl.sony.fr',
+	client_secret: '9pqsuENHVHtgw13MBCNcr8s91Vsw73WB8RwR0ES5VZeXFTkx'
+    };
+
+    var api = new FlowerPower(auth, function(err, data) {
+	if (err) {
+	    logger.error(JSON.stringify(err));
+    	    sendError(res, { "message": "Failed to log into FlowerPower server" }, __line, __function);
+            return;
+
+	} else {
+            var today = new Date();
+            var lastweek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7,
+                                    today.getHours(), today.getMinutes(), today.getSeconds());
+            
+            api.getSamples({ "id": device.flowerpower.location,
+                             "from": lastweek.toISOString(),
+                             "to": today.toISOString() },
+                           function(err, samples, events, fertilizer) {
+                               if (err) {
+                                   logger.error(err);
+    	                           sendError(res, { "message": JSON.stringify(err) }, __line, __function);
+                               } else {
+                                   sendJson(res, { "success": true });
+                               }
+                           });
+        }
+    });
+}
+
+function handleDeviceOp(req, res)
+{
+    logger.debug("Request: handleDeviceOp");
+
+    var op = req.query.op;
+    var id = req.params.id;
+    var account = req.user;
+
+    logger.debug("op=" + op + ", id=" + id);
+    
+    var device = database.getDevice(id);
+    if (!device) {
+	sendError(res, { "message": "Bad ID" }, __line, __function);
+        return;
+    }
+    if (device.account != account.id) {
+	sendError(res, { "message": "Unauthorized" }, __line, __function);
+        return;
+    }
+    if (op == "test" && device.type == "flowerpower") {
+    	testFlowerPowerDevice(req, res, device);
+    } else {
+    	sendError(res, { "message": "Invalid op" }, __line, __function);
+    }
+}
+
+function createDevice(req, res)
+{
+    logger.debug("Create device " + JSON.stringify(req.body));
+    logger.debug("Account ", JSON.stringify(req.user));
+
+    if (req.body.type != "flowerpower") {
+	sendError(res, { "success": false, 
+			 "message": "Bad device type" },
+                  __line, __function);
+	return;
+    }
+
+    var account = req.user;
+    var dev = req.body;
+    var fp = dev.flowerpower;
+    if (!fp) {
+	sendError(res, { "success": false, 
+			 "message": "Invalid data" },
+                  __line, __function);
+	return;
+    }
+    if (!validEmail(fp.username)) {
+	sendError(res, { "success": false, 
+			 "message": "Bad username" },
+                  __line, __function);
+	return;
+    }
+    if (!fp.password || !fp.password.length || fp.password.length > 20) {
+	sendError(res, { "success": false, 
+			 "message": "Bad login" },
+                  __line, __function);
+	return;
+    }
+    if (!fp.serial || !fp.serial.length || fp.serial.length > 32) {
+	sendError(res, { "success": false, 
+			 "message": "Bad serial" },
+                  __line, __function);
+	return;
+    }
+    if (!fp.nickname || !fp.nickname.length || fp.nickname.length > 100) {
+	sendError(res, { "success": false, 
+			 "message": "Bad nickname" },
+                  __line, __function);
+	return;
+    }
+    if (!fp.location || !fp.location.length || fp.location.length > 32) {
+	sendError(res, { "success": false, 
+			 "message": "Bad location ID" },
+                  __line, __function);
+	return;
+    }
+    if (!fp.plant_nickname || !fp.plant_nickname.length || fp.plant_nickname.length > 100) {
+	sendError(res, { "success": false, 
+			 "message": "Bad plant name" },
+                  __line, __function);
+	return;
+    }
+    if (!dev.name || !dev.name.length || dev.name.length > 100) {
+	sendError(res, { "success": false, 
+			 "message": "Bad plant name" },
+                  __line, __function);
+	return;
+    }
+
+    var temperature = {                                                                                                  
+        "name": "temperature",                                                                                           
+        "property": "temperature",                                                                                       
+        "unit": "Celsius",                                                                                               
+        "description": "Temperature"                                                                                     
+    };                                                                                                                   
+    database.insertDatastream(temperature);                                                                              
+                                                                                                                         
+    var humidity = {                                                                                                     
+        "name": "soilhumidity",                                                                                          
+        "property": "soilhumidity",                                                                                      
+        "unit": "%",                                                                                                     
+        "description": "Humidite du sol"                                                                                 
+    };                                                                                                                   
+    database.insertDatastream(humidity);                                                                                 
+                                                                                                                         
+    var sunlight = {                                                                                                     
+        "name": "sunlight",                                                                                              
+        "property": "par",                                                                                               
+        "unit": "umole/m2/s",                                                                                            
+        "description": "Lumiere"                                                                                         
+    };                                                                                                                   
+    database.insertDatastream(sunlight);                                                                                 
+        
+    var device = database.insertDevice({ 
+	"account": account.id, 
+        "name": dev.name,
+        "datastreams": [ temperature.id, humidity.id, sunlight.id ],
+        "type": "flowerpower",
+        "flowerpower": {
+            "username": fp.username,
+            "password": fp.password,
+            "serial": fp.serial,
+            "nickname": fp.nickname,
+            "plant_nickname": fp.plant_nickname,
+            "location": fp.location
+        }
+    });
+
+    sendJson(res, device);
+}
+
+function deleteDevice(req, res)
+{
+    var id = req.params.id;
+    var account = req.user;
+
+    logger.debug("deleteDevice: " + id);
+    
+    var device = database.getDevice(id);
+    if (!device) {
+	sendError(res, { "message": "Bad ID" }, __line, __function);
+        return;
+    }
+    if (device.account != account.id) {
+	sendError(res, { "message": "Unauthorized" }, __line, __function);
+        return;
+    }
+    database.deleteDevice(device);
+    sendJson(res, { "success": true });    
+}
 
 /*
  * App
@@ -1883,7 +2078,10 @@ function listFlowerPowers(req, res)
 
 var app = express();
 
-app.use(multer({ dest: './uploads/'}));
+//app.use(multer({ dest: './uploads/'}));
+var multer = require('multer');
+var upload = multer({ dest: './uploads' });
+
 app.use(session({ secret: "Je suis Charlie", 
 		  resave: false, 
 		  saveUninitialized: true }));
@@ -1893,7 +2091,7 @@ app.use(locale(supported));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.get("/captcha.jpg", captcha.generate());
+//app.get("/captcha.jpg", captcha.generate());
 app.get("/experiments/:id(\\d+).json", sendExperiment);
 app.get("/experiments/:id(\\d+).html", sendExperimentPage);
 app.get("/mobile/:id(\\d+).html",
@@ -1931,7 +2129,7 @@ app.post("/locations/:id",
          updateLocation);
 
 app.get("/plants.json", sendPlants);
-app.post("/accounts", captcha.check, createAccount);
+app.post("/accounts" /*, captcha.check*/, createAccount);
 app.get("/accounts/:id.json", sendAccountInfo);
 app.get("/people/:id.html", sendHomepage);
 app.get("/people/:id/profile.html",
@@ -1962,7 +2160,17 @@ app.post("/messages",
          passport.authenticate('basic', { session: true }),
          createMessage);
 
-app.get("/devices/flowerpowers.json", listFlowerPowers);
+app.get("/devices/flowerpowers.json", obtainFlowerPowerDevices);
+app.get("/devices/:id(\\d+)", 
+        passport.authenticate('basic', { session: true }),
+        handleDeviceOp);
+app.post("/devices",
+         passport.authenticate('basic', { session: true }),
+         createDevice);
+app.delete("/devices/:id(\\d+)",
+           passport.authenticate('basic', { session: true }),
+           deleteDevice);
+
 
 app.get("/", sendIndex);
 

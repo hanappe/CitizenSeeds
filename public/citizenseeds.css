@@ -160,3 +160,25 @@ p.observation {
     color: #444;
     font-style: italic;
 }
+
+.flowerpower-test-failed {
+    font-size: 32px;
+    color: red;
+}
+
+.flowerpower-test-succes {
+    font-size: 32px;
+    color: green;
+}
+
+table.devices-table tr th, table.devices-table tr td {
+    border-bottom: 1px solid #ddd;
+    padding: 5px;
+    text-align: left;
+}
+
+div.parcelle {
+    padding-top: 20px;
+    padding-bottom: 20px;
+    border-bottom: solid 1px #777;
+}
