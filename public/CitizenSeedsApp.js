@@ -2618,6 +2618,19 @@ ForumViewer.prototype = new UIComponent();
 
 //--------------------------------------------------
 
+function ActivitySlideshow(observations, index)
+{
+    var self = this;
+    this.observations = observations;
+    this.index = index;
+
+    this.open = function() {
+        var obs = [ self.observations[self.index] ];
+        _curtain.show(new Slideshow(obs));
+    }
+}
+
+
 function ActivityViewer(id)
 {
     var self = this;
@@ -2625,6 +2638,9 @@ function ActivityViewer(id)
 
     this.setObservations = function(obs) {
         this.observations = obs;
+        for (var i = 0; i < this.observations.length; i++) {
+            this.observations[i].date = new Date(this.observations[i].date);
+        }
     }
     
     this.buildView = function() {
@@ -2637,24 +2653,32 @@ function ActivityViewer(id)
         div = document.createElement("DIV");
         div.className = "recent-photos";
         
-        for (var i = this.observations.length-1, j = 0; i >= 0 && j < 27; i--, j++) {
+        for (var i = this.observations.length-1, j = 0; i >= 0 && j < 32; i--, j++) {
             var imgdiv = document.createElement("DIV");
             imgdiv.className = "recent-photo";
 
+            var a = document.createElement("A");
+            a.className = "recent-photo";
+            a.setAttribute("href", "javascript:void(0)");
+            a.onclick = function() { return false; }
+            a.onmousedown = function() { return false; }
+            setEventHandler(a, "click", new ActivitySlideshow(this.observations, i).open);
+            
             var img = document.createElement("IMG");
             img.src = _server.root + "/" + this.observations[i].thumbnail;
             img.className = "recent-photo";
-            imgdiv.appendChild(img);
-/*
+            imgdiv.appendChild(a);
+            a.appendChild(img);
+
             var br = document.createElement("BR");
             imgdiv.appendChild(br);
 
-            var a = document.createElement("A");
+            a = document.createElement("A");
             a.className = "recent-photo";
             a.setAttribute("href", _server.root + "people/" + this.observations[i].accountId + ".html");
             a.appendChild(document.createTextNode(this.observations[i].accountId));
             imgdiv.appendChild(a);
-*/
+
             div.appendChild(imgdiv);
         }
         

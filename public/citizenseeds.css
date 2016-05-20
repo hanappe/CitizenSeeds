@@ -131,12 +131,26 @@ a.observer-blog {
     font-size: 10px;
 }
 
+div.recent-photos {
+    background-color: #eee;
+}
+
 div.recent-photo {
+    margin: 2px;
     padding: 4px;
-    display: inline;
+    display: inline-block;
+    border: solid 1px #bbb;
+    border-radius: 4px;
+    background-color: white;
+    box-shadow: 2px 2px 2px #bbb;
+}
+
+a.recent-photo {
+    font-size: 10px;
 }
 
 img.recent-photo {
+    color: white;
 }
 
 p.comment {
