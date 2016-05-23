@@ -1207,7 +1207,7 @@ function ObservationView(row, observer, observations, col)
                        "plantId": observer.plantId,
                        "experimentId": observer.experimentId,
                        "date": toDateWithHMS(date) };
-        alert("date=" + toDateWithHMS(date));
+        //alert("date=" + toDateWithHMS(date));
         _curtain.show(new UploadPanel(hidden,
                                       function(data) {
                                           if (data.error) {
