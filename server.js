@@ -756,6 +756,9 @@ function createObservation(req, res)
 	return;
     }    
 
+    var comment = req.body.comment;
+    /* FIXME: valid comment... */
+
     var location = database.getLocation(req.body.locationId);
     if (!location) {
 	sendError(res, { "success": false, 
@@ -806,6 +809,7 @@ function createObservation(req, res)
 	    "date": req.body.date,
             "dateUpload": new Date().toISOString(),
             "dateUser": req.body.date,
+            "comment": comment,
 	    "plant": plant.id
 	});
     }
