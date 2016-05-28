@@ -814,6 +814,8 @@ function ExperimentView(experiment, weekOffset, numWeeks)
 
     var matrices = experiment.matrices;
 
+    console.log("*** ExperimentView: matrices=" + JSON.stringify(experiment.matrices));
+    
     for (var i = 0; i < matrices.length; i++) {
         _prof.start("new ObservationMatrixView[" + i + "]");
         var view = new ObservationMatrixView(matrices[i], weekOffset, numWeeks, i > 0);
@@ -880,6 +882,8 @@ function ObservationMatrixView(matrix, weekOffset, numWeeks, collapsed)
     this.rows = [];
     this.weekOffset = weekOffset;
     this.numWeeks = numWeeks;
+    this.matrix = matrix;
+    this.collapsed = collapsed;
 
     this.getColumnDate = function(column) {
         return new Date(_experiment.startDate.getFullYear(),
@@ -901,7 +905,7 @@ function ObservationMatrixView(matrix, weekOffset, numWeeks, collapsed)
     }
     
     this.getObservations = function(row, col) {
-        var observationRow = matrix.observations[row];
+        var observationRow = matrix.getObservations(row);
         return observationRow[this.weekOffset + col];
     }
 
@@ -937,6 +941,7 @@ function ObservationMatrixView(matrix, weekOffset, numWeeks, collapsed)
     }
 
     this.addObservationRow = function (row, observer, observations) {
+        console.log("*** addObservationRow ***");
         var row = new ObservationRowView(row, numWeeks, this);
         this.rows.push(row);
         this.matrixView.addComponent(row);
@@ -947,9 +952,10 @@ function ObservationMatrixView(matrix, weekOffset, numWeeks, collapsed)
         this.weekView = new ObservationWeekView(this, numWeeks);
         this.matrixView.addComponent(this.weekView);
         _prof.mark("new ObservationWeekView");
-        for (var row = 0; row < matrix.observers.length; row++) {
+        console.log("*** buildObservationRows: length: " + matrix.countObservers() + " ***");
+        for (var row = 0; row < matrix.countObservers(); row++) {
             _prof.start("new ObservationRowView[" + row + "]");
-            this.addObservationRow(row, this.matrix.observers[row], this.matrix.observations[row]);
+            this.addObservationRow(row, this.matrix.getObserver(row), this.matrix.getObservations(row));
             _prof.stop("new ObservationRowView[" + row + "]");
         }
     }
@@ -1013,6 +1019,7 @@ function ObservationMatrixView(matrix, weekOffset, numWeeks, collapsed)
     }
     
     this.buildViewExpanded = function() {
+        console.log("*** buildViewExpanded: matrix=" + JSON.stringify(matrix));
         this.buildHeader(false);
         this.buildMatrixView();
         this.buildPlaceHolder();
@@ -1048,10 +1055,6 @@ function ObservationMatrixView(matrix, weekOffset, numWeeks, collapsed)
         this.collapsed = false;
     }
     
-    this.matrix = matrix;
-    this.weekOffset = weekOffset;
-    this.numWeeks = numWeeks;
-    this.collapsed = collapsed;
     this.buildView();
 }
 ObservationMatrixView.prototype = new UIComponent();
@@ -1176,8 +1179,8 @@ function ObservationRowView(row, numWeeks, matrixview)
             if (show) jq(this.div).show();
             else jq(this.div).hide();
         } else { */
-            if (show) jq(this.div).fadeIn(1000).show();
-            else jq(this.div).fadeOut(1000).hide();
+//            if (show) jq(this.div).fadeIn(1000).show();
+//            else jq(this.div).fadeOut(1000).hide();
         //}
     }
     
@@ -1825,16 +1828,14 @@ function ObservationMatrix(plant, cols)
     this.cols = cols;
     this.plant = plant;
     this.observers = []; // Array of all observers of this plant
-    this.observations = []; // Array of arrays of arrays: observations[observer][column][observation]: each cell in the matrix (week) can have several obserations.
-    this.map = {};
+    this.map = {}; // A map that links a locationId to the list of observations, organised by column
 
     this.addObserver = function(observer) {
         this.observers.push(observer);
-        var observations = [];
+        var o = [];
         for (var col = 0; col < this.cols; col++)
-            observations.push([]);
-        this.observations.push(observations);
-        this.map[observer.locationId] = observations;
+            o.push([]);
+        this.map[observer.locationId] = o;
     }
 
     this.removeObservation = function(obs) {
@@ -1846,6 +1847,21 @@ function ObservationMatrix(plant, cols)
                 return { "plant": this.plant.id, "location": obs.locationId, "weeknum": obs.weeknum };
             }
         }
+    }
+ 
+    this.getObserver = function(i) {
+        return this.observers[i];
+    }
+ 
+    this.countObservers = function() {
+        return this.observers.length;
+    }
+
+    this.getObservations = function(x) {
+        var observer = x;
+        if (Number.isInteger(x))
+            observer = this.observers[x];
+        return this.map[observer.locationId];
     }
     
     this.addObservation = function(obs) {
@@ -1922,7 +1938,6 @@ function Experiment(e)
         }
     }
 }
-
 
 function SlideSelector(slideshow, i)
 {
@@ -2833,6 +2848,8 @@ function showObservations(id, startAt)
 
     _accountPanel = new AccountPanel();
 
+    var weekOffset = 0;
+    
     // First, load all the data and construct the data structure, aka
     // the 'model'.
     _server.getJSON("experiments/" + id + ".json").then(function(e) {
@@ -2854,6 +2871,7 @@ function showObservations(id, startAt)
             viewStart = _experiment.startDate;
             viewEnd = new Date(viewStart.getFullYear(), viewStart.getMonth(),
                                 viewStart.getDate() + 7 * _numWeeks, 23, 59, 59);
+            weekOffset = 0;
         } else if (startAt && startAt != "today") {
             viewStart = new Date(startAt);
             viewEnd = new Date(viewStart.getFullYear(), viewStart.getMonth(),
@@ -2862,26 +2880,30 @@ function showObservations(id, startAt)
 	} else {
             var today = new Date();
             var daysTillSunday = today.getDay() == 0? 7 : 7 - today.getDay();
-            var viewEnd = new Date(today.getFullYear(), today.getMonth(),
-				   today.getDate() + daysTillSunday, 0, 0, 0);
-            var viewStart = new Date(today.getFullYear(), today.getMonth(),
-                                     today.getDate() + daysTillSunday - _numWeeks * 7,
-                                     0, 0, 0);
+            viewEnd = new Date(today.getFullYear(), today.getMonth(),
+			       today.getDate() + daysTillSunday, 0, 0, 0);
+            viewStart = new Date(today.getFullYear(), today.getMonth(),
+                                 today.getDate() + daysTillSunday - _numWeeks * 7,
+                                 0, 0, 0);
 	}
 
         if (viewStart.getTime() < _experiment.startDate.getTime()) {
             viewStart = _experiment.startDate;
             viewEnd = new Date(viewStart.getFullYear(), viewStart.getMonth(),
                                viewStart.getDate() + 7 * _numWeeks, 23, 59, 59);
-            weekOffset = 0;
         }
-
-        // Now create the controller and build the view.
-        _controller = new ExperimentController(_experiment, weekOffset, _numWeeks);
-        _controller.buildView();
-
-        _prof.mark("buildView");
+        weekOffset = (viewStart.getTime() - _experiment.startDate.getTime()) / 1000 / 60 / 60 / 24 / 7;
         
+        return _server.getJSON("observers.json?experiment=" + id);
+
+    }).then(function(obs) {
+
+        _prof.mark("setObservers");
+
+        _experiment.setObservers(obs);
+
+        _prof.mark("setObservers");
+
         return _server.getJSON("observations.json?experiment=" + id);
 
     }).then(function(obs) {
@@ -2892,7 +2914,11 @@ function showObservations(id, startAt)
 
         _prof.mark("setObservations");
 
-        _controller.updateView();
+        // Now create the controller and build the view.
+        _controller = new ExperimentController(_experiment, weekOffset, _numWeeks);
+        _controller.buildView();
+        _prof.mark("buildView");
+//        _controller.updateView();
 
         _prof.mark("updateView");
 

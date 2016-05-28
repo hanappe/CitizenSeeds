@@ -28,7 +28,87 @@
 
   <body id="Body">
 
-    <div class="container-fluid">
+    <nav class="navbar navbar-default" role="navigation">
+      <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="https://p2pfoodlab.net">
+            <img alt="P2P Food Lab" src="<%= config.baseUrl %>/media/logo-small-blue.png" width="130px">
+          </a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+
+          <% if (account && account.id) { %>
+          <ul class="nav navbar-nav navbar-right">
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown"><b>Bonjour <%= account.id %></b> <span class="caret"></span></a>
+	      <ul id="account-dp" class="dropdown-menu">
+		<li><a href="<%= config.baseUrl %>/people/<%= account.id %>.html">Mon profile</a></li>
+		<li><a href="<%= config.baseUrl %>/people/<%= account.id %>/profile.html">Configuration</a></li>
+		<li><a href="<%= config.baseUrl %>/logout">Me déconnecter</a></li>
+	      </ul>
+            </li>
+          </ul>
+
+          <% } else { %>
+          <ul class="nav navbar-nav navbar-right">
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown"><b>Login</b> <span class="caret"></span></a>
+	      <ul id="login-dp" class="dropdown-menu">
+		<li>
+		  <div class="row">
+		    <div class="col-md-12">
+		      <!-- Login via
+		      <div class="social-buttons">
+			<a href="#" class="btn btn-fb"><i class="fa fa-facebook"></i> Facebook</a>
+			<a href="#" class="btn btn-tw"><i class="fa fa-twitter"></i> Twitter</a>
+		      </div> 
+                      or -->
+		      <form class="form" role="form" method="post" action="login" accept-charset="UTF-8" id="login-nav">
+			<div class="form-group">
+			  <label class="sr-only" for="inputUsername">Identifiant</label>
+			  <input type="text" name="username" class="form-control" id="inputUsername" placeholder="Identifiant" required>
+			</div>
+			<div class="form-group">
+			  <label class="sr-only" for="inputPassword">Mot de passe</label>
+			  <input type="password" class="form-control" name="password" id="inputPassword" placeholder="Password" required>
+                          <!-- <div class="help-block text-right"><a href="">Mot de passe oublié ?</a></div> -->
+			</div>
+			<div class="form-group">
+			  <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
+			</div>
+			<!-- <div class="checkbox">
+			  <label>
+			    <input type="checkbox"> keep me logged-in
+			  </label>
+			</div> -->
+		      </form>
+		    </div>
+		    <!-- <div class="bottom text-center">
+		      <a href="#"><b>Créer un compte</b></a>
+		    </div> -->
+		  </div>
+		</li>
+	      </ul>
+            </li>
+            <!-- <li><p class="navbar-text"><a href="#">Créer un compte</a></p></li> -->
+          </ul>
+          <% } %>
+        </div><!-- /.navbar-collapse -->
+      </div><!-- /.container-fluid -->
+    </nav>
+
+
+
+<div class="container-fluid">
       <div class="page-header">
         <h1 class="experiment-title"><%= experiment.name %></h1>
       </div>

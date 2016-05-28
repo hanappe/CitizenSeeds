@@ -33,8 +33,8 @@ var randomstring = require("randomstring");
 var XRegExp = require("xregexp").XRegExp;
 var nodemailer = require("nodemailer");
 var passport = require('passport');
-var BasicStrategy = require('passport-http').BasicStrategy;
-var oauth2 = require('./oauth2');
+//var BasicStrategy = require('passport-http').BasicStrategy;
+var LocalStrategy = require('passport-local').Strategy;
 var gm = require('gm');
 var mkdirp = require('mkdirp');
 var exit = require('exit');
@@ -45,6 +45,7 @@ var sanitizeHtml = require('sanitize-html');
 var mime = require('mime');
 var sys = require("sys");
 var FlowerPower = require('node-flower-power');
+var bcrypt = require('bcrypt-nodejs');
 
 mkdirp("log/", function(err) {
     if (err) {
@@ -63,9 +64,8 @@ log4js.configure({
 var logger = log4js.getLogger('p2pfoodlab');
 logger.setLevel('DEBUG');
 
-var database = require("./db");
-database.init();
-
+var database = require("./db");                                                                                          
+database.init();   
 
 /*
  * Mail
@@ -300,15 +300,15 @@ function createObserver(req, res)
     } else {
         var locations = database.selectLocations({ "account": account.id });
         /*if (locations.length == 0) {
-            location = database.insertLocation({ "account": account.id, "name": "Ma parcelle" });
-        } else if (locations.length >= 1) {*/
-            logger.debug("createObserver: locations: " + JSON.stringify(locations));
-	    sendError(res, { "success": false, 
-                             "type":  "select",
-                             "select":  locations,
-			     "message": "Please select or create a location" },
-                      __line, __function);
-            return;
+          location = database.insertLocation({ "account": account.id, "name": "Ma parcelle" });
+          } else if (locations.length >= 1) {*/
+        logger.debug("createObserver: locations: " + JSON.stringify(locations));
+	sendError(res, { "success": false, 
+                         "type":  "select",
+                         "select":  locations,
+			 "message": "Please select or create a location" },
+                  __line, __function);
+        return;
         //}
     }
     
@@ -329,7 +329,7 @@ function createObserver(req, res)
 	"plant": plant.id,
 	"location": location.id, 
 	"account": account.id 
-	});
+    });
 
     var r = { "id": observer.id ,
               "locationId": location.id,
@@ -424,12 +424,18 @@ function sendExperimentPage(req, res)
     if (validDate(req.query.startat)) {
 	startAt = req.query.startat;
     }
-    res.render('experiment', { "config": config, "experiment": experiment, "startAt": startAt });
+    var account = null;
+    logger.debug("user: " + JSON.stringify(req.user));
+    if (req.user && req.user.id) {
+        var a = database.getAccount(req.user.id);
+        if (a) account = { "id": a.id };
+    }
+    res.render('experiment', { "config": config, "experiment": experiment, "startAt": startAt, "account": account });
     
     //var vars = { "experimentId": experiment.id, 
-//	         "experimentName": experiment.prettyname,
-//	         "baseUrl": config.baseUrl };    
-  //  new Template("experiment").generate(res, vars);
+    //	         "experimentName": experiment.prettyname,
+    //	         "baseUrl": config.baseUrl };    
+    //  new Template("experiment").generate(res, vars);
 }
 
 function sendMobileApp(req, res)
@@ -1029,7 +1035,7 @@ function createLocation(req, res)
     var location = database.insertLocation({ 
 	"name": name, 
 	"account": account.id
-	});
+    });
     
     sendJson(res, location);
 }
@@ -1304,12 +1310,12 @@ function createAccount(req, res)
 
     logger.debug("createAccount @ 2");
 
-/*    if (!req.session.captcha.valid) 
-        return sendError(res, { "success": false,
-                                "field": "captcha",
-                                "message": "Captcha invalide. Veuillez vérifier votre saisie." },
-                         __line, __function); 
-*/
+    /*    if (!req.session.captcha.valid) 
+          return sendError(res, { "success": false,
+          "field": "captcha",
+          "message": "Captcha invalide. Veuillez vérifier votre saisie." },
+          __line, __function); 
+    */
     
     logger.debug("createAccount @ 3");
 
@@ -1379,7 +1385,7 @@ function createAccount(req, res)
         return sendError(res, { "success": false,
                                 "field": "flowerpower",
                                 "message": "Valeur invalide pour le champs 'flowerpower'." },
-                          __line, __function); 
+                         __line, __function); 
 
     logger.debug("createAccount @ 11");
 
@@ -1584,6 +1590,7 @@ function sendAccountInfo(req, res)
     sendJson(res, copy);
 }
 
+/*
 function sendWhoami(req, res)
 {
     res.writeHead(200, {"Content-Type": "application/json"});
@@ -1613,6 +1620,7 @@ function logout(req, res)
     res.writeHead(200, {"Content-Type": "application/json"});
     res.end(JSON.stringify({ "success": true }));
 }
+*/
 
 function reload(req, res)
 {
@@ -1634,12 +1642,22 @@ function reload(req, res)
 /*
  * Authentication
  */
-passport.use(new BasicStrategy(function(username, password, done) {
-    var account = database.getAccount(username);
-    if (!account) return done(null, false);
-    if (account.password == password) return done(null, account);
-    return done(null, false);
-}));
+passport.use(new LocalStrategy(
+    function(username, password, cb) {
+        logger.debug("passport.use, username: " + username);
+        var account = database.getAccount(username);
+        if (!account) { return cb(null, false); }
+        if (account.password != password) { return cb(null, false); }
+        return cb(null, account);
+    }));
+
+/* passport.use(new BasicStrategy(function(username, password, done) {
+   var account = database.getAccount(username);
+   if (!account) return done(null, false);
+   if (account.password == password) return done(null, account);
+   return done(null, false);
+   }));
+*/
 
 passport.serializeUser(function(account, done) {
     done(null, account.id);
@@ -1650,6 +1668,17 @@ passport.deserializeUser(function(id, done) {
     done(null, account);
 });
 
+function isLoggedIn(req, res, next)
+{
+    logger.debug("isLoggedIn: returnTo=" + req.url);
+    if (req.isAuthenticated()) {
+        logger.debug("Logged in");
+        return next();
+    }
+    logger.debug("Not logged in");
+    req.session.returnTo = req.session.returnTo || req.url;
+    res.redirect(config.baseUrl + "/login");
+}
 
 /*
  * Files
@@ -1740,9 +1769,9 @@ function sendMessages(req, res)
                                              "account": account,
                                              "thread": thread });
     /*for (var i = 0; i < messages.length; i++) {
-        //messages[i].text = messages[i].text.replace(/^\s+|\s+$/gm, '');
-        messages[i].shorttext = messages[i].text.substr(0, 42).replace(/[\n\r]/g, " ");
-        console.log(messages[i].shorttext);
+    //messages[i].text = messages[i].text.replace(/^\s+|\s+$/gm, '');
+    messages[i].shorttext = messages[i].text.substr(0, 42).replace(/[\n\r]/g, " ");
+    console.log(messages[i].shorttext);
     }
     database.saveTable("messages");
     */
@@ -1764,12 +1793,12 @@ function createMessage(req, res)
 	return;
     }
     /*text = text.replace(/^\s+|\s+$/gm, '');
-    if (!text) {
-	sendError(res, { "success": false, 
-			 "message": "No data" },
-                  __line, __function);
-	return;
-    }
+      if (!text) {
+      sendError(res, { "success": false, 
+      "message": "No data" },
+      __line, __function);
+      return;
+      }
     */
     
     var subject = req.body.subject;
@@ -2017,7 +2046,7 @@ function createDevice(req, res)
         "description": "Temperature"                                                                                     
     };                                                                                                                   
     database.insertDatastream(temperature);                                                                              
-                                                                                                                         
+    
     var humidity = {                                                                                                     
         "name": "soilhumidity",                                                                                          
         "property": "soilhumidity",                                                                                      
@@ -2025,7 +2054,7 @@ function createDevice(req, res)
         "description": "Humidite du sol"                                                                                 
     };                                                                                                                   
     database.insertDatastream(humidity);                                                                                 
-                                                                                                                         
+    
     var sunlight = {                                                                                                     
         "name": "sunlight",                                                                                              
         "property": "par",                                                                                               
@@ -2033,7 +2062,7 @@ function createDevice(req, res)
         "description": "Lumiere"                                                                                         
     };                                                                                                                   
     database.insertDatastream(sunlight);                                                                                 
-        
+    
     var device = database.insertDevice({ 
 	"account": account.id, 
         "name": dev.name,
@@ -2094,23 +2123,27 @@ app.use(bodyParser.urlencoded({ extended: true }));
 //app.get("/captcha.jpg", captcha.generate());
 app.get("/experiments/:id(\\d+).json", sendExperiment);
 app.get("/experiments/:id(\\d+).html", sendExperimentPage);
+
 app.get("/mobile/:id(\\d+).html",
-        passport.authenticate('basic', { session: true }),
+        passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
         sendMobileApp);
 
 app.get("/observers.json", sendObservers);
+
 app.post("/observers", 
-         passport.authenticate('basic', { session: true }),
+         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
          createObserver);
 
 app.get("/observations.json", sendObservations);
 app.get("/observations/:id(\\d+).jpg", sendObservationImage);
 app.get("/observations/:id(\\d+).json", sendObservationMeta);
+
 app.post("/observations",
-         passport.authenticate('basic', { session: true }),
+         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
          createObservation);
+
 app.delete("/observations/:id(\\d+)",
-           passport.authenticate('basic', { session: true }),
+           passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
            deleteObservation);
 
 app.get("/sensordata.json", sendSensorData);
@@ -2122,66 +2155,90 @@ app.get("/groups.json", sendGroups);
 
 app.get("/locations.json", sendLocations);
 app.post("/locations",
-         passport.authenticate('basic', { session: true }),
+         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
          createLocation);
+
 app.post("/locations/:id",
-         passport.authenticate('basic', { session: true }),
+         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
          updateLocation);
 
 app.get("/plants.json", sendPlants);
 app.post("/accounts" /*, captcha.check*/, createAccount);
 app.get("/accounts/:id.json", sendAccountInfo);
 app.get("/people/:id.html", sendHomepage);
-app.get("/people/:id/profile.html",
-        passport.authenticate('basic', { session: true }),
-        sendProfile);
+
+app.get("/people/:id/profile.html", isLoggedIn, sendProfile);
+
 app.post("/people/:id/profile",
-         passport.authenticate('basic', { session: true }),
+         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
          updateProfile);
-app.get("/whoami", sendWhoami);
-app.get("/login",
-        passport.authenticate('basic', { session: true }),
-        login);
-app.get("/logout", logout);
 
 app.get("/reload", 
-        passport.authenticate('basic', { session: true }),
+        passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
         reload);
 
 app.post("/files",
-         passport.authenticate('basic', { session: true }),
+         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
          createFile);
+
 app.delete("/files/:id(\\d+)",
-           passport.authenticate('basic', { session: true }),
+           passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
            deleteFile);
 
 app.get("/messages", sendMessages);
 app.post("/messages",
-         passport.authenticate('basic', { session: true }),
+         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
          createMessage);
 
 app.get("/devices/flowerpowers.json", obtainFlowerPowerDevices);
 app.get("/devices/:id(\\d+)", 
-        passport.authenticate('basic', { session: true }),
+        passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
         handleDeviceOp);
+
 app.post("/devices",
-         passport.authenticate('basic', { session: true }),
+         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
          createDevice);
+
 app.delete("/devices/:id(\\d+)",
-           passport.authenticate('basic', { session: true }),
+           passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
            deleteDevice);
 
+app.get('/login',
+        function(req, res) {
+            res.render('login');
+        });
+
+app.post('/login', 
+         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
+         function(req, res) {
+             res.redirect('/');
+         });
+
+app.get('/logout',
+        function(req, res){
+            req.logout();
+            res.redirect('/');
+        });
+
+app.get('/whoami',
+        function(req, res){
+            res.writeHead(200, {"Content-Type": "application/json"});
+            if (req.user) 
+                res.end(JSON.stringify({ "id": req.user.id }));
+            else
+                res.end("null");
+        });
 
 app.get("/", sendIndex);
 
 /*
-var plotter = require('./plotter');
-function sendGraph(req, res)
-{
-    res.writeHead(200, {"Content-Type": "image/svg+xml"});
-    res.end(plotter.plotGraph(null));
-}
-app.get("/graphs", sendGraph);
+  var plotter = require('./plotter');
+  function sendGraph(req, res)
+  {
+  res.writeHead(200, {"Content-Type": "image/svg+xml"});
+  res.end(plotter.plotGraph(null));
+  }
+  app.get("/graphs", sendGraph);
 */
 
 app.use(express.static("public"));
