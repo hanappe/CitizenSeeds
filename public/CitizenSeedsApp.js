@@ -1142,6 +1142,10 @@ function ObservationWeekView(matrixview, numWeeks)
     }
     
     this.buildView(numWeeks);
+        this.buildView(numWeeks);
+    }
+    
+    this.buildView(numWeeks);
 }
 ObservationWeekView.prototype = new UIComponent();
 
@@ -1165,6 +1169,23 @@ function ObservationRowView(row, numWeeks, matrixview)
             this.addComponent(this.cells[col]);
             this.cells[col].moveTo(120 + col * 90, 0);
         }
+    }
+
+    this.showHide = function(imm) {
+        var show = false;
+        for (var col = 0; col < numWeeks; col++) {
+            if (this.cells[col].hasObservations()) {
+                show = true;
+                break;
+            }
+        }
+/*        if (imm) {
+            if (show) jq(this.div).show();
+            else jq(this.div).hide();
+        } else { */
+            if (show) jq(this.div).fadeIn(1000).show();
+            else jq(this.div).fadeOut(1000).hide();
+        //}
     }
 
     this.showHide = function(imm) {
@@ -2891,19 +2912,14 @@ function showObservations(id, startAt)
             viewStart = _experiment.startDate;
             viewEnd = new Date(viewStart.getFullYear(), viewStart.getMonth(),
                                viewStart.getDate() + 7 * _numWeeks, 23, 59, 59);
+            weekOffset = 0;
         }
         weekOffset = (viewStart.getTime() - _experiment.startDate.getTime()) / 1000 / 60 / 60 / 24 / 7;
         
-        return _server.getJSON("observers.json?experiment=" + id);
-
-    }).then(function(obs) {
-
+        _prof.mark("setObservers");
         _prof.mark("setObservers");
 
-        _experiment.setObservers(obs);
-
-        _prof.mark("setObservers");
-
+        return _server.getJSON("observations.json?experiment=" + id);
         return _server.getJSON("observations.json?experiment=" + id);
 
     }).then(function(obs) {
