@@ -817,11 +817,8 @@ function ExperimentView(experiment, weekOffset, numWeeks)
     console.log("*** ExperimentView: matrices=" + JSON.stringify(experiment.matrices));
     
     for (var i = 0; i < matrices.length; i++) {
-        _prof.start("new ObservationMatrixView[" + i + "]");
         var view = new ObservationMatrixView(matrices[i], weekOffset, numWeeks, i > 0);
-        _prof.stop("new ObservationMatrixView[" + i + "]");
         this.addComponent(view);
-        _prof.mark("add ObservationMatrixView[" + i + "]");
         view.showHideRows(true);
     }
     
@@ -951,12 +948,9 @@ function ObservationMatrixView(matrix, weekOffset, numWeeks, collapsed)
         this.clear();
         this.weekView = new ObservationWeekView(this, numWeeks);
         this.matrixView.addComponent(this.weekView);
-        _prof.mark("new ObservationWeekView");
         console.log("*** buildObservationRows: length: " + matrix.countObservers() + " ***");
         for (var row = 0; row < matrix.countObservers(); row++) {
-            _prof.start("new ObservationRowView[" + row + "]");
             this.addObservationRow(row, this.matrix.getObserver(row), this.matrix.getObservations(row));
-            _prof.stop("new ObservationRowView[" + row + "]");
         }
     }
 
@@ -1136,12 +1130,8 @@ function ObservationWeekView(matrixview, numWeeks)
             this.addComponent(header);
         }
     }
-
-    this.updateView = function () {
-        this.buildView(numWeeks);
-    }
     
-    this.buildView(numWeeks);
+    this.updateView = function () {
         this.buildView(numWeeks);
     }
     
@@ -1165,7 +1155,6 @@ function ObservationRowView(row, numWeeks, matrixview)
     this.buildView = function() {
         for (var col = 0; col < numWeeks; col++) {
             this.cells[col] = new ObservationView(row, col, this, matrixview);
-            _prof.mark("new ObservationView[" + col + "]");
             this.addComponent(this.cells[col]);
             this.cells[col].moveTo(120 + col * 90, 0);
         }
@@ -1291,15 +1280,9 @@ function ObservationView(row, col, parent, matrixview)
         // else's row of observations.
         _server.getJSON("login").then(function(e) {
             if (e.error) alert(e.message);
-            else {
-                if (!_account || !_account.id) {
-                    _account = e;
-                    _accountPanel.update();
-                }
-                if (observer.accountId != e.id)
-                    alert("Il semblerait que cette ligne d'observations appartient à quelqu'un d'autre.");
-                else self._uploadPhoto();
-            }
+            else if (observer.accountId != e.id)
+                alert("Il semblerait que cette ligne d'observations appartient à quelqu'un d'autre.");
+            else self._uploadPhoto();
         });
     }
     
@@ -1768,10 +1751,6 @@ function ExperimentController(experiment, weekOffset, numWeeks)
         _server.getJSON("login").then(function(e) {
             if (e.error) alert(e.message);
             else {
-                if (!_account || !_account.id) {
-                    _account = e;
-                    _accountPanel.update();
-                }
                 if (observation.accountId != _account.id)
                     alert("Il semblerait que cette image n'est pas a vous !");
                 else {
@@ -1852,6 +1831,7 @@ function ObservationMatrix(plant, cols)
     this.map = {}; // A map that links a locationId to the list of observations, organised by column
 
     this.addObserver = function(observer) {
+        console.log("*** addObserver ***");
         this.observers.push(observer);
         var o = [];
         for (var col = 0; col < this.cols; col++)
@@ -1887,6 +1867,9 @@ function ObservationMatrix(plant, cols)
     
     this.addObservation = function(obs) {
         var row = this.map[obs.locationId];
+        if (!row) {
+            console.log(JSON.stringify(this.map));
+        }
         var cell = row[obs.weeknum];
         if (!cell) {
             alert(JSON.stringify(obs));
@@ -2163,34 +2146,6 @@ function Slideshow(observations)
     this.preloadSlides();
 }
 Slideshow.prototype = new UIComponent();
-
-
-//--------------------------------------------------
-
-function AccountPanel()
-{
-    var self = this;
-
-    function authenticate() {
-    }
-
-    this.update = function() {
-        this.removeComponents();
-        /*
-        if (_account && _account.id) {
-            this.addText("Nom : " + _account.id);
-            //this.addEventLink("Changer", function() { self.authenticate(); }, "");    
-        } else {
-            this.addEventLink("Se connecter", function() { self.authenticate(); }, "");    
-        }
-        */
-    }
-    
-    this.init("AccountPanel", "AccountPanel", document.getElementById("AccountPanel"));
-    this.update();
-}
-AccountPanel.prototype = new UIComponent();
-
 
 //--------------------------------------------------
 
@@ -2793,6 +2748,17 @@ function ActivityViewer(id)
             var img = document.createElement("IMG");
             img.src = _server.root + "/" + this.observations[i].thumbnail;
             img.className = "recent-photo";
+            {
+                var text = "";
+                if (this.observations[i].comment) {
+                    text += this.observations[i].comment + " | ";
+                }
+                text += this.observations[i].plantFamily;
+                if (this.observations[i].plantVariety)
+                    text += ", " + this.observations[i].plantVariety;
+                text += " | " + toDate(this.observations[i].date);
+                img.title = text;
+            }
             imgdiv.appendChild(a);
             a.appendChild(img);
 
@@ -2859,7 +2825,6 @@ var _experiment = undefined;
 var _controller = undefined;
 var _curtain = undefined;
 var _account = undefined;
-var _accountPanel = undefined;
 var _forum = undefined;
 
 function showObservations(id, startAt)
@@ -2867,23 +2832,13 @@ function showObservations(id, startAt)
     _curtain = new Curtain();
     document.getElementById("Body").appendChild(_curtain.div);
 
-    _accountPanel = new AccountPanel();
-
     var weekOffset = 0;
     
     // First, load all the data and construct the data structure, aka
     // the 'model'.
     _server.getJSON("experiments/" + id + ".json").then(function(e) {
 
-        _prof.mark("loadExperiment");
-            
         _experiment = new Experiment(e);
-
-        _prof.mark("handleExperiment");
-
-        return _server.getJSON("observers.json?experiment=" + id);
-
-    }).then(function(obs) {
 
 	var viewStart;
 	var viewEnd;
@@ -2916,63 +2871,33 @@ function showObservations(id, startAt)
         }
         weekOffset = (viewStart.getTime() - _experiment.startDate.getTime()) / 1000 / 60 / 60 / 24 / 7;
         
-        _prof.mark("setObservers");
-        _prof.mark("setObservers");
+        return _server.getJSON("observers.json?experiment=" + id);
 
-        return _server.getJSON("observations.json?experiment=" + id);
+    }).then(function(obs) {
+        _experiment.setObservers(obs);
         return _server.getJSON("observations.json?experiment=" + id);
 
     }).then(function(obs) {
-
-        _prof.mark("loadObservations");
-
         _experiment.setObservations(obs);
-
-        _prof.mark("setObservations");
 
         // Now create the controller and build the view.
         _controller = new ExperimentController(_experiment, weekOffset, _numWeeks);
         _controller.buildView();
-        _prof.mark("buildView");
-//        _controller.updateView();
-
-        _prof.mark("updateView");
 
         return _server.getJSON("sensordata.json");
 
     }).then(function(data) {
-        _prof.mark("getSensorData");
-
         _experiment.sensordata = {};
         for (var i = 0; i < data.length; i++) {
             _experiment.sensordata[data[i].id] = data[i];
         }
-
-        _prof.mark("handleSensorData");
-
         _controller.updateSensorData();
-
-        _prof.mark("updateSensorData");
-
         return _server.getJSON("whoami");
-        
-    }).then(function(data) {
-        _prof.mark("getWhoami");
 
-        if (data.id) {
-            _account = data;
-            _accountPanel.update();
-        }
-
-        if (true) {
-            var body = document.getElementById("Body");
-            var div = document.createElement("DIV");
-            var pre = document.createElement("PRE");
-            pre.className = "PerformanceProfile";
-            pre.innerHTML = JSON.stringify(_prof.list, null, 4);
-            div.appendChild(pre);
-            body.appendChild(div);
-        }
+    }).then(function(data) {                                                                                             
+        if (data.id) {                                                                                                   
+            _account = data;                                                                                             
+        }                                                                                                                
     });
 }
 
