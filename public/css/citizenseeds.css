@@ -339,7 +339,7 @@ span.less-recent-photos {
 /* About */
 
 #aboutcitizenseeds-wrp {
-  background: url("media/citizenseeds_bgd.jpg") center center;
+  background: url("../media/citizenseeds_bgd.jpg") center center;
 }
 
 .intro { margin-top: 10px; margin-bottom: 30px; }
