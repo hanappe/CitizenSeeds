@@ -3,17 +3,11 @@
   "version": "0.2.0",
   "description": "CitizenSeeds",
   "author": "Peter Hanappe <hanappe@csl.sony.fr>",
-  "contributors": [],
-  "scripts": {
-    "test": "echo run test",
-    "start": "node server.js",
-    "predeploy": "echo im about to deploy",
-    "postdeploy": "echo ive deployed"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/hanappe/CitizenSeeds.git"
   },
+  "license": "GPLv3"
   "bugs": {
     "email": "hanappe@csl.sony.fr"
   },
@@ -49,14 +43,5 @@
     "sanitize-html": "^1.6.1",
     "session-file-store": "*",
     "xregexp": "*"
-  },
-  "devDependencies": {},
-  "preferGlobal": true,
-  "private": true,
-  "publishConfig": {
-    "registry": "https://your-private-hosted-npm.registry.nodejitsu.com"
-  },
-  "subdomain": "foobar",
-  "analyze": true,
-  "license": "GPLv3"
+  }
 }
