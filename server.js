@@ -43,9 +43,19 @@ var ExifImage = require('exif').ExifImage;
 var ejs = require('ejs');
 var sanitizeHtml = require('sanitize-html');
 var mime = require('mime');
-var sys = require("sys");
+//var sys = require("sys");
 var FlowerPower = require('node-flower-power');
 var bcrypt = require('bcrypt-nodejs');
+
+var config = { "port": 10201 };
+
+try {
+    text = fs.readFileSync("config.json");
+    config = JSON.parse(text);        
+} catch (e) {
+    return;
+}
+
 
 mkdirp("log/", function(err) {
     if (err) {
@@ -430,7 +440,11 @@ function sendExperimentPage(req, res)
         var a = database.getAccount(req.user.id);
         if (a) account = { "id": a.id };
     }
-    res.render('experiment', { "config": config, "experiment": experiment, "startAt": startAt, "account": account });
+    res.render('experiment', { "config": config,
+                               "experiment": experiment,
+                               "startAt": startAt,
+                               "account": account,
+                               "r": config.baseUrl + "/experiments/" + experiment.id  + ".html" });
     
     //var vars = { "experimentId": experiment.id, 
     //	         "experimentName": experiment.prettyname,
@@ -719,11 +733,11 @@ function deleteObservation(req, res)
 
 function createObservation(req, res)
 {
-    logger.debug(JSON.stringify(req.files));
-    logger.debug(JSON.stringify(req.body));
+    logger.debug("File: " + JSON.stringify(req.file));
+    //logger.debug("Body: " + JSON.stringify(req.body));
     logger.debug("Account ", JSON.stringify(req.user));
 
-    if (!req.files.photo) {
+    if (!req.file) {
 	sendError(res, { "success": false, 
 			 "message": "No photo" },
                   __line, __function);
@@ -820,7 +834,7 @@ function createObservation(req, res)
 	});
     }
 
-    var p = req.files.photo.path;
+    var p = req.file.path;
     var basedir = "public/observations/" + location.id + "/" + plant.id + "/";
 
     getJpegExif(p, observation,
@@ -1135,11 +1149,12 @@ function sendPlants(req, res)
 function sendIndex(req, res)
 {
     logger.debug("Request: sendIndex");
-    if (req.locale == "fr") {
+    res.writeHead(302, { 'Location': config.baseUrl + '/experiments/6.html' });
+/*    if (req.locale == "fr") {
         res.writeHead(302, { 'Location': 'https://p2pfoodlab.net/CitizenSeedsInfo.fr.html' });
     } else {
         res.writeHead(302, { 'Location': 'https://p2pfoodlab.net/CitizenSeedsInfo.fr.html' });
-    }
+    }*/
     res.end();
 }
 
@@ -1488,7 +1503,10 @@ function sendHomepage(req, res)
     logger.debug("sendHomepage ", JSON.stringify(profile));
     if (!profile) profile = {};
     logger.debug("rendering homepage");
-    res.render('homepage', { "config": config, "account": account, "profile": profile });
+    res.render('homepage', { "config": config,
+                             "account": account,
+                             "profile": profile,
+                             "r": config.baseUrl + "/people/" + account.id  + ".html"});
 }
 
 function sendProfile(req, res)
@@ -1518,7 +1536,8 @@ function sendProfile(req, res)
                             "profile": profile,
                             "locations": locations,
                             "files": files,
-                            "devices": devices
+                            "devices": devices,
+                            "r": config.baseUrl + "/people/" + account.id  + "/profile.html"
                           });
 }
 
@@ -1671,6 +1690,16 @@ passport.deserializeUser(function(id, done) {
     var account = database.getAccount(id);
     done(null, account);
 });
+
+function apiIsLoggedIn(req, res, next)
+{
+    if (req.isAuthenticated()) {
+        logger.debug("API: Logged in");
+        return next();
+    }
+    logger.debug("API: Not logged in");
+    return sendError(res, { "success": false, "message": "Not authorized." });
+}
 
 function isLoggedIn(req, res, next)
 {
@@ -2124,18 +2153,26 @@ app.use(locale(supported));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+
+app.get('/about.html',
+        function(req, res) {
+            res.render('about', { "config": config,
+                                  "account": req.user,
+                                  "r": config.baseUrl + "/about.html" });
+        });
+
 //app.get("/captcha.jpg", captcha.generate());
 app.get("/experiments/:id(\\d+).json", sendExperiment);
 app.get("/experiments/:id(\\d+).html", sendExperimentPage);
 
 app.get("/mobile/:id(\\d+).html",
-        passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
+        passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
         sendMobileApp);
 
 app.get("/observers.json", sendObservers);
 
 app.post("/observers", 
-         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
+         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
          createObserver);
 
 app.get("/observations.json", sendObservations);
@@ -2143,11 +2180,12 @@ app.get("/observations/:id(\\d+).jpg", sendObservationImage);
 app.get("/observations/:id(\\d+).json", sendObservationMeta);
 
 app.post("/observations",
-         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
+         apiIsLoggedIn, //passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
+         upload.single('photo'), 
          createObservation);
 
 app.delete("/observations/:id(\\d+)",
-           passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
+           passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
            deleteObservation);
 
 app.get("/sensordata.json", sendSensorData);
@@ -2159,11 +2197,11 @@ app.get("/groups.json", sendGroups);
 
 app.get("/locations.json", sendLocations);
 app.post("/locations",
-         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
+         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
          createLocation);
 
 app.post("/locations/:id",
-         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
+         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
          updateLocation);
 
 app.get("/plants.json", sendPlants);
@@ -2174,57 +2212,71 @@ app.get("/people/:id.html", sendHomepage);
 app.get("/people/:id/profile.html", isLoggedIn, sendProfile);
 
 app.post("/people/:id/profile",
-         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
+         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
          updateProfile);
 
 app.get("/reload", 
-        passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
+        passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
         reload);
 
 app.post("/files",
-         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
+         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
          createFile);
 
 app.delete("/files/:id(\\d+)",
-           passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
+           passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
            deleteFile);
 
 app.get("/messages", sendMessages);
 app.post("/messages",
-         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
+         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
          createMessage);
 
 app.get("/devices/flowerpowers.json", obtainFlowerPowerDevices);
 app.get("/devices/:id(\\d+)", 
-        passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
+        passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
         handleDeviceOp);
 
 app.post("/devices",
-         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
+         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
          createDevice);
 
 app.delete("/devices/:id(\\d+)",
-           passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
+           passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
            deleteDevice);
 
 app.get('/login',
         function(req, res) {
-            res.render('login');
+            var r = (req.query && req.query.r)? req.query.r : null;
+            res.render('login', { "r": r });
         });
 
 app.post('/login', 
-         passport.authenticate('local', { failureRedirect: '/login', successReturnToOrRedirect: '/' }),
-         function(req, res) {
-             res.redirect('/');
+         function(req, res, next) {
+             logger.debug("login: r=" + JSON.stringify(req.query || req.query.r));
+             var rs = (req.query && req.query.r)? req.query.r : '/';
+             var re = (req.query && req.query.r)? config.baseUrl + '/login?r=' + req.query.r : config.baseUrl + '/login';
+             var opt = { failureRedirect: re, successRedirect: rs };
+             passport.authenticate('local', opt)(req, res, next);
          });
 
+app.post('/login.json',
+         function(req, res, next) {
+             passport.authenticate('local', function(err, user, info) {
+                 if (err) { sendError(res, err); }
+                 else if (!user) { sendError(res, 'Connexion sans succès'); }
+                 else sendJson(res, { "id": user.username });
+             })(req, res, next);
+         });
+
+         
 app.get('/logout',
         function(req, res){
             req.logout();
             res.redirect('/');
         });
 
-app.get('/whoami',
+app.get('/whoami.json',
         function(req, res){
             res.writeHead(200, {"Content-Type": "application/json"});
             if (req.user) 
@@ -2248,15 +2300,6 @@ app.get("/", sendIndex);
 app.use(express.static("public"));
 app.set('view engine', 'ejs');
 
-
-var config = { "port": 10201 };
-
-try {
-    text = fs.readFileSync("config.json");
-    config = JSON.parse(text);        
-} catch (e) {
-    return;
-}
 
 logger.debug("Server starting on port " + config.port);
 var server = app.listen(config.port, function () {});
