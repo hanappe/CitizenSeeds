@@ -2194,7 +2194,7 @@ app.get('/about.html',
 
 //app.get("/captcha.jpg", captcha.generate());
 app.get("/experiments/:id(\\d+).json", sendExperiment);
-app.get("/experiments/:id(\\d+).html", sendExperimentPage);
+app.get("/experiments/:id(\\d+).html", isLoggedIn, sendExperimentPage);
 
 app.get("/mobile/:id(\\d+).html",
         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
