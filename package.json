@@ -22,7 +22,7 @@
     "exif": "^0.4.0",
     "exit": "^0.1.2",
     "express": "*",
-    "express-session": "*",
+    "express-session": "^1.13.0",
     "gm": "*",
     "locale": "*",
     "log4js": "*",
@@ -34,14 +34,14 @@
     "nodemailer-smtp-transport": "*",
     "oauth2": "0.0.1",
     "oauth2orize": "^1.0.1",
-    "passport": "*",
+    "passport": "^0.3.2",
     "passport-http": "*",
     "passport-http-bearer": "^1.0.1",
     "passport-local": "^1.0.0",
     "passport-oauth2-client-password": "^0.1.2",
     "randomstring": "*",
     "sanitize-html": "^1.6.1",
-    "session-file-store": "*",
+    "session-file-store": "^0.2.0",
     "xregexp": "*"
   }
 }
