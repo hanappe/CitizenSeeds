@@ -1,0 +1,62 @@
+{
+  "name": "CitizenSeeds",
+  "version": "0.2.0",
+  "description": "CitizenSeeds",
+  "author": "Peter Hanappe <hanappe@csl.sony.fr>",
+  "contributors": [],
+  "scripts": {
+    "test": "echo run test",
+    "start": "node server.js",
+    "predeploy": "echo im about to deploy",
+    "postdeploy": "echo ive deployed"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hanappe/CitizenSeeds.git"
+  },
+  "bugs": {
+    "email": "hanappe@csl.sony.fr"
+  },
+  "keywords": [
+    "gardening"
+  ],
+  "dependencies": {
+    "bcrypt-nodejs": "*",
+    "body-parser": "*",
+    "connect-ensure-login": "^0.1.1",
+    "ejs": "^2.3.1",
+    "exif": "^0.4.0",
+    "exit": "^0.1.2",
+    "express": "*",
+    "express-session": "*",
+    "gm": "*",
+    "locale": "*",
+    "log4js": "*",
+    "mime": "^1.3.4",
+    "mkdirp": "*",
+    "multer": "1.1.0",
+    "node-flower-power": "*",
+    "nodemailer": "*",
+    "nodemailer-smtp-transport": "*",
+    "oauth2": "0.0.1",
+    "oauth2orize": "^1.0.1",
+    "passport": "*",
+    "passport-http": "*",
+    "passport-http-bearer": "^1.0.1",
+    "passport-local": "^1.0.0",
+    "passport-oauth2-client-password": "^0.1.2",
+    "randomstring": "*",
+    "sanitize-html": "^1.6.1",
+    "session-file-store": "*",
+    "xregexp": "*"
+  },
+  "devDependencies": {},
+  "preferGlobal": true,
+  "private": true,
+  "publishConfig": {
+    "registry": "https://your-private-hosted-npm.registry.nodejitsu.com"
+  },
+  "subdomain": "foobar",
+  "analyze": true,
+  "license": "GPLv3"
+}
