@@ -1150,7 +1150,8 @@ function sendPlants(req, res)
 function sendIndex(req, res)
 {
     logger.debug("Request: sendIndex");
-    res.writeHead(302, { 'Location': config.baseUrl + '/experiments/6.html' });
+    //res.writeHead(302, { 'Location': config.baseUrl + '/experiments/6.html' });
+    res.writeHead(302, { 'Location': config.baseUrl + '/people/peter/profile.html' });
 /*    if (req.locale == "fr") {
         res.writeHead(302, { 'Location': 'https://p2pfoodlab.net/CitizenSeedsInfo.fr.html' });
     } else {
