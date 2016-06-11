@@ -911,6 +911,7 @@ function ObservationMatrixView(matrix, weekOffset, numWeeks, collapsed)
     this.updateView = function() {
         for (var i = 0; i < this.rows.length; i++)
             this.rows[i].updateView();
+        this.showHideRows();
     }
 
     this.updateSensorData = function() {
@@ -950,7 +951,7 @@ function ObservationMatrixView(matrix, weekOffset, numWeeks, collapsed)
         this.clear();
         this.weekView = new ObservationWeekView(this, numWeeks);
         this.matrixView.addComponent(this.weekView);
-        console.log("*** buildObservationRows: length: " + matrix.countObservers() + " ***");
+        //console.log("*** buildObservationRows: length: " + matrix.countObservers() + " ***");
         for (var row = 0; row < matrix.countObservers(); row++) {
             this.addObservationRow(row, this.matrix.getObserver(row), this.matrix.getObservations(row));
         }
@@ -985,14 +986,16 @@ function ObservationMatrixView(matrix, weekOffset, numWeeks, collapsed)
         this.matrixView = new ObservationTableView();
         this.addComponent(this.matrixView);
         this.buildObservationRows();
-        // FIXME
-        this.button = new Button("createObserver_" + this.matrix.plant.id,
-                                 "",
-                                 "Rajouter une ligne pour mes photos.",
-                                 "createObserver");
-        this.button.addListener(_controller);
-        this.button.matrix = this.matrix;
-        this.addComponent(this.button);
+        if (_account && _account.id) {
+            // FIXME
+            this.button = new Button("createObserver_" + this.matrix.plant.id,
+                                     "",
+                                     "Rajouter une ligne pour mes photos.",
+                                     "createObserver");
+            this.button.addListener(_controller);
+            this.button.matrix = this.matrix;
+            this.addComponent(this.button);
+        }
     }
 
     this.buildPlaceHolder = function() {
@@ -1029,7 +1032,7 @@ function ObservationMatrixView(matrix, weekOffset, numWeeks, collapsed)
     this.collapse = function() {
         if (this.matrixView) {
             this.matrixView.setVisible(false);
-            this.button.setVisible(false);
+            if (this.button) this.button.setVisible(false);
         }
         if (!this.placeholder)
             this.buildPlaceHolder();
@@ -1042,7 +1045,7 @@ function ObservationMatrixView(matrix, weekOffset, numWeeks, collapsed)
             this.buildMatrixView();
         }
         this.matrixView.setVisible(true);
-        this.button.setVisible(true);
+        if (this.button) this.button.setVisible(true);
         this.showHideRows();
         
         if (this.placeholder)
@@ -1816,7 +1819,10 @@ function ExperimentController(experiment, weekOffset, numWeeks)
                 matrix.addObserver(r);
                 var view = self.view.getMatrixViewByPlantId(matrix.plant.id);
                 //alert(view);
-                if (view) view.buildView();
+                if (view) {
+                    view.buildView();
+                    view.showHideRows();
+                }
             }
         }); 
     }

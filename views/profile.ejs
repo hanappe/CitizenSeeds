@@ -3,7 +3,7 @@
 
 <% include head %>
 
-  <body>
+  <body id="Body">
 
 <% include navbar %>
     
@@ -133,28 +133,19 @@
 
             <h3>Flower Power</h3>
 
-            <% if (devices.length > 0) { %>
-            <table class="devices-table">
-              <tr>
-                <th>Appareils enregistrés (Nom FlowerPower - Nom plante)&nbsp;:</th>
-                <th></th>
-                <th></th>
-                <th></th>
-              </tr>
-              <% for (var i = 0; i < devices.length; i++) { %>
-                 <tr>
-                   <td><%= devices[i].flowerpower.nickname %> - <%= devices[i].name %></td>
-                   <td><span id="testResult_<%= devices[i].id %>" class="" aria-hidden="true"></span></td>
-                   <td><button class="btn btn-default" type="button" id="testDevice_<%= devices[i].id %>">Tester</button></td>
-                   <td><button class="btn btn-default" type="button" id="removeDevice_<%= devices[i].id %>">Oublier</button></td>
-                 </tr>
-                 <% } %>
-            </table>
-            <% } %>
+            <div id="DeviceList"></div>
 
 
             <h3>Enregistrer un nouveau FlowerPower&nbsp;:</h3>
 
+            <p>Voici comment ajouter un FlowerPower :</p>
+            <ul>
+              <li>Saisissez votre identifiant et mot de passe du FlowerPower. 
+              <li>Cliquez sur "Afficher les FlowerPowers"
+              <li>La liste des FlowerPowers du compte s'affichera.
+              <li>Selectionner le FlowerPower dont vous voulez utiliser les données dans CitizenSeeds. Il s'ajoutera dans la liste ci-dessus.
+            </ul>
+            
             <div class="input-group top-margin">
               <span class="input-group-addon" id="sizing-addon1">Votre identifiant FlowerPower</span>
               <input type="text" class="form-control" placeholder="..." id="flowerpower_id" value="">
@@ -169,9 +160,6 @@
             
             <button class="btn btn-primary" type="button" id="listFlowerPowers">Afficher les FlowerPowers</button>
 
-            <div id="ListFlowerPowers"></div>
-
-          
           </div> <!-- End of tab content -->
 
         </div>	
@@ -213,15 +201,16 @@ jq(document).ready(function(){
     insertImageLib({ "id": <%= files[i].id %>, "thumbnail": "<%= files[i].thumbnail %>", "small": "<%= files[i].small %>", "orig": "<%= files[i].orig %>" });
 <% } %>
 
-<% for (var i = 0; i < devices.length; i++) { %>
-    jq("#testDevice_<%= devices[i].id %>").click(function() { testDevice(<%= devices[i].id %>) });
-    jq("#removeDevice_<%= devices[i].id %>").click(function() { removeDevice(<%= devices[i].id %>) });
-<% } %>
-
     jq("#listFlowerPowers").click(function() { listFlowerPowers() });
+
+    getDevices();
+   _curtain = new Curtain();
+    document.getElementById("Body").appendChild(_curtain.div);
 
 });
 
+var _curtain = undefined;
+var _account = { id: "<%= account.id %>" };
 var _flowerpowers = [];
 var _server = new Server("<%= config.baseUrl %>");
     </script>

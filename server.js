@@ -1618,37 +1618,34 @@ function sendAccountInfo(req, res)
     sendJson(res, copy);
 }
 
-/*
-function sendWhoami(req, res)
+function sendAccountDevices(req, res)
 {
-    res.writeHead(200, {"Content-Type": "application/json"});
-    if (req.user) {
-        res.end(JSON.stringify({ "id": req.user.id }));
-    } else {
-        res.end(JSON.stringify({ "message": "Who are you?" }));
+    logger.debug("sendAccountDevices: Account: " + JSON.stringify(req.user));
+
+    if (!req.user || !req.user.id)
+        return sendError(res, { "success": false, "message": "Not logged in." });
+        
+    if (req.user.id != req.params.id)
+        return sendError(res, { "success": false, "message": "Unauthorized." });
+
+    var devices = database.selectDevices({"type": "flowerpower", "account": req.user.id});
+    var list = [];
+    for (var i = 0; i < devices.length; i++) {
+        list.push({"id": devices[i].id,
+                   "account": "peter",
+                   "name": devices[i].name,
+                   "type": "flowerpower",
+                   "datastreams": devices[i].datastreams,
+                   "flowerpower": {
+                       "serial": devices[i].flowerpower.serial,
+                       "location": devices[i].flowerpower.location,
+                       "plant_nickname": devices[i].flowerpower.plant_nickname,
+                       "nickname": devices[i].flowerpower.nickname,
+                       "test": "test"
+                   }});
     }
+    sendJson(res, list);    
 }
-
-function login(req, res)
-{
-    logger.debug(JSON.stringify(req.session));
-    var account = req.user;
-    logger.debug("login: " + JSON.stringify(req.user));
-    res.writeHead(200, {"Content-Type": "application/json"});
-    res.end(JSON.stringify({ "id": account.id }));
-}
-
-function logout(req, res)
-{
-    logger.debug(JSON.stringify(req.session));
-    req.logout();
-    req.session.destroy();
-    //req.session.save();
-
-    res.writeHead(200, {"Content-Type": "application/json"});
-    res.end(JSON.stringify({ "success": true }));
-}
-*/
 
 function reload(req, res)
 {
@@ -1935,7 +1932,7 @@ function obtainFlowerPowerDevices(req, res)
                     if (!sensor) continue;
                     var device = {
                         "account": "peter",
-                        "name": sensor.nickname,
+                        "name": plants[i].plant_nickname,
                         "type": "flowerpower",
                         "flowerpower": {
                             "username": email,
@@ -2030,6 +2027,12 @@ function createDevice(req, res)
     var account = req.user;
     var dev = req.body;
     var fp = dev.flowerpower;
+    if (!account || !account.id) {
+	sendError(res, { "success": false, 
+			 "message": "Unauthorized" },
+                  __line, __function);
+	return;
+    }
     if (!fp) {
 	sendError(res, { "success": false, 
 			 "message": "Invalid data" },
@@ -2079,6 +2082,19 @@ function createDevice(req, res)
 	return;
     }
 
+    var d = database.selectDevices({"type": "flowerpower", "account": req.user.id});
+    for (var i = 0; i < d.length; i++) {
+        if (d[i].flowerpower.serial == fp.serial
+            && d[i].flowerpower.nickname == fp.nickname
+            && d[i].flowerpower.plant_nickname == fp.plant_nickname
+            && d[i].flowerpower.location == fp.location) {
+	    sendError(res, { "success": false, 
+			     "message": "The device is already registered!" },
+                      __line, __function);
+            return;
+        }
+    }
+    
     var temperature = {                                                                                                  
         "name": "temperature",                                                                                           
         "property": "temperature",                                                                                       
@@ -2209,6 +2225,7 @@ app.get("/accounts/:id.json", sendAccountInfo);
 app.get("/people/:id.html", sendHomepage);
 app.get("/people/:id/profile.html", isLoggedIn, sendProfile);
 app.post("/people/:id/profile", apiIsLoggedIn, updateProfile);
+app.get("/people/:id/devices.json", apiIsLoggedIn, sendAccountDevices);
 
 app.get("/reload", 
         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
@@ -2249,7 +2266,6 @@ app.post('/login.json',
                  else sendJson(res, { "id": user.username });
              })(req, res, next);
          });
-
          
 app.get('/logout',
         function(req, res){

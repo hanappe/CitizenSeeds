@@ -135,7 +135,6 @@ function insertImage(src)
     jq('#description').wysiwyg('insertImage', src);
 }
 
-
 function testDevice(id)
 {
     _server.getJSON("devices/" + id + "?op=test").then(function(e) {
@@ -148,6 +147,7 @@ function testDevice(id)
     });
 }
 
+/*
 function removeDevice(id)
 {
     _server.deleteJSON("devices/" + id).then(function(e) {
@@ -157,6 +157,45 @@ function removeDevice(id)
             alert("OK");
         }
     });
+}
+*/
+
+function DeviceWrapper(device)
+{
+    var self = this;
+    this.device = device;
+
+    this.registerDevice = function() {
+        _server.postJSON("devices", device).then(function (r) {
+            if (r.error) alert(r.message);
+            else {
+                getDevices();
+            }
+        });
+    }
+
+    this.testDevice = function() {
+        _server.getJSON("devices/" + device.id + "?op=test").then(function(e) {
+            if (e.error) {
+                jq("#testResult_" + device.id).addClass("glyphicon glyphicon-remove-circle flowerpower-test-failed");
+                alert(e.message);
+            } else {
+                jq("#testResult_" + device.id).addClass("glyphicon glyphicon-ok-circle flowerpower-test-succes");
+            }
+        });
+    }
+
+    this.removeDevice = function() {
+        if (confirm("Oublier le FlowerPower ?")) {
+            _server.deleteJSON("devices/" + self.device.id).then(function(e) {
+                if (e.error) {
+                    alert(e.message);
+                } else {
+                    getDevices();
+                }
+            });
+        }
+    }
 }
 
 function listFlowerPowers()
@@ -172,27 +211,95 @@ function listFlowerPowers()
     });
 }
 
-function deviceWrapper(device)
+function FlowerPowerList(list)
 {
-    var self = this;
-    this.device = device;
+    this.init("FlowerPowerList", "FlowerPowerList");
+    this.list = list;
+    
+    this.buildView = function() {
+        this.removeComponents();
+        
+        var div = this.div;
+        var table = document.createElement("table");
+        table.className = "devices-table";
+        div.appendChild(table);
 
-    this.registerDevice = function() {
-        alert("Register " + JSON.stringify(device));
-        _server.postJSON("devices", device).then(function (r) {
-            if (r.error) alert(e.message);
-            else {
-                alert("OK"); // TODO
-            }
-        });
+        var tr = document.createElement("tr");
+        var td = document.createElement("th");
+        td.innerHTML = "Liste des FlowerPower disponibles (Nom du FlowerPower - Nom de la plante)";
+        tr.appendChild(td);
+        table.appendChild(tr);
+        td = document.createElement("th");
+        tr.appendChild(td);
+
+        if (!this.list || !this.list.length) {
+            tr = document.createElement("tr");
+            td = document.createElement("td");
+            td.innerHTML = "<i>Aucun FlowerPower n'a été trouvé...</i>";
+            tr.appendChild(td);
+            table.appendChild(tr);
+            return;
+        }
+
+        for (var i = 0; i < this.list.length; i++) {
+            tr = document.createElement("tr");
+            td = document.createElement("td");
+            td.innerHTML = this.list[i].flowerpower.nickname + " - " + this.list[i].flowerpower.plant_nickname;
+            tr.appendChild(td);
+
+            var button = document.createElement("button");
+            button.setAttribute("href", "javascript:void(0)");
+            button.className = "btn btn-primary";
+            button.type = "button";
+            button.innerHTML = "Ajouter";
+            button.onclick = function() { return false; }
+            button.onmousedown = function() { return false; }
+            setEventHandler(button, "click", new DeviceWrapper(this.list[i]).registerDevice);
+
+            td = document.createElement("td");
+            td.appendChild(button);
+            tr.appendChild(td);
+
+            table.appendChild(tr);
+        }
+
+        var button = document.createElement("button");
+        button.setAttribute("href", "javascript:void(0)");
+        button.className = "btn btn-primary";
+        button.type = "button";
+        button.innerHTML = "Fermer";
+        button.onclick = function() { return false; }
+        button.onmousedown = function() { return false; }
+        setEventHandler(button, "click", function() {_curtain.finished(); });
+        div.appendChild(button);
+        
     }
+
+    this.buildView();
 }
+FlowerPowerList.prototype = new UIComponent();
 
 function displayFlowerPowers(list)
 {
-    _flowerpowers = list;
+    _curtain.show(new FlowerPowerList(list));
+}
 
-    var div = document.getElementById("ListFlowerPowers");
+function getDevices()
+{
+    _server.getJSON("people/" + _account.id + "/devices.json").then(function(e) {
+        if (e.error) {
+            alert(e.message);
+        } else {
+            displayDevices(e);
+        }
+    });
+}
+
+function displayDevices(list)
+{
+    _devices = list;
+
+    var div = document.getElementById("DeviceList");
     while (div.hasChildNodes()) {
         div.removeChild(div.firstChild);
     }
@@ -203,8 +310,13 @@ function displayFlowerPowers(list)
 
     var tr = document.createElement("tr");
     var td = document.createElement("th");
-    td.innerHTML = "Liste des FlowerPower disponibles (Nom du FlowerPower - Nom de la plante)";
+    td.innerHTML = "Appareils enregistrés (Nom FlowerPower - Nom plante)&nbsp;:";
     tr.appendChild(td);
+    // Add empty TH
+    for (var i = 0; i < 3; i++) {
+        td = document.createElement("th");
+        tr.appendChild(td);
+    }    
     table.appendChild(tr);
     td = document.createElement("th");
     tr.appendChild(td);
@@ -212,8 +324,13 @@ function displayFlowerPowers(list)
     if (!list || !list.length) {
         tr = document.createElement("tr");
         td = document.createElement("td");
-        td.innerHTML = "<i>Aucun FlowerPower n'a été trouvé...</i>";
+        td.innerHTML = ("<i>Aucun FlowerPower est actuellement enregistré sur CitizenSeeds. Si vous "
+                        + "avez un FlowerPower, vous pouvez l'enregistrer ci-dessous.</i>");
         tr.appendChild(td);
+        for (var i = 0; i < 3; i++) {
+            td = document.createElement("td");
+            tr.appendChild(td);
+        }    
         table.appendChild(tr);
         return;
     }
@@ -221,20 +338,37 @@ function displayFlowerPowers(list)
     for (var i = 0; i < list.length; i++) {
         tr = document.createElement("tr");
         td = document.createElement("td");
-        td.innerHTML = list[i].name + " - " + list[i].flowerpower.plant_nickname;
+        td.innerHTML = list[i].flowerpower.nickname + " - " + list[i].name;
+        tr.appendChild(td);
+
+        var span = document.createElement("span");
+        span.id = "testResult_" + list[i].id;
+        td = document.createElement("td");
+        td.appendChild(span);
         tr.appendChild(td);
 
         var button = document.createElement("button");
         button.setAttribute("href", "javascript:void(0)");
-        button.className = "btn btn-primary";
+        button.className = "btn btn-default";
         button.type = "button";
-        button.innerHTML = "Ajouter";
+        button.innerHTML = "Tester";
         button.onclick = function() { return false; }
         button.onmousedown = function() { return false; }
-        setEventHandler(button, "click", new deviceWrapper(list[i]).registerDevice);
-
+        setEventHandler(button, "click", new DeviceWrapper(list[i]).testDevice);
         td = document.createElement("td");
         td.appendChild(button);
+        tr.appendChild(td);
+
+        button = document.createElement("button");
+        button.setAttribute("href", "javascript:void(0)");
+        button.className = "btn btn-default";
+        button.type = "button";
+        button.innerHTML = "Oublier";
+        button.onclick = function() { return false; }
+        button.onmousedown = function() { return false; }
+        setEventHandler(button, "click", new DeviceWrapper(list[i]).removeDevice);
+        td = document.createElement("td");
+        td.appendChild(button);        
         tr.appendChild(td);
 
         table.appendChild(tr);

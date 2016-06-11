@@ -406,3 +406,15 @@ div.ObservationPhoto {
     background-color: white;
     box-shadow: 2px 2px 2px #bbb;
 }
+
+/************************************************/
+
+div.FlowerPowerList {
+    width: 500px;
+    //border: solid 1px black;
+    box-shadow: 3px 3px 3px #444444;
+    background-color: white;
+    padding: 20px;
+    margin: auto;
+    margin-top: 40px;
+}
