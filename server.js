@@ -2171,12 +2171,12 @@ var upload = multer({ dest: './uploads' });
 
 app.use(session({ secret: "Je suis Charlie", 
 		  resave: false, 
-		  saveUninitialized: false,
+		  saveUninitialized: false /*,
                   store: new FileStore({
                       path: "db/sessions",
                       ttl: 31536000,
                       encrypt: true
-                  })
+                  })*/
                 }));
 app.use(passport.initialize());
 app.use(passport.session());
