@@ -2249,7 +2249,17 @@ app.get('/login',
             res.render('login', { "r": r, "config": config });
         });
 
-app.post('/login', 
+app.post('/login',
+         function(req, res, next) {
+             logger.debug("login: r=" + JSON.stringify(req.query || req.query.r));
+             var rs = (req.query && req.query.r)? req.query.r : '/';
+             var re = (req.query && req.query.r)? config.baseUrl + '/login?r=' + req.query.r : config.baseUrl + '/login';
+             var opt = { failureRedirect: re, successRedirect: rs };
+             passport.authenticate('local', opt)(req, res, next);
+         });
+
+/*
+app.post('/login',
          function(req, res, next) {
              //logger.debug("login: r=" + JSON.stringify(req.query || req.query.r));
              //var rs = (req.query && req.query.r)? req.query.r : '/';
@@ -2257,7 +2267,7 @@ app.post('/login',
              //var opt = { failureRedirect: re, successRedirect: rs };
              //passport.authenticate('local', opt)(req, res, next);
              passport.authenticate('local')(req, res, next);
-         },
+             },
          function (req, res) {
              req.session.save(function (err) {
                  var r = "/";
@@ -2269,6 +2279,7 @@ app.post('/login',
                  res.redirect(r);
              });
          });
+*/
 
 app.post('/login.json',
          function(req, res, next) {
