@@ -2255,7 +2255,8 @@ app.post('/login',
              //var rs = (req.query && req.query.r)? req.query.r : '/';
              //var re = (req.query && req.query.r)? config.baseUrl + '/login?r=' + req.query.r : config.baseUrl + '/login';
              //var opt = { failureRedirect: re, successRedirect: rs };
-             passport.authenticate('local', opt)(req, res, next);
+             //passport.authenticate('local', opt)(req, res, next);
+             passport.authenticate('local')(req, res, next);
          },
          function (req, res) {
              req.session.save(function (err) {
