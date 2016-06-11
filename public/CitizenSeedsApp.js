@@ -155,7 +155,7 @@ function UIComponent()
         return a;
     }
 
-    this.addGlyph = function(glyphname, callback, parent, className) {
+    this.addGlyph = function(glyphname, callback, parent, className, title) {
         var a = document.createElement("A");
         a.setAttribute("href", "javascript:void(0)");
         a.onclick = function() { return false; }
@@ -165,6 +165,7 @@ function UIComponent()
         span.className = "glyphicon " + glyphname;
         if (className) span.className = "glyphicon " + glyphname + " " + className;
         else span.className = "glyphicon " + glyphname;
+        if (title) a.title = title;
         a.appendChild(span);
         if (parent) parent.appendChild(a);
         else this.div.appendChild(a);
@@ -263,6 +264,7 @@ function UIComponent()
         this.components.push(c);
         this.div.appendChild(c.div);
         c.parent = this;
+        return c;
     }
 
     this.appendChild = function(element) {
@@ -316,7 +318,7 @@ function UIComponent()
             component = this.components[i];
             if (id == component.id) {
                 component.addComponent(c);
-                break;
+                return c;
             }
         }
     }
@@ -1168,29 +1170,15 @@ function ObservationRowView(row, numWeeks, matrixview)
                 break;
             }
         }
+        if (_account && _account.id && this.observer.accountId == _account.id)
+            show = true;
+        
 /*        if (imm) {
             if (show) jq(this.div).show();
             else jq(this.div).hide();
         } else { */
             if (show) jq(this.div).fadeIn(1000).show();
             else jq(this.div).fadeOut(1000).hide();
-        //}
-    }
-
-    this.showHide = function(imm) {
-        var show = false;
-        for (var col = 0; col < numWeeks; col++) {
-            if (this.cells[col].hasObservations()) {
-                show = true;
-                break;
-            }
-        }
-/*        if (imm) {
-            if (show) jq(this.div).show();
-            else jq(this.div).hide();
-        } else { */
-//            if (show) jq(this.div).fadeIn(1000).show();
-//            else jq(this.div).fadeOut(1000).hide();
         //}
     }
     
@@ -1216,8 +1204,7 @@ function ObservationRowView(row, numWeeks, matrixview)
     this.buildView();
 }
 ObservationRowView.prototype = new UIComponent();
-
-
+        
 function ObservationLocationView(observer)
 {
     this.init("ObservationLocationView", "ObservationLocationView Column");
@@ -1254,6 +1241,48 @@ function PhotoViewer(observations)
 }
 PhotoViewer.prototype = new UIComponent();
 
+
+
+function ObservationPhoto(parent, observation)
+{
+    this.init("ObservationPhoto", "ObservationPhoto");
+
+    this.uploading = false;
+    this.observation = observation;
+
+    this.updateView = function() {
+        this.removeComponents();
+        if (this.uploading) {
+            this.div.className = "ObservationPhoto";
+            this.image = this.addImage(_server.root + "/media/spinner.gif");
+
+        } else if (this.observation) {
+            var src = _server.root + "/" + this.observation.thumbnail;
+            this.div.className = "ObservationPhoto";
+            this.image = this.addEventImage(src, "", "ObservationView",
+                                            function() {
+                                                _curtain.show(new Slideshow(parent.observations));
+                                            });
+        } else {
+            this.div.className = "ObservationPhotoEmpty";
+        }
+    }
+
+    this.setUploading = function() {
+        this.uploading = true;
+        this.updateView();
+    }
+    
+    this.setObservation = function(observation) {
+        this.uploading = false;
+        this.observation = observation;
+        this.updateView();
+    }
+
+    this.updateView();
+}
+ObservationPhoto.prototype = new UIComponent();
+
 function ObservationView(row, col, parent, matrixview)
 {
     var self = this;
@@ -1266,8 +1295,7 @@ function ObservationView(row, col, parent, matrixview)
     
     this.setProgress = function (value) {
         if (!this.progress) {
-            this.image.src = _server.root + "/media/spinner.gif";
-            this.image.className = "Spinner";
+            this.photo.setUploading();
             this.progress = new ProgressBar();
             this.addComponent(this.progress);
         }
@@ -1278,22 +1306,25 @@ function ObservationView(row, col, parent, matrixview)
         // Make sure that the visitor is logged in BEFORE uploading
         // the photo. And that she isn't uploading a photo for someone
         // else's row of observations.
-        _server.getJSON("login").then(function(e) {
+        /*
+        _server.getJSON("whoami.json").then(function(e) {
             if (e.error) alert(e.message);
             else if (observer.accountId != e.id)
                 alert("Il semblerait que cette ligne d'observations appartient à quelqu'un d'autre.");
             else self._uploadPhoto();
         });
+        */
+        self._uploadPhoto();
     }
     
     this._uploadPhoto = function () {
         var date = matrixview.getColumnDate(this.col); // FIXME
-        var hidden = { "accountId": observer.accountId,
-                       "locationId": observer.locationId,
-                       "plantId": observer.plantId,
-                       "experimentId": observer.experimentId,
+        var hidden = { "accountId": this.observer.accountId,
+                       "locationId": this.observer.locationId,
+                       "plantId": this.observer.plantId,
+                       "experimentId": this.observer.experimentId,
                        "date": toDateWithHMS(date) };
-        alert("date=" + toDateWithHMS(date));
+        //alert("date=" + toDateWithHMS(date));
         _curtain.show(new UploadPanel(hidden,
                                       function(data) {
                                           if (data.error) {
@@ -1308,10 +1339,12 @@ function ObservationView(row, col, parent, matrixview)
                                           }
                                       },
                                       function() {
+                                          console.log("Cancel?");
                                           _curtain.finished();
                                           self.updateObservation();
                                       },
                                       function() {
+                                          console.log("Error?");
                                           _curtain.finished();
                                           self.updateObservation();
                                       },
@@ -1349,36 +1382,29 @@ function ObservationView(row, col, parent, matrixview)
 
         this.observations = matrixview.getObservations(this.row, this.col);
 
+        var observation = null;
         var index = -1;
         for (var i = 0; this.observations && i < this.observations.length; i++) {
             if (this.observations[i].thumbnail) {
                 index = i;
+                observation = this.observations[i];
                 break;
             }
         }
         
-        if (index >= 0) {
-            var src = _server.root + "/" + this.observations[index].thumbnail;
-            this.image = this.addEventImage(src, "", "ObservationView",
-                                            function() {
-                                                if (self.observations.length == 1)
-                                                    _curtain.show(new Slideshow(self.observations));
-                                                else
-                                                    _curtain.show(new Slideshow(self.observations));
-                                            });
-        } else {
-            this.image = this.addImage(_server.root + "/media/white.gif", "",
-                                       "EmptyObservationView");
-        }
+        this.photo = this.addComponent(new ObservationPhoto(this, observation));
+
         if (this.observations && this.observations.length > 1) {
             var count = document.createElement("DIV");
             count.className = "ObservationCount";
-            count.innerHTML = "x" + this.observations.length;
+            count.innerHTML = "" + this.observations.length;
             this.div.appendChild(count);
         }
-        
-        this.ops = new ObservationOps(this);
-        this.addComponent(this.ops);
+
+        if (_account && _account.id && this.observer.accountId == _account.id) {
+            this.ops = new ObservationOps(this);
+            this.addComponent(this.ops);
+        }
     }
 
     this.updateObservation();
@@ -1745,10 +1771,11 @@ function ExperimentController(experiment, weekOffset, numWeeks)
     this.insertObservation = function(observation) {
         observation.date = new Date(observation.date);
         this.experiment.insertObservation(observation);
+        _activityViewer.updateList();
     }
 
     this.deleteObservation = function(observation, callback) {
-        _server.getJSON("login").then(function(e) {
+        _server.getJSON("whoami.json").then(function(e) {
             if (e.error) alert(e.message);
             else {
                 if (observation.accountId != _account.id)
@@ -2717,11 +2744,32 @@ function ActivityViewer(id)
     var self = this;
     this.init("ActivityViewer", "", document.getElementById("ActivityViewer"));
 
+    this.length = 32;
+    
     this.setObservations = function(obs) {
         this.observations = obs;
         for (var i = 0; i < this.observations.length; i++) {
             this.observations[i].date = new Date(this.observations[i].date);
         }
+    }
+
+    this.showMorePhotos = function() {
+        this.length += 32;
+        this.buildView();
+    }
+
+    this.showLessPhotos = function() {
+        this.length -= 32;
+        if (this.length < 32) this.length = 32
+        this.buildView();
+    }
+
+    this.updateList = function() {
+        _server.getJSON("observations.json?experiment=" + id + "&sort=upload")
+            .then(function(obs) {
+                self.setObservations(obs);
+                self.buildView();
+            });
     }
     
     this.buildView = function() {
@@ -2734,7 +2782,7 @@ function ActivityViewer(id)
         div = document.createElement("DIV");
         div.className = "recent-photos";
         
-        for (var i = this.observations.length-1, j = 0; i >= 0 && j < 32; i--, j++) {
+        for (var i = this.observations.length-1, j = 0; i >= 0 && j < this.length; i--, j++) {
             var imgdiv = document.createElement("DIV");
             imgdiv.className = "recent-photo";
 
@@ -2773,16 +2821,19 @@ function ActivityViewer(id)
 
             div.appendChild(imgdiv);
         }
+
+        this.addGlyph("glyphicon-plus", function () { self.showMorePhotos(); }, div,
+                      "more-recent-photos", "Afficher plus de photos");
+
+        if (this.length > 32) {
+            this.addGlyph("glyphicon-minus", function () { self.showLessPhotos(); }, div,
+                          "less-recent-photos", "Afficher moins de photos");
+        }
         
         this.div.appendChild(div);        
     }
     
-    _server.getJSON("observations.json?experiment=" + id 
-                    + "&days=21&sort=upload")
-        .then(function(obs) {
-            self.setObservations(obs);
-            self.buildView();
-        });
+    this.updateList();
 }
 ActivityViewer.prototype = new UIComponent();
 
@@ -2826,6 +2877,7 @@ var _controller = undefined;
 var _curtain = undefined;
 var _account = undefined;
 var _forum = undefined;
+var _activityViewer = undefined;
 
 function showObservations(id, startAt)
 {
@@ -2892,10 +2944,10 @@ function showObservations(id, startAt)
             _experiment.sensordata[data[i].id] = data[i];
         }
         _controller.updateSensorData();
-        return _server.getJSON("whoami");
+        return _server.getJSON("whoami.json");
 
     }).then(function(data) {                                                                                             
-        if (data.id) {                                                                                                   
+        if (data && data.id) {                                                                                                   
             _account = data;                                                                                             
         }                                                                                                                
     });
@@ -2912,7 +2964,7 @@ function initForum(id)
 
 function showRecentActivity(id)
 {
-    new ActivityViewer(id);
+    _activityViewer = new ActivityViewer(id);
 }
 
 
@@ -3231,7 +3283,7 @@ function startMobileApp(url, id)
     // the 'model'.
     _server.getJSON("experiments/" + id + ".json").then(function(e) {
         _experiment = new Experiment(e);
-        return _server.getJSON("login");
+        return _server.getJSON("whoami.json");
     }).then(function(a) {
         _account = a;
         return _server.getJSON("locations.json?account=" + _account.id);

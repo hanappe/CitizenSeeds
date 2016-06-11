@@ -46,6 +46,7 @@ var mime = require('mime');
 //var sys = require("sys");
 var FlowerPower = require('node-flower-power');
 var bcrypt = require('bcrypt-nodejs');
+var FileStore = require('session-file-store')(session);
 
 var config = { "port": 10201 };
 
@@ -2144,9 +2145,17 @@ var app = express();
 var multer = require('multer');
 var upload = multer({ dest: './uploads' });
 
+
+
 app.use(session({ secret: "Je suis Charlie", 
 		  resave: false, 
-		  saveUninitialized: true }));
+		  saveUninitialized: false,
+                  store: new FileStore({
+                      path: "db/sessions",
+                      ttl: 31536000,
+                      encrypt: true
+                  })
+                }));
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(locale(supported));

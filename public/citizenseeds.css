@@ -183,6 +183,18 @@ div.parcelle {
     border-bottom: solid 1px #777;
 }
 
+span.more-recent-photos {
+    margin: 20px;
+    margin-right: 0px;
+    font-size: 50px;
+}
+
+span.less-recent-photos {
+    margin: 20px;
+    margin-left: 0px;
+    font-size: 50px;
+}
+
 
 /*===============================================*/
 
