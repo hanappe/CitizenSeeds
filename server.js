@@ -420,6 +420,8 @@ function sendExperimentPage(req, res)
 {
     logger.debug("Request: sendExperimentPage");
     logger.debug("ID: " + req.params.id);
+    logger.debug("Account: " + JSON.stringify(req.user));
+    logger.debug("StartAt: " + req.query.startat);
 
     var id = req.params.id;
     var experiment = database.getExperiment(id);
@@ -431,12 +433,10 @@ function sendExperimentPage(req, res)
     //var startAt = "2015-05-02";
     //var startAt = "today";
     var startAt = "beginning";
-    logger.debug("startat: " + req.query.startat);
     if (validDate(req.query.startat)) {
 	startAt = req.query.startat;
     }
     var account = null;
-    logger.debug("user: " + JSON.stringify(req.user));
     if (req.user && req.user.id) {
         var a = database.getAccount(req.user.id);
         if (a) account = { "id": a.id };
@@ -1487,6 +1487,8 @@ function validateAccount(req, res)
 
 function sendHomepage(req, res)
 {
+    logger.debug("sendHomepage: Visitor account: " + JSON.stringify(req.user));
+
     var id = req.params.id;
     logger.debug("sendHomepage id=", JSON.stringify(id));
     var account = database.getAccount(id);
@@ -1512,6 +1514,8 @@ function sendHomepage(req, res)
 
 function sendProfile(req, res)
 {
+    logger.debug("sendProfile: Visitor account: " + JSON.stringify(req.user));
+
     var id = req.params.id;
     var account = req.user;
     if (!account) {
@@ -1704,6 +1708,7 @@ function apiIsLoggedIn(req, res, next)
 
 function isLoggedIn(req, res, next)
 {
+    logger.debug("isLoggedIn: Visitor account: " + JSON.stringify(req.user));
     logger.debug("isLoggedIn: returnTo=" + req.url);
     if (req.isAuthenticated()) {
         logger.debug("Logged in");
@@ -2222,6 +2227,7 @@ app.delete("/devices/:id(\\d+)", apiIsLoggedIn, deleteDevice);
 
 app.get('/login',
         function(req, res) {
+            logger.debug("login: Visitor account: " + JSON.stringify(req.user));
             var r = (req.query && req.query.r)? req.query.r : null;
             res.render('login', { "r": r, "config": config });
         });
