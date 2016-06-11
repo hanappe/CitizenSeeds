@@ -1898,7 +1898,8 @@ function obtainFlowerPowerDevices(req, res)
     logger.debug("Email: " + email);
 
     if (!email || !password) {
-    	sendError(res, { "message": "Incomplete login info" }, __line, __function);
+    	sendError(res, { "message": "Merci de renseigner votre login et mot de passe pour accéder aux services de Parrot/FlowerPower" },
+                  __line, __function);
         return;
     }
     
@@ -2179,23 +2180,12 @@ app.get("/mobile/:id(\\d+).html",
         sendMobileApp);
 
 app.get("/observers.json", sendObservers);
-
-app.post("/observers", 
-         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
-         createObserver);
-
+app.post("/observers", apiIsLoggedIn, createObserver);
 app.get("/observations.json", sendObservations);
 app.get("/observations/:id(\\d+).jpg", sendObservationImage);
 app.get("/observations/:id(\\d+).json", sendObservationMeta);
-
-app.post("/observations",
-         apiIsLoggedIn, //passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
-         upload.single('photo'), 
-         createObservation);
-
-app.delete("/observations/:id(\\d+)",
-           passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
-           deleteObservation);
+app.post("/observations", apiIsLoggedIn, upload.single('photo'), createObservation);
+app.delete("/observations/:id(\\d+)", apiIsLoggedIn, deleteObservation);
 
 app.get("/sensordata.json", sendSensorData);
 
@@ -2205,59 +2195,35 @@ app.get("/datastreams/:id(\\d+)/datapoints.json", sendDatapoints);
 app.get("/groups.json", sendGroups);
 
 app.get("/locations.json", sendLocations);
-app.post("/locations",
-         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
-         createLocation);
-
-app.post("/locations/:id",
-         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
-         updateLocation);
+app.post("/locations", apiIsLoggedIn, createLocation);
+app.post("/locations/:id", apiIsLoggedIn, updateLocation);
 
 app.get("/plants.json", sendPlants);
 app.post("/accounts" /*, captcha.check*/, createAccount);
 app.get("/accounts/:id.json", sendAccountInfo);
 app.get("/people/:id.html", sendHomepage);
-
 app.get("/people/:id/profile.html", isLoggedIn, sendProfile);
-
-app.post("/people/:id/profile",
-         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
-         updateProfile);
+app.post("/people/:id/profile", apiIsLoggedIn, updateProfile);
 
 app.get("/reload", 
         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
         reload);
 
-app.post("/files",
-         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
-         createFile);
-
-app.delete("/files/:id(\\d+)",
-           passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
-           deleteFile);
+app.post("/files", apiIsLoggedIn, createFile);
+app.delete("/files/:id(\\d+)", apiIsLoggedIn, deleteFile);
 
 app.get("/messages", sendMessages);
-app.post("/messages",
-         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
-         createMessage);
+app.post("/messages", apiIsLoggedIn, createMessage);
 
 app.get("/devices/flowerpowers.json", obtainFlowerPowerDevices);
-app.get("/devices/:id(\\d+)", 
-        passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
-        handleDeviceOp);
-
-app.post("/devices",
-         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
-         createDevice);
-
-app.delete("/devices/:id(\\d+)",
-           passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
-           deleteDevice);
+app.get("/devices/:id(\\d+)", apiIsLoggedIn, handleDeviceOp);
+app.post("/devices", apiIsLoggedIn, createDevice);
+app.delete("/devices/:id(\\d+)", apiIsLoggedIn, deleteDevice);
 
 app.get('/login',
         function(req, res) {
             var r = (req.query && req.query.r)? req.query.r : null;
-            res.render('login', { "r": r });
+            res.render('login', { "r": r, "config": config });
         });
 
 app.post('/login', 
