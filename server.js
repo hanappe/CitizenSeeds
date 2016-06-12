@@ -2199,9 +2199,9 @@ app.get('/about.html',
 app.get("/experiments/:id(\\d+).json", sendExperiment);
 app.get("/experiments/:id(\\d+).html", sendExperimentPage);
 
-app.get("/mobile/:id(\\d+).html",
+/*app.get("/mobile/:id(\\d+).html",
         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
-        sendMobileApp);
+        sendMobileApp);*/
 
 app.get("/observers.json", sendObservers);
 app.post("/observers", apiIsLoggedIn, createObserver);
@@ -2236,9 +2236,7 @@ app.get('/people/:id/profile.html',
 app.post("/people/:id/profile", apiIsLoggedIn, updateProfile);
 app.get("/people/:id/devices.json", apiIsLoggedIn, sendAccountDevices);
 
-app.get("/reload", 
-        passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
-        reload);
+app.get("/reload", reload);
 
 app.post("/files", apiIsLoggedIn, createFile);
 app.delete("/files/:id(\\d+)", apiIsLoggedIn, deleteFile);
@@ -2265,9 +2263,9 @@ app.get('/login',
 */
 
 app.post('/login', 
-  passport.authenticate('local', { failureRedirect: '/login' }),
+  passport.authenticate('local', { failureRedirect: config.baseUrl + '/login' }),
   function(req, res) {
-    res.redirect('/');
+    res.redirect(config.baseUrl + '/');
   });
 
 /*
@@ -2316,7 +2314,7 @@ app.post('/login.json',
 app.get('/logout',
         function(req, res){
             req.logout();
-            res.redirect('/');
+            res.redirect(config.baseUrl + '/experiments/6.html');
         });
 
 app.get('/whoami.json',
