@@ -25,6 +25,7 @@ var fs = require("fs");
 var express = require("express");
 var bodyParser = require("body-parser");
 var multer = require("multer");
+var upload = multer({ dest: './uploads' });
 var locale = require("locale");
 var supported = [ "en", "fr" ];
 var session = require("express-session");
@@ -33,7 +34,6 @@ var randomstring = require("randomstring");
 var XRegExp = require("xregexp").XRegExp;
 var nodemailer = require("nodemailer");
 var passport = require('passport');
-//var BasicStrategy = require('passport-http').BasicStrategy;
 var LocalStrategy = require('passport-local').Strategy;
 var gm = require('gm');
 var mkdirp = require('mkdirp');
@@ -43,10 +43,13 @@ var ExifImage = require('exif').ExifImage;
 var ejs = require('ejs');
 var sanitizeHtml = require('sanitize-html');
 var mime = require('mime');
-//var sys = require("sys");
 var FlowerPower = require('node-flower-power');
 var bcrypt = require('bcrypt-nodejs');
 var FileStore = require('session-file-store')(session);
+var cookieParser = require('cookie-parser');
+var ensureLoggedIn = require('connect-ensure-login').ensureLoggedIn;
+var morgan = require('morgan');
+
 
 var config = { "port": 10201 };
 
@@ -2164,12 +2167,13 @@ function deleteDevice(req, res)
 
 var app = express();
 
-//app.use(multer({ dest: './uploads/'}));
-var multer = require('multer');
-var upload = multer({ dest: './uploads' });
+app.set('view engine', 'ejs');
 
-
-
+app.use(morgan('combined'));
+app.use(locale(supported));
+app.use(cookieParser());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(session({ secret: "Je suis Charlie", 
 		  resave: false, 
 		  saveUninitialized: false /*,
@@ -2181,9 +2185,7 @@ app.use(session({ secret: "Je suis Charlie",
                 }));
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(locale(supported));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static("public"));
 
 
 app.get('/about.html',
@@ -2195,7 +2197,7 @@ app.get('/about.html',
 
 //app.get("/captcha.jpg", captcha.generate());
 app.get("/experiments/:id(\\d+).json", sendExperiment);
-app.get("/experiments/:id(\\d+).html", isLoggedIn, sendExperimentPage);
+app.get("/experiments/:id(\\d+).html", sendExperimentPage);
 
 app.get("/mobile/:id(\\d+).html",
         passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
@@ -2224,7 +2226,13 @@ app.get("/plants.json", sendPlants);
 app.post("/accounts" /*, captcha.check*/, createAccount);
 app.get("/accounts/:id.json", sendAccountInfo);
 app.get("/people/:id.html", sendHomepage);
-app.get("/people/:id/profile.html", isLoggedIn, sendProfile);
+
+//app.get("/people/:id/profile.html", isLoggedIn, sendProfile);
+app.get('/people/:id/profile.html',
+  ensureLoggedIn(),
+  sendProfile);
+
+
 app.post("/people/:id/profile", apiIsLoggedIn, updateProfile);
 app.get("/people/:id/devices.json", apiIsLoggedIn, sendAccountDevices);
 
@@ -2244,12 +2252,25 @@ app.post("/devices", apiIsLoggedIn, createDevice);
 app.delete("/devices/:id(\\d+)", apiIsLoggedIn, deleteDevice);
 
 app.get('/login',
+  function(req, res){
+      res.render('login', { "config": config });
+  });
+
+/*app.get('/login',
         function(req, res) {
             logger.debug("login: Visitor account: " + JSON.stringify(req.user));
             var r = (req.query && req.query.r)? req.query.r : null;
             res.render('login', { "r": r, "config": config });
         });
+*/
 
+app.post('/login', 
+  passport.authenticate('local', { failureRedirect: '/login' }),
+  function(req, res) {
+    res.redirect('/');
+  });
+
+/*
 app.post('/login',
          function(req, res, next) {
              logger.debug("login: r=" + JSON.stringify(req.query || req.query.r));
@@ -2258,6 +2279,7 @@ app.post('/login',
              var opt = { failureRedirect: re, successRedirect: rs };
              passport.authenticate('local', opt)(req, res, next);
          });
+*/
 
 /*
 app.post('/login',
@@ -2318,8 +2340,6 @@ app.get("/", sendIndex);
   app.get("/graphs", sendGraph);
 */
 
-app.use(express.static("public"));
-app.set('view engine', 'ejs');
 
 
 logger.debug("Server starting on port " + config.port);

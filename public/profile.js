@@ -310,7 +310,7 @@ function displayDevices(list)
 
     var tr = document.createElement("tr");
     var td = document.createElement("th");
-    td.innerHTML = "Appareils enregistrés (Nom FlowerPower - Nom plante)&nbsp;:";
+    td.innerHTML = "Appareils enregistrés (Nom du FlowerPower - Nom de la plante)&nbsp;:";
     tr.appendChild(td);
     // Add empty TH
     for (var i = 0; i < 3; i++) {
