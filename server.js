@@ -447,8 +447,7 @@ function sendExperimentPage(req, res)
     res.render('experiment', { "config": config,
                                "experiment": experiment,
                                "startAt": startAt,
-                               "account": account,
-                               "r": config.baseUrl + "/experiments/" + experiment.id  + ".html" });
+                               "account": account });
     
     //var vars = { "experimentId": experiment.id, 
     //	         "experimentName": experiment.prettyname,
@@ -1155,11 +1154,6 @@ function sendIndex(req, res)
     logger.debug("Request: sendIndex");
     res.writeHead(302, { 'Location': config.baseUrl + '/experiments/6.html' });
     //res.writeHead(302, { 'Location': config.baseUrl + '/people/peter/profile.html' });
-/*    if (req.locale == "fr") {
-        res.writeHead(302, { 'Location': 'https://p2pfoodlab.net/CitizenSeedsInfo.fr.html' });
-    } else {
-        res.writeHead(302, { 'Location': 'https://p2pfoodlab.net/CitizenSeedsInfo.fr.html' });
-    }*/
     res.end();
 }
 
@@ -1512,8 +1506,7 @@ function sendHomepage(req, res)
     logger.debug("rendering homepage");
     res.render('homepage', { "config": config,
                              "account": account,
-                             "profile": profile,
-                             "r": config.baseUrl + "/people/" + account.id  + ".html"});
+                             "profile": profile });
 }
 
 function sendProfile(req, res)
@@ -1545,9 +1538,7 @@ function sendProfile(req, res)
                             "profile": profile,
                             "locations": locations,
                             "files": files,
-                            "devices": devices,
-                            "r": config.baseUrl + "/people/" + account.id  + "/profile.html"
-                          });
+                            "devices": devices });
 }
 
 function updateProfile(req, res)
@@ -1717,7 +1708,7 @@ function isLoggedIn(req, res, next)
     }
     logger.debug("Not logged in");
     req.session.returnTo = req.session.returnTo || req.url;
-    res.redirect(config.baseUrl + "/login");
+    res.redirect("/login");
 }
 
 /*
@@ -2191,8 +2182,7 @@ app.use(express.static("public"));
 app.get('/about.html',
         function(req, res) {
             res.render('about', { "config": config,
-                                  "account": req.user,
-                                  "r": config.baseUrl + "/about.html" });
+                                  "account": req.user });
         });
 
 //app.get("/captcha.jpg", captcha.generate());
@@ -2263,9 +2253,9 @@ app.get('/login',
 */
 
 app.post('/login', 
-  passport.authenticate('local', { failureRedirect: config.baseUrl + '/login' }),
+  passport.authenticate('local', { failureRedirect: '/login' }),
   function(req, res) {
-    res.redirect(config.baseUrl + '/');
+    res.redirect('/');
   });
 
 /*
@@ -2314,7 +2304,7 @@ app.post('/login.json',
 app.get('/logout',
         function(req, res){
             req.logout();
-            res.redirect(config.baseUrl + '/experiments/6.html');
+            res.redirect('/experiments/6.html');
         });
 
 app.get('/whoami.json',
