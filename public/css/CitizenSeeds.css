@@ -326,8 +326,9 @@ div.ObservationOps {
     color: grey;
     font-size: 9px;
     line-height: 9px;
-    position: absolute;
-    bottom: 2px;
+    padding: 2px;
+/*    position: absolute;
+    bottom: 2px; */
 }
 
 div.ObservationOps:hover {

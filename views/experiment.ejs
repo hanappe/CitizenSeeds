@@ -29,6 +29,8 @@ jq(document).ready(function(){
     _server = new Server("<%= config.baseUrl %>");
     <% if (account && account.id) { %>
     _account = { "id": "<%= account.id %>" };
+    <% } else { %>
+    _account = {};
     <% } %>
     showObservations(<%= experiment.id %>, "<%= startAt %>");
     initForum(<%= experiment.id %>);

@@ -2881,7 +2881,6 @@ var _server = undefined;
 var _experiment = undefined;
 var _controller = undefined;
 var _curtain = undefined;
-var _account = undefined;
 var _forum = undefined;
 var _activityViewer = undefined;
 
@@ -2950,12 +2949,6 @@ function showObservations(id, startAt)
             _experiment.sensordata[data[i].id] = data[i];
         }
         _controller.updateSensorData();
-        return _server.getJSON("whoami.json");
-
-    }).then(function(data) {                                                                                             
-        if (data && data.id) {                                                                                                   
-            _account = data;                                                                                             
-        }                                                                                                                
     });
 }
 
