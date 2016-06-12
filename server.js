@@ -1153,8 +1153,8 @@ function sendPlants(req, res)
 function sendIndex(req, res)
 {
     logger.debug("Request: sendIndex");
-    //res.writeHead(302, { 'Location': config.baseUrl + '/experiments/6.html' });
-    res.writeHead(302, { 'Location': config.baseUrl + '/people/peter/profile.html' });
+    res.writeHead(302, { 'Location': config.baseUrl + '/experiments/6.html' });
+    //res.writeHead(302, { 'Location': config.baseUrl + '/people/peter/profile.html' });
 /*    if (req.locale == "fr") {
         res.writeHead(302, { 'Location': 'https://p2pfoodlab.net/CitizenSeedsInfo.fr.html' });
     } else {
@@ -2320,7 +2320,7 @@ app.get('/logout',
 app.get('/whoami.json',
         function(req, res){
             res.writeHead(200, {"Content-Type": "application/json"});
-            if (req.user) 
+            if (req.user && req.user.id) 
                 res.end(JSON.stringify({ "id": req.user.id }));
             else
                 res.end("null");
