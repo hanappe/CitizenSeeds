@@ -1229,6 +1229,7 @@ function ObservationLocationView(observer)
         text += ", " + observer.locationCity;
     if (observer.locationCountry)
         text += ", " + observer.locationCountry;
+    //text += " (" + observer.locationId + ")";
     this.addText(text, "ObservationLocationData");
 }
 ObservationLocationView.prototype = new UIComponent();
