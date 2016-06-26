@@ -2194,12 +2194,12 @@ app.get("/experiments/:id(\\d+).html", sendExperimentPage);
         sendMobileApp);*/
 
 app.get("/observers.json", sendObservers);
-app.post("/observers", /*apiIsLoggedIn,*/ createObserver);
+app.post("/observers", apiIsLoggedIn, createObserver);
 app.get("/observations.json", sendObservations);
 app.get("/observations/:id(\\d+).jpg", sendObservationImage);
 app.get("/observations/:id(\\d+).json", sendObservationMeta);
-app.post("/observations", /*apiIsLoggedIn,*/ upload.single('photo'), createObservation);
-app.delete("/observations/:id(\\d+)", /*apiIsLoggedIn,*/ deleteObservation);
+app.post("/observations", apiIsLoggedIn, upload.single('photo'), createObservation);
+app.delete("/observations/:id(\\d+)", apiIsLoggedIn, deleteObservation);
 
 app.get("/sensordata.json", sendSensorData);
 
@@ -2209,8 +2209,8 @@ app.get("/datastreams/:id(\\d+)/datapoints.json", sendDatapoints);
 app.get("/groups.json", sendGroups);
 
 app.get("/locations.json", sendLocations);
-app.post("/locations", /*apiIsLoggedIn,*/ createLocation);
-app.post("/locations/:id", /*apiIsLoggedIn,*/ updateLocation);
+app.post("/locations", apiIsLoggedIn, createLocation);
+app.post("/locations/:id", apiIsLoggedIn, updateLocation);
 
 app.get("/plants.json", sendPlants);
 app.post("/accounts" /*, captcha.check*/, createAccount);
@@ -2223,21 +2223,21 @@ app.get('/people/:id/profile.html',
   sendProfile);
 
 
-app.post("/people/:id/profile", /*apiIsLoggedIn,*/ updateProfile);
-app.get("/people/:id/devices.json", /*apiIsLoggedIn,*/ sendAccountDevices);
+app.post("/people/:id/profile", apiIsLoggedIn, updateProfile);
+app.get("/people/:id/devices.json", apiIsLoggedIn, sendAccountDevices);
 
 app.get("/reload", reload);
 
-app.post("/files", /*apiIsLoggedIn,*/ createFile);
-app.delete("/files/:id(\\d+)", /*apiIsLoggedIn,*/ deleteFile);
+app.post("/files", apiIsLoggedIn, createFile);
+app.delete("/files/:id(\\d+)", apiIsLoggedIn, deleteFile);
 
 app.get("/messages", sendMessages);
-app.post("/messages", /*apiIsLoggedIn,*/ createMessage);
+app.post("/messages", apiIsLoggedIn, createMessage);
 
 app.get("/devices/flowerpowers.json", obtainFlowerPowerDevices);
-app.get("/devices/:id(\\d+)", /*apiIsLoggedIn,*/ handleDeviceOp);
-app.post("/devices", /*apiIsLoggedIn,*/ createDevice);
-app.delete("/devices/:id(\\d+)", /*apiIsLoggedIn,*/ deleteDevice);
+app.get("/devices/:id(\\d+)", apiIsLoggedIn, handleDeviceOp);
+app.post("/devices", apiIsLoggedIn, createDevice);
+app.delete("/devices/:id(\\d+)", apiIsLoggedIn, deleteDevice);
 
 app.get('/login',
   function(req, res){
@@ -2307,7 +2307,7 @@ app.post('/login.json',
 app.get('/logout',
         function(req, res){
             req.logout();
-            res.redirect('/experiments/6.html');
+            res.redirect(config.baseUrl + '/experiments/6.html');
         });
 
 app.get('/whoami.json',
