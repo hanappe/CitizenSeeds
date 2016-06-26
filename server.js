@@ -25,16 +25,16 @@ var fs = require("fs");
 var express = require("express");
 var bodyParser = require("body-parser");
 var multer = require("multer");
+var upload = multer({ dest: './uploads' });
 var locale = require("locale");
 var supported = [ "en", "fr" ];
 var session = require("express-session");
-var captcha = require("easy-captcha");
+//var captcha = require("easy-captcha");
 var randomstring = require("randomstring");
 var XRegExp = require("xregexp").XRegExp;
 var nodemailer = require("nodemailer");
 var passport = require('passport');
-var BasicStrategy = require('passport-http').BasicStrategy;
-var oauth2 = require('./oauth2');
+var LocalStrategy = require('passport-local').Strategy;
 var gm = require('gm');
 var mkdirp = require('mkdirp');
 var exit = require('exit');
@@ -43,8 +43,23 @@ var ExifImage = require('exif').ExifImage;
 var ejs = require('ejs');
 var sanitizeHtml = require('sanitize-html');
 var mime = require('mime');
-var sys = require("sys");
 var FlowerPower = require('node-flower-power');
+var bcrypt = require('bcrypt-nodejs');
+var FileStore = require('session-file-store')(session);
+var cookieParser = require('cookie-parser');
+var ensureLoggedIn = require('connect-ensure-login').ensureLoggedIn;
+var morgan = require('morgan');
+
+
+var config = { "port": 10201 };
+
+try {
+    text = fs.readFileSync("config.json");
+    config = JSON.parse(text);        
+} catch (e) {
+    return;
+}
+
 
 mkdirp("log/", function(err) {
     if (err) {
@@ -63,9 +78,8 @@ log4js.configure({
 var logger = log4js.getLogger('p2pfoodlab');
 logger.setLevel('DEBUG');
 
-var database = require("./db");
-database.init();
-
+var database = require("./db");                                                                                          
+database.init();   
 
 /*
  * Mail
@@ -300,15 +314,15 @@ function createObserver(req, res)
     } else {
         var locations = database.selectLocations({ "account": account.id });
         /*if (locations.length == 0) {
-            location = database.insertLocation({ "account": account.id, "name": "Ma parcelle" });
-        } else if (locations.length >= 1) {*/
-            logger.debug("createObserver: locations: " + JSON.stringify(locations));
-	    sendError(res, { "success": false, 
-                             "type":  "select",
-                             "select":  locations,
-			     "message": "Please select or create a location" },
-                      __line, __function);
-            return;
+          location = database.insertLocation({ "account": account.id, "name": "Ma parcelle" });
+          } else if (locations.length >= 1) {*/
+        logger.debug("createObserver: locations: " + JSON.stringify(locations));
+	sendError(res, { "success": false, 
+                         "type":  "select",
+                         "select":  locations,
+			 "message": "Please select or create a location" },
+                  __line, __function);
+        return;
         //}
     }
     
@@ -329,7 +343,7 @@ function createObserver(req, res)
 	"plant": plant.id,
 	"location": location.id, 
 	"account": account.id 
-	});
+    });
 
     var r = { "id": observer.id ,
               "locationId": location.id,
@@ -409,6 +423,8 @@ function sendExperimentPage(req, res)
 {
     logger.debug("Request: sendExperimentPage");
     logger.debug("ID: " + req.params.id);
+    logger.debug("Account: " + JSON.stringify(req.user));
+    logger.debug("StartAt: " + req.query.startat);
 
     var id = req.params.id;
     var experiment = database.getExperiment(id);
@@ -420,16 +436,23 @@ function sendExperimentPage(req, res)
     //var startAt = "2015-05-02";
     //var startAt = "today";
     var startAt = "beginning";
-    logger.debug("startat: " + req.query.startat);
     if (validDate(req.query.startat)) {
 	startAt = req.query.startat;
     }
-    res.render('experiment', { "config": config, "experiment": experiment, "startAt": startAt });
+    var account = null;
+    if (req.user && req.user.id) {
+        var a = database.getAccount(req.user.id);
+        if (a) account = { "id": a.id };
+    }
+    res.render('experiment', { "config": config,
+                               "experiment": experiment,
+                               "startAt": startAt,
+                               "account": account });
     
     //var vars = { "experimentId": experiment.id, 
-//	         "experimentName": experiment.prettyname,
-//	         "baseUrl": config.baseUrl };    
-  //  new Template("experiment").generate(res, vars);
+    //	         "experimentName": experiment.prettyname,
+    //	         "baseUrl": config.baseUrl };    
+    //  new Template("experiment").generate(res, vars);
 }
 
 function sendMobileApp(req, res)
@@ -713,11 +736,11 @@ function deleteObservation(req, res)
 
 function createObservation(req, res)
 {
-    logger.debug(JSON.stringify(req.files));
-    logger.debug(JSON.stringify(req.body));
+    logger.debug("File: " + JSON.stringify(req.file));
+    //logger.debug("Body: " + JSON.stringify(req.body));
     logger.debug("Account ", JSON.stringify(req.user));
 
-    if (!req.files.photo) {
+    if (!req.file) {
 	sendError(res, { "success": false, 
 			 "message": "No photo" },
                   __line, __function);
@@ -814,7 +837,7 @@ function createObservation(req, res)
 	});
     }
 
-    var p = req.files.photo.path;
+    var p = req.file.path;
     var basedir = "public/observations/" + location.id + "/" + plant.id + "/";
 
     getJpegExif(p, observation,
@@ -977,8 +1000,8 @@ function sendGroups(req, res)
     var groups = database.getGroups();
     for (var i = 0; i < groups.length; i++) {
         list.push({ "id": groups[i].id,
-                      "name": groups[i].name,
-                      "address": groups[i].address });
+                    "name": groups[i].name,
+                    "address": groups[i].address });
     }
     res.writeHead(200, {"Content-Type": "application/json"});
     res.end(JSON.stringify(list));
@@ -1033,7 +1056,7 @@ function createLocation(req, res)
     var location = database.insertLocation({ 
 	"name": name, 
 	"account": account.id
-	});
+    });
     
     sendJson(res, location);
 }
@@ -1129,11 +1152,8 @@ function sendPlants(req, res)
 function sendIndex(req, res)
 {
     logger.debug("Request: sendIndex");
-    if (req.locale == "fr") {
-        res.writeHead(302, { 'Location': 'https://p2pfoodlab.net/CitizenSeedsInfo.fr.html' });
-    } else {
-        res.writeHead(302, { 'Location': 'https://p2pfoodlab.net/CitizenSeedsInfo.fr.html' });
-    }
+    res.writeHead(302, { 'Location': config.baseUrl + '/experiments/6.html' });
+    //res.writeHead(302, { 'Location': config.baseUrl + '/people/peter/profile.html' });
     res.end();
 }
 
@@ -1308,12 +1328,13 @@ function createAccount(req, res)
 
     logger.debug("createAccount @ 2");
 
-    if (!req.session.captcha.valid) 
-        return sendError(res, { "success": false,
-                                "field": "captcha",
-                                "message": "Captcha invalide. Veuillez vérifier votre saisie." },
-                         __line, __function); 
-
+    /*    if (!req.session.captcha.valid) 
+          return sendError(res, { "success": false,
+          "field": "captcha",
+          "message": "Captcha invalide. Veuillez vérifier votre saisie." },
+          __line, __function); 
+    */
+    
     logger.debug("createAccount @ 3");
 
     if (!validUsername(id))
@@ -1382,7 +1403,7 @@ function createAccount(req, res)
         return sendError(res, { "success": false,
                                 "field": "flowerpower",
                                 "message": "Valeur invalide pour le champs 'flowerpower'." },
-                          __line, __function); 
+                         __line, __function); 
 
     logger.debug("createAccount @ 11");
 
@@ -1464,6 +1485,8 @@ function validateAccount(req, res)
 
 function sendHomepage(req, res)
 {
+    logger.debug("sendHomepage: Visitor account: " + JSON.stringify(req.user));
+
     var id = req.params.id;
     logger.debug("sendHomepage id=", JSON.stringify(id));
     var account = database.getAccount(id);
@@ -1481,11 +1504,15 @@ function sendHomepage(req, res)
     logger.debug("sendHomepage ", JSON.stringify(profile));
     if (!profile) profile = {};
     logger.debug("rendering homepage");
-    res.render('homepage', { "config": config, "account": account, "profile": profile });
+    res.render('homepage', { "config": config,
+                             "account": account,
+                             "profile": profile });
 }
 
 function sendProfile(req, res)
 {
+    logger.debug("sendProfile: Visitor account: " + JSON.stringify(req.user));
+
     var id = req.params.id;
     var account = req.user;
     if (!account) {
@@ -1504,13 +1531,14 @@ function sendProfile(req, res)
     if (!profile) profile = {};
     var locations = database.selectLocations({ "account": id });
     var files = database.selectFiles({ "account": id });
+    var devices = database.selectDevices({"type": "flowerpower", "account": account.id})
 
     res.render('profile', { "config": config,
                             "account": account,
                             "profile": profile,
                             "locations": locations,
-                            "files": files
-                          });
+                            "files": files,
+                            "devices": devices });
 }
 
 function updateProfile(req, res)
@@ -1585,34 +1613,33 @@ function sendAccountInfo(req, res)
     sendJson(res, copy);
 }
 
-function sendWhoami(req, res)
+function sendAccountDevices(req, res)
 {
-    res.writeHead(200, {"Content-Type": "application/json"});
-    if (req.user) {
-        res.end(JSON.stringify({ "id": req.user.id }));
-    } else {
-        res.end(JSON.stringify({ "message": "Who are you?" }));
+    logger.debug("sendAccountDevices: Account: " + JSON.stringify(req.user));
+
+    if (!req.user || !req.user.id)
+        return sendError(res, { "success": false, "message": "Not logged in." });
+        
+    if (req.user.id != req.params.id)
+        return sendError(res, { "success": false, "message": "Unauthorized." });
+
+    var devices = database.selectDevices({"type": "flowerpower", "account": req.user.id});
+    var list = [];
+    for (var i = 0; i < devices.length; i++) {
+        list.push({"id": devices[i].id,
+                   "account": "peter",
+                   "name": devices[i].name,
+                   "type": "flowerpower",
+                   "datastreams": devices[i].datastreams,
+                   "flowerpower": {
+                       "serial": devices[i].flowerpower.serial,
+                       "location": devices[i].flowerpower.location,
+                       "plant_nickname": devices[i].flowerpower.plant_nickname,
+                       "nickname": devices[i].flowerpower.nickname,
+                       "test": "test"
+                   }});
     }
-}
-
-function login(req, res)
-{
-    logger.debug(JSON.stringify(req.session));
-    var account = req.user;
-    logger.debug("login: " + JSON.stringify(req.user));
-    res.writeHead(200, {"Content-Type": "application/json"});
-    res.end(JSON.stringify({ "id": account.id }));
-}
-
-function logout(req, res)
-{
-    logger.debug(JSON.stringify(req.session));
-    req.logout();
-    req.session.destroy();
-    //req.session.save();
-
-    res.writeHead(200, {"Content-Type": "application/json"});
-    res.end(JSON.stringify({ "success": true }));
+    sendJson(res, list);    
 }
 
 function reload(req, res)
@@ -1635,12 +1662,22 @@ function reload(req, res)
 /*
  * Authentication
  */
-passport.use(new BasicStrategy(function(username, password, done) {
-    var account = database.getAccount(username);
-    if (!account) return done(null, false);
-    if (account.password == password) return done(null, account);
-    return done(null, false);
-}));
+passport.use(new LocalStrategy(
+    function(username, password, cb) {
+        logger.debug("passport.use, username: " + username);
+        var account = database.getAccount(username);
+        if (!account) { return cb(null, false); }
+        if (account.password != password) { return cb(null, false); }
+        return cb(null, account);
+    }));
+
+/* passport.use(new BasicStrategy(function(username, password, done) {
+   var account = database.getAccount(username);
+   if (!account) return done(null, false);
+   if (account.password == password) return done(null, account);
+   return done(null, false);
+   }));
+*/
 
 passport.serializeUser(function(account, done) {
     done(null, account.id);
@@ -1651,6 +1688,28 @@ passport.deserializeUser(function(id, done) {
     done(null, account);
 });
 
+function apiIsLoggedIn(req, res, next)
+{
+    if (req.isAuthenticated()) {
+        logger.debug("API: Logged in");
+        return next();
+    }
+    logger.debug("API: Not logged in");
+    return sendError(res, { "success": false, "message": "Not authorized." });
+}
+
+function isLoggedIn(req, res, next)
+{
+    logger.debug("isLoggedIn: Visitor account: " + JSON.stringify(req.user));
+    logger.debug("isLoggedIn: returnTo=" + req.url);
+    if (req.isAuthenticated()) {
+        logger.debug("Logged in");
+        return next();
+    }
+    logger.debug("Not logged in");
+    req.session.returnTo = req.session.returnTo || req.url;
+    res.redirect("/login");
+}
 
 /*
  * Files
@@ -1741,9 +1800,9 @@ function sendMessages(req, res)
                                              "account": account,
                                              "thread": thread });
     /*for (var i = 0; i < messages.length; i++) {
-        //messages[i].text = messages[i].text.replace(/^\s+|\s+$/gm, '');
-        messages[i].shorttext = messages[i].text.substr(0, 42).replace(/[\n\r]/g, " ");
-        console.log(messages[i].shorttext);
+    //messages[i].text = messages[i].text.replace(/^\s+|\s+$/gm, '');
+    messages[i].shorttext = messages[i].text.substr(0, 42).replace(/[\n\r]/g, " ");
+    console.log(messages[i].shorttext);
     }
     database.saveTable("messages");
     */
@@ -1765,12 +1824,12 @@ function createMessage(req, res)
 	return;
     }
     /*text = text.replace(/^\s+|\s+$/gm, '');
-    if (!text) {
-	sendError(res, { "success": false, 
-			 "message": "No data" },
-                  __line, __function);
-	return;
-    }
+      if (!text) {
+      sendError(res, { "success": false, 
+      "message": "No data" },
+      __line, __function);
+      return;
+      }
     */
     
     var subject = req.body.subject;
@@ -1814,7 +1873,7 @@ function deleteMessage(req, res)
 }
 
 /*
- *  FlowerPower
+ *  Devices
  */
 
 function getSensor(sensors, id)
@@ -1826,17 +1885,18 @@ function getSensor(sensors, id)
     return null;
 }
 
-function listFlowerPowers(req, res)
+function obtainFlowerPowerDevices(req, res)
 {
-    logger.debug("Request: listFlowerPowers");
+    logger.debug("Request: obtainFlowerPowerDevices");
 
-    var email = (req.query.email)? req.query.email : undefined;
-    var password = (req.query.password)? req.query.password : undefined;
+    var email = req.query.email;
+    var password = req.query.password;
 
     logger.debug("Email: " + email);
 
     if (!email || !password) {
-    	sendError(res, { "message": "Incomplete login info" }, __line, __function);
+    	sendError(res, { "message": "Merci de renseigner votre login et mot de passe pour accéder aux services de Parrot/FlowerPower" },
+                  __line, __function);
         return;
     }
     
@@ -1865,13 +1925,19 @@ function listFlowerPowers(req, res)
                 for (var i = 0; i < plants.length; i++) {
                     var sensor = getSensor(sensors, plants[i].sensor_serial);
                     if (!sensor) continue;
-                    var flowerpower = {
-                        "serial": sensor.sensor_serial,
-                        "nickname": sensor.nickname,
-                        "location": plants[i].location_identifier,
-                        "plant_nickname": plants[i].plant_nickname
-                    };
-                    list.push(flowerpower);
+                    var device = {
+                        "account": "peter",
+                        "name": plants[i].plant_nickname,
+                        "type": "flowerpower",
+                        "flowerpower": {
+                            "username": email,
+                            "password": password,
+                            "serial": sensor.sensor_serial,
+                            "location": plants[i].location_identifier,
+                            "plant_nickname": plants[i].plant_nickname,
+                            "nickname": sensor.nickname
+                        }};
+                    list.push(device);
                 }
                 logger.debug("List: " + JSON.stringify(list));
                 sendJson(res, list);    
@@ -1880,6 +1946,211 @@ function listFlowerPowers(req, res)
     });
 }
 
+function testFlowerPowerDevice(req, res, device)
+{
+    var auth = {
+	username: device.flowerpower.username,
+	password: device.flowerpower.password,
+	client_id: 'hanappe@csl.sony.fr',
+	client_secret: '9pqsuENHVHtgw13MBCNcr8s91Vsw73WB8RwR0ES5VZeXFTkx'
+    };
+
+    var api = new FlowerPower(auth, function(err, data) {
+	if (err) {
+	    logger.error(JSON.stringify(err));
+    	    sendError(res, { "message": "Failed to log into FlowerPower server" }, __line, __function);
+            return;
+
+	} else {
+            var today = new Date();
+            var lastweek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7,
+                                    today.getHours(), today.getMinutes(), today.getSeconds());
+            
+            api.getSamples({ "id": device.flowerpower.location,
+                             "from": lastweek.toISOString(),
+                             "to": today.toISOString() },
+                           function(err, samples, events, fertilizer) {
+                               if (err) {
+                                   logger.error(err);
+    	                           sendError(res, { "message": JSON.stringify(err) }, __line, __function);
+                               } else {
+                                   sendJson(res, { "success": true });
+                               }
+                           });
+        }
+    });
+}
+
+function handleDeviceOp(req, res)
+{
+    logger.debug("Request: handleDeviceOp");
+
+    var op = req.query.op;
+    var id = req.params.id;
+    var account = req.user;
+
+    logger.debug("op=" + op + ", id=" + id);
+    
+    var device = database.getDevice(id);
+    if (!device) {
+	sendError(res, { "message": "Bad ID" }, __line, __function);
+        return;
+    }
+    if (device.account != account.id) {
+	sendError(res, { "message": "Unauthorized" }, __line, __function);
+        return;
+    }
+    if (op == "test" && device.type == "flowerpower") {
+    	testFlowerPowerDevice(req, res, device);
+    } else {
+    	sendError(res, { "message": "Invalid op" }, __line, __function);
+    }
+}
+
+function createDevice(req, res)
+{
+    logger.debug("Create device " + JSON.stringify(req.body));
+    logger.debug("Account ", JSON.stringify(req.user));
+
+    if (req.body.type != "flowerpower") {
+	sendError(res, { "success": false, 
+			 "message": "Bad device type" },
+                  __line, __function);
+	return;
+    }
+
+    var account = req.user;
+    var dev = req.body;
+    var fp = dev.flowerpower;
+    if (!account || !account.id) {
+	sendError(res, { "success": false, 
+			 "message": "Unauthorized" },
+                  __line, __function);
+	return;
+    }
+    if (!fp) {
+	sendError(res, { "success": false, 
+			 "message": "Invalid data" },
+                  __line, __function);
+	return;
+    }
+    if (!validEmail(fp.username)) {
+	sendError(res, { "success": false, 
+			 "message": "Bad username" },
+                  __line, __function);
+	return;
+    }
+    if (!fp.password || !fp.password.length || fp.password.length > 20) {
+	sendError(res, { "success": false, 
+			 "message": "Bad login" },
+                  __line, __function);
+	return;
+    }
+    if (!fp.serial || !fp.serial.length || fp.serial.length > 32) {
+	sendError(res, { "success": false, 
+			 "message": "Bad serial" },
+                  __line, __function);
+	return;
+    }
+    if (!fp.nickname || !fp.nickname.length || fp.nickname.length > 100) {
+	sendError(res, { "success": false, 
+			 "message": "Bad nickname" },
+                  __line, __function);
+	return;
+    }
+    if (!fp.location || !fp.location.length || fp.location.length > 32) {
+	sendError(res, { "success": false, 
+			 "message": "Bad location ID" },
+                  __line, __function);
+	return;
+    }
+    if (!fp.plant_nickname || !fp.plant_nickname.length || fp.plant_nickname.length > 100) {
+	sendError(res, { "success": false, 
+			 "message": "Bad plant name" },
+                  __line, __function);
+	return;
+    }
+    if (!dev.name || !dev.name.length || dev.name.length > 100) {
+	sendError(res, { "success": false, 
+			 "message": "Bad plant name" },
+                  __line, __function);
+	return;
+    }
+
+    var d = database.selectDevices({"type": "flowerpower", "account": req.user.id});
+    for (var i = 0; i < d.length; i++) {
+        if (d[i].flowerpower.serial == fp.serial
+            && d[i].flowerpower.nickname == fp.nickname
+            && d[i].flowerpower.plant_nickname == fp.plant_nickname
+            && d[i].flowerpower.location == fp.location) {
+	    sendError(res, { "success": false, 
+			     "message": "The device is already registered!" },
+                      __line, __function);
+            return;
+        }
+    }
+    
+    var temperature = {                                                                                                  
+        "name": "temperature",                                                                                           
+        "property": "temperature",                                                                                       
+        "unit": "Celsius",                                                                                               
+        "description": "Temperature"                                                                                     
+    };                                                                                                                   
+    database.insertDatastream(temperature);                                                                              
+    
+    var humidity = {                                                                                                     
+        "name": "soilhumidity",                                                                                          
+        "property": "soilhumidity",                                                                                      
+        "unit": "%",                                                                                                     
+        "description": "Humidite du sol"                                                                                 
+    };                                                                                                                   
+    database.insertDatastream(humidity);                                                                                 
+    
+    var sunlight = {                                                                                                     
+        "name": "sunlight",                                                                                              
+        "property": "par",                                                                                               
+        "unit": "umole/m2/s",                                                                                            
+        "description": "Lumiere"                                                                                         
+    };                                                                                                                   
+    database.insertDatastream(sunlight);                                                                                 
+    
+    var device = database.insertDevice({ 
+	"account": account.id, 
+        "name": dev.name,
+        "datastreams": [ temperature.id, humidity.id, sunlight.id ],
+        "type": "flowerpower",
+        "flowerpower": {
+            "username": fp.username,
+            "password": fp.password,
+            "serial": fp.serial,
+            "nickname": fp.nickname,
+            "plant_nickname": fp.plant_nickname,
+            "location": fp.location
+        }
+    });
+
+    sendJson(res, device);
+}
+
+function deleteDevice(req, res)
+{
+    var id = req.params.id;
+    var account = req.user;
+
+    logger.debug("deleteDevice: " + id);
+    
+    var device = database.getDevice(id);
+    if (!device) {
+	sendError(res, { "message": "Bad ID" }, __line, __function);
+        return;
+    }
+    if (device.account != account.id) {
+	sendError(res, { "message": "Unauthorized" }, __line, __function);
+        return;
+    }
+    database.deleteDevice(device);
+    sendJson(res, { "success": true });    
+}
 
 /*
  * App
@@ -1887,37 +2158,48 @@ function listFlowerPowers(req, res)
 
 var app = express();
 
-app.use(multer({ dest: './uploads/'}));
-app.use(session({ secret: "Je suis Charlie", 
-		  resave: false, 
-		  saveUninitialized: true }));
-app.use(passport.initialize());
-app.use(passport.session());
+app.set('view engine', 'ejs');
+
+app.use(morgan('combined'));
 app.use(locale(supported));
+app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(session({ secret: "Je suis Charlie", 
+		  resave: false, 
+		  saveUninitialized: false /*,
+                  store: new FileStore({
+                      path: "db/sessions",
+                      ttl: 31536000,
+                      encrypt: true
+                  })*/
+                }));
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(express.static("public"));
 
-app.get("/captcha.jpg", captcha.generate());
+
+app.get('/about.html',
+        function(req, res) {
+            res.render('about', { "config": config,
+                                  "account": req.user });
+        });
+
+//app.get("/captcha.jpg", captcha.generate());
 app.get("/experiments/:id(\\d+).json", sendExperiment);
 app.get("/experiments/:id(\\d+).html", sendExperimentPage);
-app.get("/mobile/:id(\\d+).html",
-        passport.authenticate('basic', { session: true }),
-        sendMobileApp);
+
+/*app.get("/mobile/:id(\\d+).html",
+        passport.authenticate('local', { failureRedirect: config.baseUrl + "/login", successReturnToOrRedirect: '/' }),
+        sendMobileApp);*/
 
 app.get("/observers.json", sendObservers);
-app.post("/observers", 
-         passport.authenticate('basic', { session: true }),
-         createObserver);
-
+app.post("/observers", /*apiIsLoggedIn,*/ createObserver);
 app.get("/observations.json", sendObservations);
 app.get("/observations/:id(\\d+).jpg", sendObservationImage);
 app.get("/observations/:id(\\d+).json", sendObservationMeta);
-app.post("/observations",
-         passport.authenticate('basic', { session: true }),
-         createObservation);
-app.delete("/observations/:id(\\d+)",
-           passport.authenticate('basic', { session: true }),
-           deleteObservation);
+app.post("/observations", /*apiIsLoggedIn,*/ upload.single('photo'), createObservation);
+app.delete("/observations/:id(\\d+)", /*apiIsLoggedIn,*/ deleteObservation);
 
 app.get("/sensordata.json", sendSensorData);
 
@@ -1927,71 +2209,129 @@ app.get("/datastreams/:id(\\d+)/datapoints.json", sendDatapoints);
 app.get("/groups.json", sendGroups);
 
 app.get("/locations.json", sendLocations);
-app.post("/locations",
-         passport.authenticate('basic', { session: true }),
-         createLocation);
-app.post("/locations/:id",
-         passport.authenticate('basic', { session: true }),
-         updateLocation);
+app.post("/locations", /*apiIsLoggedIn,*/ createLocation);
+app.post("/locations/:id", /*apiIsLoggedIn,*/ updateLocation);
 
 app.get("/plants.json", sendPlants);
-app.post("/accounts", captcha.check, createAccount);
+app.post("/accounts" /*, captcha.check*/, createAccount);
 app.get("/accounts/:id.json", sendAccountInfo);
 app.get("/people/:id.html", sendHomepage);
-app.get("/people/:id/profile.html",
-        passport.authenticate('basic', { session: true }),
-        sendProfile);
-app.post("/people/:id/profile",
-         passport.authenticate('basic', { session: true }),
-         updateProfile);
-app.get("/whoami", sendWhoami);
-app.get("/login",
-        passport.authenticate('basic', { session: true }),
-        login);
-app.get("/logout", logout);
 
-app.get("/reload", 
-        passport.authenticate('basic', { session: true }),
-        reload);
+//app.get("/people/:id/profile.html", isLoggedIn, sendProfile);
+app.get('/people/:id/profile.html',
+  ensureLoggedIn(),
+  sendProfile);
 
-app.post("/files",
-         passport.authenticate('basic', { session: true }),
-         createFile);
-app.delete("/files/:id(\\d+)",
-           passport.authenticate('basic', { session: true }),
-           deleteFile);
+
+app.post("/people/:id/profile", /*apiIsLoggedIn,*/ updateProfile);
+app.get("/people/:id/devices.json", /*apiIsLoggedIn,*/ sendAccountDevices);
+
+app.get("/reload", reload);
+
+app.post("/files", /*apiIsLoggedIn,*/ createFile);
+app.delete("/files/:id(\\d+)", /*apiIsLoggedIn,*/ deleteFile);
 
 app.get("/messages", sendMessages);
-app.post("/messages",
-         passport.authenticate('basic', { session: true }),
-         createMessage);
+app.post("/messages", /*apiIsLoggedIn,*/ createMessage);
 
-app.get("/devices/flowerpowers.json", listFlowerPowers);
+app.get("/devices/flowerpowers.json", obtainFlowerPowerDevices);
+app.get("/devices/:id(\\d+)", /*apiIsLoggedIn,*/ handleDeviceOp);
+app.post("/devices", /*apiIsLoggedIn,*/ createDevice);
+app.delete("/devices/:id(\\d+)", /*apiIsLoggedIn,*/ deleteDevice);
+
+app.get('/login',
+  function(req, res){
+      res.render('login', { "config": config });
+  });
+
+/*app.get('/login',
+        function(req, res) {
+            logger.debug("login: Visitor account: " + JSON.stringify(req.user));
+            var r = (req.query && req.query.r)? req.query.r : null;
+            res.render('login', { "r": r, "config": config });
+        });
+*/
+
+app.post('/login', 
+  passport.authenticate('local', { failureRedirect: '/login' }),
+  function(req, res) {
+      //res.redirect('/');
+      req.session.save(function(){
+          res.redirect('/');
+      });
+  });
+
+/*
+app.post('/login',
+         function(req, res, next) {
+             logger.debug("login: r=" + JSON.stringify(req.query || req.query.r));
+             var rs = (req.query && req.query.r)? req.query.r : '/';
+             var re = (req.query && req.query.r)? config.baseUrl + '/login?r=' + req.query.r : config.baseUrl + '/login';
+             var opt = { failureRedirect: re, successRedirect: rs };
+             passport.authenticate('local', opt)(req, res, next);
+         });
+*/
+
+/*
+app.post('/login',
+         function(req, res, next) {
+             //logger.debug("login: r=" + JSON.stringify(req.query || req.query.r));
+             //var rs = (req.query && req.query.r)? req.query.r : '/';
+             //var re = (req.query && req.query.r)? config.baseUrl + '/login?r=' + req.query.r : config.baseUrl + '/login';
+             //var opt = { failureRedirect: re, successRedirect: rs };
+             //passport.authenticate('local', opt)(req, res, next);
+             passport.authenticate('local')(req, res, next);
+             },
+         function (req, res) {
+             req.session.save(function (err) {
+                 var r = "/";
+                 if (req.isAuthenticated()) {
+                     r = (req.query && req.query.r)? req.query.r : '/';
+                 } else { 
+                     r = (req.query && req.query.r)? config.baseUrl + '/login?r=' + req.query.r : config.baseUrl + '/login';
+                 }
+                 res.redirect(r);
+             });
+         });
+*/
+
+app.post('/login.json',
+         function(req, res, next) {
+             passport.authenticate('local', function(err, user, info) {
+                 if (err) { sendError(res, err); }
+                 else if (!user) { sendError(res, 'Connexion sans succès'); }
+                 else sendJson(res, { "id": user.username });
+             })(req, res, next);
+         });
+         
+app.get('/logout',
+        function(req, res){
+            req.logout();
+            res.redirect('/experiments/6.html');
+        });
+
+app.get('/whoami.json',
+        function(req, res){
+            res.writeHead(200, {"Content-Type": "application/json"});
+            if (req.user && req.user.id) 
+                res.end(JSON.stringify({ "id": req.user.id }));
+            else
+                res.end("null");
+        });
 
 app.get("/", sendIndex);
 
 /*
-var plotter = require('./plotter');
-function sendGraph(req, res)
-{
-    res.writeHead(200, {"Content-Type": "image/svg+xml"});
-    res.end(plotter.plotGraph(null));
-}
-app.get("/graphs", sendGraph);
+  var plotter = require('./plotter');
+  function sendGraph(req, res)
+  {
+  res.writeHead(200, {"Content-Type": "image/svg+xml"});
+  res.end(plotter.plotGraph(null));
+  }
+  app.get("/graphs", sendGraph);
 */
 
-app.use(express.static("public"));
-app.set('view engine', 'ejs');
 
-
-var config = { "port": 10201 };
-
-try {
-    text = fs.readFileSync("config.json");
-    config = JSON.parse(text);        
-} catch (e) {
-    return;
-}
 
 logger.debug("Server starting on port " + config.port);
 var server = app.listen(config.port, function () {});
