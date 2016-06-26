@@ -2257,7 +2257,7 @@ app.post('/login',
   function(req, res) {
       //res.redirect('/');
       req.session.save(function(){
-          res.redirect('/');
+          res.redirect(config.baseUrl + '/');
       });
   });
 
