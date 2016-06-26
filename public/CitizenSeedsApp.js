@@ -1140,6 +1140,7 @@ function ObservationLocationView(observer)
         text += ", " + observer.locationCity;
     if (observer.locationCountry)
         text += ", " + observer.locationCountry;
+    //text += " (" + observer.locationId + ")";
     this.addText(text, "ObservationLocationData");
 }
 ObservationLocationView.prototype = new UIComponent();
@@ -2667,6 +2668,17 @@ function ActivityViewer(id)
             var img = document.createElement("IMG");
             img.src = _server.root + "/" + this.observations[i].thumbnail;
             img.className = "recent-photo";
+            {
+                var text = "";
+                if (this.observations[i].comment) {
+                    text += this.observations[i].comment + " | ";
+                }
+                text += this.observations[i].plantFamily;
+                if (this.observations[i].plantVariety)
+                    text += ", " + this.observations[i].plantVariety;
+                text += " | " + toDate(this.observations[i].date);
+                img.title = text;
+            }
             imgdiv.appendChild(a);
             a.appendChild(img);
 
