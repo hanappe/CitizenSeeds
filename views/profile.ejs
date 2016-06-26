@@ -1,236 +1,174 @@
 <!DOCTYPE html>
-<html lang="en"><head>
-<meta http-equiv="content-type" content="text/html; charset=UTF-8">
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="">
-    <meta name="author" content="Peter Hanappe">
-    <link rel="icon" href="<%= config.baseUrl %>/media/favicon.ico">
+<html lang="en">
 
-    <title>P2P Food Lab - CitizenSeeds - Profile</title>
+<% include head %>
 
-    <link href='https://fonts.googleapis.com/css?family=Raleway:700,400' rel='stylesheet' type='text/css'>
-    <link href="<%= config.baseUrl %>/bootstrap.css" rel="stylesheet">
-    <link href="<%= config.baseUrl %>/citizenseeds.css" rel="stylesheet">
-    <link href="<%= config.baseUrl %>/jwysiwyg/jquery.wysiwyg.css" rel="stylesheet">
+  <body id="Body">
 
-    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
-    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
-    <script src="<%= config.baseUrl %>/ie-emulation-modes-warning.js"></script>
-
-    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-    <!--[if lt IE 9]>
-      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
-      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-    <![endif]-->
-  </head>
-
-  <body>
-
-    <nav class="navbar navbar-default navbar-citizenseeds">
-      <div class="container">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="https://p2pfoodlab.net">
-            <img alt="P2P Food Lab" src="<%= config.baseUrl %>/media/logo-small-blue.png" width="130px">
-          </a>
-        </div>
-      
-        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-          <ul class="nav navbar-nav">
-            <li><a href="<%= config.baseUrl %>/experiments/4.html">CitizenSeeds</a></li>
-          </ul>
-        </div>
-      </div>
-    </nav>
-
-    <div class="container">
-      <div class="page-header">
-        <h1><%= account.id %> <a href="<%= config.baseUrl %>/people/<%= account.id %>.html" class="btn btn-default">Voir</a></h1>
-      </div>
-    </div>
-
-    <hr>
-
-    <div class="container">
-      <div class="row top-margin">
-        <div class="col-lg-6">
-          <h2>Mes pages perso où je poste mes nouvelles sur CitizenSeeds :</h2>
-        </div><!-- /.col-lg-6 -->
-      </div><!-- /.row -->
-
-      <div class="row top-margin">
-        <div class="col-lg-6">
-          <div class="input-group top-margin">
-            <span class="input-group-addon" id="sizing-addon1">Blog</span>
-            <input type="text" class="form-control" placeholder="..." id="blog" value="<%= profile.blog %>">
-            <span class="input-group-btn">
-              <button class="btn btn-default" type="button" id="updateBlog">Changer</button>
-            </span>
-          </div><!-- /input-group -->
-        </div><!-- /.col-lg-6 -->
-      </div><!-- /.row -->
-
-      <div class="row top-margin">
-        <div class="col-lg-6">
-          <div class="input-group top-margin">
-            <span class="input-group-addon" id="sizing-addon1">Video blog</span>
-            <input type="text" class="form-control" placeholder="..." id="vlog" value="<%= profile.vlog %>">
-            <span class="input-group-btn">
-              <button class="btn btn-default" type="button" id="updateVlog">Changer</button>
-            </span>
-          </div><!-- /input-group -->
-        </div><!-- /.col-lg-6 -->
-      </div><!-- /.row -->
-
-    </div><!-- /.container -->
-
-    <hr>
-
-    <div class="container">
-      <div class="row top-margin">
-        <div class="col-lg-6">
-          <h2>Mes parcelles</h2>
-        </div><!-- /.col-lg-6 -->
-      </div><!-- /.row -->
-      
-      <% for (var i = 0; i < locations.length; i++) { %>      
-         
-         <div class="row top-margin">
-           <div class="col-lg-6">
-             <div class="input-group top-margin">
-               <span class="input-group-addon" id="sizing-addon1">Nom</span>
-               <input type="text" class="form-control" placeholder="..." id="name_<%= locations[i].id %>" value="<%= locations[i].name %>">
-               <span class="input-group-btn">
-                 <button class="btn btn-default" type="button" id="updateLocationName_<%= locations[i].id %>">Changer</button>
-               </span>
-             </div><!-- /input-group -->
-           </div><!-- /.col-lg-6 -->
-         </div><!-- /.row -->
-         
-         <div class="row">
-           <div class="col-lg-6">
-             <div class="input-group top-margin">
-               <span class="input-group-addon" id="sizing-addon1">Ville</span>
-               <input type="text" class="form-control" placeholder="..." id="city_<%= locations[i].id %>" value="<%= locations[i].city %>">
-               <span class="input-group-btn">
-                 <button class="btn btn-default" type="button" id="updateLocationCity_<%= locations[i].id %>">Changer</button>
-               </span>
-             </div><!-- /input-group -->
-           </div><!-- /.col-lg-6 -->
-         </div><!-- /.row -->
-         
-         <div class="row">
-           <div class="col-lg-6">
-             <div class="input-group top-margin">
-               <span class="input-group-addon" id="sizing-addon1">Pays</span>
-               <input type="text" class="form-control" placeholder="..." id="country_<%= locations[i].id %>" value="<%= locations[i].country %>">
-               <span class="input-group-btn">
-                 <button class="btn btn-default" type="button" id="updateLocationCountry_<%= locations[i].id %>">Changer</button>
-               </span>
-             </div><!-- /input-group -->
-             <hr>
-           </div><!-- /.col-lg-6 -->
-         </div><!-- /.row -->
-         
-         <% } %>
-    </div><!-- /.container -->
+<% include navbar %>
     
-    <hr>
-
-    <div class="container">
-      <div class="row top-margin">
-        <div class="col-lg-4">
-          <h2>Qui suis-je ?</h2>
-          <p>Fournissez plus d'info sur vous-même, sur votre parcelle,
-          sur pourquoi vous participez, votre site web perso... avec
-          l'éditeur ci-dessous. Ces informations seront affichées dans
-          votre page <a href="<%= config.baseUrl
-          %>/people/<%= account.id %>.html"><i>Profile</i></a>.</p>
-
-          <p>En dessous de l'éditeur vous pouvez uploader des images. Après le téléchargement, une
-          vignette de l'image sera affichée
-          ensemble avec des boutons cliquables. Ces boutons permettent
-          d'insérer l'image directement dans le texte.</p>
-
-          <p>N'oubliez pas de sauvegarder vos modifications avec le
-            bouton ... "Sauvegarder" !</p> <!-- ' -->
-        </div><!-- /.col-lg-4 -->
-
-        <div class="col-lg-4">
-          <h2>Who am I?</h2>
-    
-          <p>Provide more information about yourself, about your plot,
-            about why you participate, your personal web page and
-            anything you feel like sharing, using the editor below. The
-            information will be shown in
-            your <a href="<%= config.baseUrl %>/people/<%= account.id
-            %>.html"><i>Profile</i></a> page.</p>
-
-          <p>Below the editor you can also upload images. After the
-          upload, a thumbnail will appear together with a set of
-          buttons that allow you to insert the image directly in the
-          text.</p>
-
-          <p>Don't forget the save your changes using the
-          "Sauvegarder" button!</p> <!-- ' -->
-        </div><!-- /.col-lg-4 -->
-
-      </div><!-- /.row -->
-
-      <div class="row top-margin">
-        <div class="col-lg-8">
-          <textarea id="description" style="width: 100%; height: 400px;"><%- profile.description %></textarea>
-
-          <button class="btn btn-primary" type="button" id="updateDescription">Sauvegarder</button>
-          <a class="btn btn-default" type="button" id="viewProfile" href="<%= config.baseUrl %>/people/<%= account.id %>.html">Voir</a>
-        </div><!-- /.col-lg-6 -->
-      </div><!-- /.row -->
-
-      <div class="row top-margin">
-        <div class="col-lg-6">
-          <div id="image-lib">
-          <p>Images :</p>
-          </div>
-        </div>
+    <div class='container'>
+      <div class="span12">
+	<section id="header">
+	  <div class="page-header">
+	    <h1>Les onglets ci-dessous vous permettent de modifier votre profile&nbsp;:</h1>
+	  </div>
+        </section>
       </div>
 
-      <div class="row top-margin">
-        <div class="col-lg-6">
-          <p>Uploader une image (JPEG) :</p>
-          <form>
-            <input name="bits" type="file" id="filechooser" />
-          </form>
-        </div><!-- /.col-lg-6 -->
-      </div><!-- /.row -->
-      <div class="row">
-        <div class="col-lg-3">
-          <div class="progress">
-            <div class="progress-bar" role="progressbar" id="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
-              <span class="sr-only">0% Complete</span>
+      <div class="span12">
+        <ul class="nav nav-tabs">
+          <li class="active"><a href="#profile" data-toggle="tab">Profile</a></li>
+          <li><a href="#parcelles" data-toggle="tab">Parcelles</a></li>
+          <li><a href="#flowerpower" data-toggle="tab">Flower Power</a></li>
+        </ul>
+        
+        <div class="tab-content">
+          
+          <!-- Profile tab -->
+          <div class="tab-pane active" id="profile">
+            <h3>Mes pages perso où je poste mes nouvelles sur CitizenSeeds :</h3>
+
+            <!-- Blog address -->
+            <div class="input-group top-margin">
+              <span class="input-group-addon" id="sizing-addon1">Blog</span>
+              <input type="text" class="form-control" placeholder="..." id="blog" value="<%= profile.blog %>">
+              <span class="input-group-btn">
+                <button class="btn btn-default" type="button" id="updateBlog">Changer</button>
+              </span>
+            </div><!-- /input-group -->
+
+            <!-- Vlog address -->
+            <div class="input-group top-margin">
+              <span class="input-group-addon" id="sizing-addon1">Video blog</span>
+              <input type="text" class="form-control" placeholder="..." id="vlog" value="<%= profile.vlog %>">
+              <span class="input-group-btn">
+                <button class="btn btn-default" type="button" id="updateVlog">Changer</button>
+              </span>
+            </div><!-- /input-group -->
+
+
+            <h3>Qui suis-je ?</h3>
+            
+            <p>Fournissez plus d'info sur vous-même, sur votre parcelle,
+              sur pourquoi vous participez, votre site web perso... avec
+              l'éditeur ci-dessous. Ces informations seront affichées dans
+              votre page <a href="<%= config.baseUrl %>/people/<%= account.id %>.html"><i>Profile</i></a>.</p>
+
+            <p>En dessous de l'éditeur vous pouvez uploader des
+              images. Après le téléchargement, une vignette de l'image
+              sera affichée ensemble avec des boutons cliquables. Ces
+              boutons permettent d'insérer l'image directement dans le
+              texte.</p>
+
+            <p>N'oubliez pas de sauvegarder vos modifications avec le
+              bouton ... "Sauvegarder" !</p> <!-- ' -->
+
+
+            <textarea id="description" style="width: 100%; height: 400px;"><%- profile.description %></textarea>
+
+            <button class="btn btn-primary" type="button" id="updateDescription">Sauvegarder</button>
+            <a class="btn btn-default" type="button" id="viewProfile" href="<%= config.baseUrl %>/people/<%= account.id %>.html">Voir</a>
+
+            <div id="image-lib">
+              <h3>Images :</h3>
             </div>
-          </div>
-        </div><!-- /.col-lg-3 -->
-      </div><!-- /.row -->
-      
-    </div>
-    
 
-    <!-- Bootstrap core JavaScript -->
-    <script src="<%= config.baseUrl %>/jquery.js"></script>
-    <script src="<%= config.baseUrl %>/bootstrap.js"></script>
-    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
-    <script src="<%= config.baseUrl %>/ie10-viewport-bug-workaround.js"></script>
-    <script src="<%= config.baseUrl %>/jwysiwyg/jquery.wysiwyg.js" type="text/javascript"></script>
-    <script src="<%= config.baseUrl %>/jwysiwyg/controls/wysiwyg.image.js" type="text/javascript"></script>
-    <script src="<%= config.baseUrl %>/jwysiwyg/controls/wysiwyg.link.js" type="text/javascript"></script>
-    <script src="<%= config.baseUrl %>/profile.js" type="text/javascript"></script>
+            <h3>Uploader une image (JPEG) :</h3>
+
+            <form>
+              <input name="bits" type="file" id="filechooser" />
+            </form>
+
+            <div class="progress">
+              <div class="progress-bar" role="progressbar" id="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
+                <span class="sr-only">0% Complete</span>
+              </div>
+            </div>
+            
+          </div> <!-- End of tab content -->
+
+
+          <!-- Parcelles tab -->
+          <div class="tab-pane" id="parcelles">
+
+            <h2>Mes parcelles</h2>
+            
+            <% for (var i = 0; i < locations.length; i++) { %>      
+
+               <div class="parcelle">
+
+                 <div class="input-group top-margin">
+                   <span class="input-group-addon" id="sizing-addon1">Nom</span>
+                   <input type="text" class="form-control" placeholder="..." id="name_<%= locations[i].id %>" value="<%= locations[i].name %>">
+                   <span class="input-group-btn">
+                     <button class="btn btn-default" type="button" id="updateLocationName_<%= locations[i].id %>">Changer</button>
+                   </span>
+                 </div><!-- /input-group -->
+                 
+                 <div class="input-group top-margin">
+                   <span class="input-group-addon" id="sizing-addon1">Ville</span>
+                   <input type="text" class="form-control" placeholder="..." id="city_<%= locations[i].id %>" value="<%= locations[i].city %>">
+                   <span class="input-group-btn">
+                     <button class="btn btn-default" type="button" id="updateLocationCity_<%= locations[i].id %>">Changer</button>
+                   </span>
+                 </div><!-- /input-group -->
+                 
+                 <div class="input-group top-margin">
+                   <span class="input-group-addon" id="sizing-addon1">Pays</span>
+                   <input type="text" class="form-control" placeholder="..." id="country_<%= locations[i].id %>" value="<%= locations[i].country %>">
+                   <span class="input-group-btn">
+                     <button class="btn btn-default" type="button" id="updateLocationCountry_<%= locations[i].id %>">Changer</button>
+                   </span>
+                 </div><!-- /input-group -->
+                 
+               </div> <!-- parcelle -->
+               <% } %>
+
+          </div> <!-- End of tab content -->
+
+          
+          <!-- FlowerPower tab -->
+          <div class="tab-pane" id="flowerpower">
+
+            <h3>Flower Power</h3>
+
+            <div id="DeviceList"></div>
+
+
+            <h3>Enregistrer un nouveau FlowerPower&nbsp;:</h3>
+
+            <p>Voici comment ajouter un FlowerPower :</p>
+            <ul>
+              <li>Saisissez votre identifiant et mot de passe du FlowerPower. 
+              <li>Cliquez sur "Afficher les FlowerPowers"
+              <li>La liste des FlowerPowers du compte s'affichera.
+              <li>Selectionner le FlowerPower dont vous voulez utiliser les données dans CitizenSeeds. Il s'ajoutera dans la liste ci-dessus.
+            </ul>
+            
+            <div class="input-group top-margin">
+              <span class="input-group-addon" id="sizing-addon1">Votre identifiant FlowerPower</span>
+              <input type="text" class="form-control" placeholder="..." id="flowerpower_id" value="">
+            </div><!-- /input-group -->
+            
+            <div class="input-group top-margin">
+              <span class="input-group-addon" id="sizing-addon1">Votre mot de passe FlowerPower</span>
+              <input type="text" class="form-control" placeholder="..." id="flowerpower_pw" value="">
+            </div><!-- /input-group -->
+
+            <br>
+            
+            <button class="btn btn-primary" type="button" id="listFlowerPowers">Afficher les FlowerPowers</button>
+
+          </div> <!-- End of tab content -->
+
+        </div>	
+      </div>
+    </div>
+
+
+    <!--   -->
+<% include scripts %>    
     
     <script>
 var jq = $.noConflict();
@@ -249,7 +187,19 @@ jq(document).ready(function(){
 <% for (var i = 0; i < files.length; i++) { %>
     insertImageLib({ "id": <%= files[i].id %>, "thumbnail": "<%= files[i].thumbnail %>", "small": "<%= files[i].small %>", "orig": "<%= files[i].orig %>" });
 <% } %>
+
+    jq("#listFlowerPowers").click(function() { listFlowerPowers() });
+
+    getDevices();
+   _curtain = new Curtain();
+    document.getElementById("Body").appendChild(_curtain.div);
+
 });
+
+var _curtain = undefined;
+var _account = { id: "<%= account.id %>" };
+var _flowerpowers = [];
+var _server = new Server("<%= config.baseUrl %>");
     </script>
   </body>
 </html>

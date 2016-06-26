@@ -12,9 +12,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- CSS -------------------–––––––––––– -->
-    <link rel="stylesheet" href="<%= config.baseUrl %>/normalize.css">
-    <link rel="stylesheet" href="<%= config.baseUrl %>/skeleton.css">
-    <link rel="stylesheet" href="<%= config.baseUrl %>/CitizenSeedsMobile.css">
+    <link rel="stylesheet" href="<%= config.baseUrl %>/css/normalize.css">
+    <link rel="stylesheet" href="<%= config.baseUrl %>/css/skeleton.css">
+    <link rel="stylesheet" href="<%= config.baseUrl %>/css/citizenseeds/mobile.css">
 
   </head>
   <body id="Body">
@@ -34,9 +34,9 @@
 
     <section id="MobileApp" class="section"></section>
 
-    <script src="<%= config.baseUrl %>/es6-promise-2.0.1.min.js"></script>
-    <script src="<%= config.baseUrl %>/CitizenSeedsApp.js"></script>
-    <script src="<%= config.baseUrl %>/CitizenSeedsServer.js"></script>
+    <script src="<%= config.baseUrl %>/js/es6-promise-2.0.1.min.js"></script>
+    <script src="<%= config.baseUrl %>/js/citizenseeds/app.js"></script>
+    <script src="<%= config.baseUrl %>/js/citizenseeds/server.js"></script>
     <script>setTimeout(function() { startMobileApp("<%= config.baseUrl %>", <%= experiment.id %>); }, 1);</script>
 
   </body>

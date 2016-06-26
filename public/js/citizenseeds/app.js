@@ -84,7 +84,7 @@ function UIComponent()
     this.addListener = function(listener) { 
         this.listeners.push(listener);
     }
-    
+
     this.callListeners = function(what) { 
         for (var i = 0; i < this.listeners.length; i++) {
             this.listeners[i].handleEvent(what, this);
@@ -104,7 +104,6 @@ function UIComponent()
     this.isVisible = function() {
         return this.visible;
     }
-
 
     this.toggleVisibility = function() {
         if (this.visible) {
@@ -156,7 +155,7 @@ function UIComponent()
         return a;
     }
 
-    this.addGlyph = function(glyphname, callback, parent, className) {
+    this.addGlyph = function(glyphname, callback, parent, className, title) {
         var a = document.createElement("A");
         a.setAttribute("href", "javascript:void(0)");
         a.onclick = function() { return false; }
@@ -166,6 +165,7 @@ function UIComponent()
         span.className = "glyphicon " + glyphname;
         if (className) span.className = "glyphicon " + glyphname + " " + className;
         else span.className = "glyphicon " + glyphname;
+        if (title) a.title = title;
         a.appendChild(span);
         if (parent) parent.appendChild(a);
         else this.div.appendChild(a);
@@ -258,9 +258,13 @@ function UIComponent()
     
     this.addComponent = function(c) {
         //alert("UIComponent.addComponent: " + this + ": " + c);
+        if (!c) {
+            c = null;
+        }
         this.components.push(c);
         this.div.appendChild(c.div);
         c.parent = this;
+        return c;
     }
 
     this.appendChild = function(element) {
@@ -314,7 +318,7 @@ function UIComponent()
             component = this.components[i];
             if (id == component.id) {
                 component.addComponent(c);
-                break;
+                return c;
             }
         }
     }
@@ -805,24 +809,21 @@ function randomString(length)
 // Views
 //--------------------------------------------------
 
-function ExperimentView(experiment)
+function ExperimentView(experiment, weekOffset, numWeeks)
 {
     this.init("ExperimentView", "ExperimentView",
               document.getElementById("ExperimentView"));
 
     var matrices = experiment.matrices;
 
+    console.log("*** ExperimentView: matrices=" + JSON.stringify(experiment.matrices));
+    
     for (var i = 0; i < matrices.length; i++) {
-        _prof.start("new ObservationMatrixView[" + i + "]");
-        var view = new ObservationMatrixView(matrices[i],
-                                             experiment.viewStart,
-                                             experiment.numWeeks,
-                                             i > 0);
-        _prof.stop("new ObservationMatrixView[" + i + "]");
+        var view = new ObservationMatrixView(matrices[i], weekOffset, numWeeks, i > 0);
         this.addComponent(view);
-        _prof.mark("add ObservationMatrixView[" + i + "]");
+        view.showHideRows(true);
     }
-
+    
     this.updateView = function() {
         for (var i = 0; i < this.components.length; i++) {
             if (this.components[i].matrix)
@@ -857,10 +858,10 @@ function ExperimentView(experiment)
         return undefined;
     }
 
-    this.getObservationView = function(plant, location, col) {
+    this.getObservationView = function(plant, location, weeknum) {
         for (var i = 0; i < this.components.length; i++) {
             if (this.components[i].matrix && (this.components[i].matrix.plant.id == plant))
-                return this.components[i].getObservationView(location, col);
+                return this.components[i].getObservationView(location, weeknum);
         }
         return undefined;
     }
@@ -872,16 +873,45 @@ function ExperimentView(experiment)
 ExperimentView.prototype = new UIComponent();
 
 
-function ObservationMatrixView(matrix, viewStart, numWeeks, collapsed)
+function ObservationMatrixView(matrix, weekOffset, numWeeks, collapsed)
 {
     var self = this;
     this.init("ObservationMatrixView", "container-fluid ObservationMatrixView");
 
     this.rows = [];
+    this.weekOffset = weekOffset;
+    this.numWeeks = numWeeks;
+    this.matrix = matrix;
+    this.collapsed = collapsed;
+
+    this.getColumnDate = function(column) {
+        return new Date(_experiment.startDate.getFullYear(),
+                        _experiment.startDate.getMonth(),
+                        _experiment.startDate.getDate() + (this.weekOffset + column) * 7,
+                        12, 0, 0); // FIXME
+    }
+
+    this.toWeek = function(column) {
+        return this.weekOffset + column;
+    }
+
+    this.toColumn = function(week) {
+        return week - this.weekOffset;
+    }
+
+    this.getObserver = function(row) {
+        return matrix.observers[row];
+    }
     
+    this.getObservations = function(row, col) {
+        var observationRow = matrix.getObservations(row);
+        return observationRow[this.weekOffset + col];
+    }
+
     this.updateView = function() {
         for (var i = 0; i < this.rows.length; i++)
             this.rows[i].updateView();
+        this.showHideRows();
     }
 
     this.updateSensorData = function() {
@@ -889,7 +919,8 @@ function ObservationMatrixView(matrix, viewStart, numWeeks, collapsed)
             this.rows[i].updateSensorData();
     }
 
-    this.getObservationView = function(location, col) {
+    this.getObservationView = function(location, weeknum) {
+        var col = this.toColumn(weeknum);
         for (var i = 0; i < this.rows.length; i++) {
             if (this.rows[i].observer.locationId == location)
                 return this.rows[i].getObservationView(col);
@@ -909,35 +940,62 @@ function ObservationMatrixView(matrix, viewStart, numWeeks, collapsed)
         this.addComponent(this.header);
     }
 
-    this.addObservationRow = function (observer, observations) {
-        var row = new ObservationRowView(observer, observations);
+    this.addObservationRow = function (row, observer, observations) {
+        console.log("*** addObservationRow ***");
+        var row = new ObservationRowView(row, numWeeks, this);
         this.rows.push(row);
         this.matrixView.addComponent(row);
     }
-
+    
     this.buildObservationRows = function() {
         this.clear();
-        this.matrixView.addComponent(new ObservationWeekView(viewStart, numWeeks));
-        _prof.mark("new ObservationWeekView");
-        for (var i = 0; i < matrix.observers.length; i++) {
-            _prof.start("new ObservationRowView[" + i + "]");
-            this.addObservationRow(this.matrix.observers[i], this.matrix.observations[i]);
-            _prof.stop("new ObservationRowView[" + i + "]");
+        this.weekView = new ObservationWeekView(this, numWeeks);
+        this.matrixView.addComponent(this.weekView);
+        //console.log("*** buildObservationRows: length: " + matrix.countObservers() + " ***");
+        for (var row = 0; row < matrix.countObservers(); row++) {
+            this.addObservationRow(row, this.matrix.getObserver(row), this.matrix.getObservations(row));
         }
     }
+
+    this.showHideRows = function() {
+        for (var i = 0; i < this.rows.length; i++)
+            this.rows[i].showHide();
+    }
+
+    this._updateWeekOffset = function() {
+        this.weekView.updateView();
+        for (var i = 0; i < this.rows.length; i++)
+            this.rows[i].updateView();
+    }
     
+    this.incrementWeekOffset = function() {
+        this.weekOffset++; // TODO: no limit?
+        this._updateWeekOffset();
+        this.showHideRows();
+    }
+
+    this.decrementWeekOffset = function() {
+        if (this.weekOffset > 0) {
+            this.weekOffset--;
+            this._updateWeekOffset();
+            this.showHideRows();
+        }
+    }
+
     this.buildMatrixView = function() {
         this.matrixView = new ObservationTableView();
         this.addComponent(this.matrixView);
         this.buildObservationRows();
-        // FIXME
-        this.button = new Button("createObserver_" + this.matrix.plant.id,
-                                 "",
-                                 "Rajouter une ligne pour mes photos.",
-                                 "createObserver");
-        this.button.addListener(_controller);
-        this.button.matrix = this.matrix;
-        this.addComponent(this.button);
+        if (_account && _account.id) {
+            // FIXME
+            this.button = new Button("createObserver_" + this.matrix.plant.id,
+                                     "",
+                                     "Rajouter une ligne pour mes photos.",
+                                     "createObserver");
+            this.button.addListener(_controller);
+            this.button.matrix = this.matrix;
+            this.addComponent(this.button);
+        }
     }
 
     this.buildPlaceHolder = function() {
@@ -960,6 +1018,7 @@ function ObservationMatrixView(matrix, viewStart, numWeeks, collapsed)
     }
     
     this.buildViewExpanded = function() {
+        console.log("*** buildViewExpanded: matrix=" + JSON.stringify(matrix));
         this.buildHeader(false);
         this.buildMatrixView();
         this.buildPlaceHolder();
@@ -973,7 +1032,7 @@ function ObservationMatrixView(matrix, viewStart, numWeeks, collapsed)
     this.collapse = function() {
         if (this.matrixView) {
             this.matrixView.setVisible(false);
-            this.button.setVisible(false);
+            if (this.button) this.button.setVisible(false);
         }
         if (!this.placeholder)
             this.buildPlaceHolder();
@@ -986,17 +1045,15 @@ function ObservationMatrixView(matrix, viewStart, numWeeks, collapsed)
             this.buildMatrixView();
         }
         this.matrixView.setVisible(true);
-        this.button.setVisible(true);
+        if (this.button) this.button.setVisible(true);
+        this.showHideRows();
+        
         if (this.placeholder)
             this.placeholder.className = "matrix-collapsed hidden";
 
         this.collapsed = false;
     }
     
-    this.matrix = matrix;
-    this.viewStart = viewStart;
-    this.numWeeks = numWeeks;
-    this.collapsed = collapsed;
     this.buildView();
 }
 ObservationMatrixView.prototype = new UIComponent();
@@ -1057,43 +1114,75 @@ function ObservationHeaderView(parent, collapsed)
 }
 ObservationHeaderView.prototype = new UIComponent();
 
-function ObservationWeekView(date, numWeeks)
+function ObservationWeekView(matrixview, numWeeks)
 {
+    var self = this;
     this.init("ObservationWeekView", "ObservationWeekView Row");
-
+    
     this.titleView = new UIComponent().init("WeekTitle", "WeekTitle Column");
     this.titleView.addText("La semaine du ");
-    this.addComponent(this.titleView);
-
-    for (var i = 0; i < numWeeks; i++) {
-        this.titleView = new UIComponent().init("WeekDate", "WeekDate Column");
-        this.titleView.addText(date.getDate() + "/" + (1+date.getMonth()));
+    this.titleView.addGlyphButton("glyphicon-chevron-left", "", function () { matrixview.decrementWeekOffset(); });
+    this.titleView.addGlyphButton("glyphicon-chevron-right", "", function () { matrixview.incrementWeekOffset(); });
+    
+    this.buildView = function () {
+        this.removeComponents();
         this.addComponent(this.titleView);
-        date = new Date(date.getFullYear(),
-                        date.getMonth(),
-                        date.getDate() + 7,
-                        12, 0, 0);
+        
+        for (var i = 0; i < numWeeks; i++) {
+            var date = matrixview.getColumnDate(i);
+            var header = new UIComponent().init("WeekDate", "WeekDate Column");
+            header.addText(date.getDate() + "/" + (1+date.getMonth()));
+            this.addComponent(header);
+        }
     }
+    
+    this.updateView = function () {
+        this.buildView(numWeeks);
+    }
+    
+    this.buildView(numWeeks);
 }
 ObservationWeekView.prototype = new UIComponent();
 
-function ObservationRowView(observer, observations)
+function ObservationRowView(row, numWeeks, matrixview)
 {
     this.init("ObservationRowView", "ObservationRowView Row");
 
-    this.observer = observer;
-    this.locationView = new ObservationLocationView(observer);
+    this.row = row;
+    this.matrixview = matrixview;
+    this.observer = matrixview.getObserver(row);
+    this.numWeeks = numWeeks;
+    this.locationView = new ObservationLocationView(this.observer);
     this.addComponent(this.locationView);
     this.locationView.moveTo(0, 0);
     this.cells = [];
     
     this.buildView = function() {
-        for (var i = 0; i < observations.length; i++) {
-            this.cells[i] = new ObservationView(this, observer, observations[i], i);
-            _prof.mark("new ObservationView[" + i + "]");
-            this.addComponent(this.cells[i]);
-            this.cells[i].moveTo(120 + i * 90, 0);
+        for (var col = 0; col < numWeeks; col++) {
+            this.cells[col] = new ObservationView(row, col, this, matrixview);
+            this.addComponent(this.cells[col]);
+            this.cells[col].moveTo(120 + col * 90, 0);
         }
+    }
+
+    this.showHide = function(imm) {
+        var show = false;
+        for (var col = 0; col < numWeeks; col++) {
+            if (this.cells[col].hasObservations()) {
+                show = true;
+                break;
+            }
+        }
+        if (_account && _account.id && this.observer.accountId == _account.id)
+            show = true;
+        
+/*        if (imm) {
+            if (show) jq(this.div).show();
+            else jq(this.div).hide();
+        } else { */
+            if (show) jq(this.div).fadeIn(1000).show();
+            else jq(this.div).fadeOut(1000).hide();
+        //}
     }
     
     this.getObservationView = function(col) {
@@ -1103,6 +1192,7 @@ function ObservationRowView(observer, observations)
     this.updateView = function() {
         for (var i = 0; i < this.cells.length; i++)
             this.cells[i].updateView();
+        this.showHide(true);
     }
     
     this.updateSensorData = function() {
@@ -1117,8 +1207,7 @@ function ObservationRowView(observer, observations)
     this.buildView();
 }
 ObservationRowView.prototype = new UIComponent();
-
-
+        
 function ObservationLocationView(observer)
 {
     this.init("ObservationLocationView", "ObservationLocationView Column");
@@ -1155,24 +1244,61 @@ function PhotoViewer(observations)
 }
 PhotoViewer.prototype = new UIComponent();
 
-function ObservationView(row, observer, observations, col)
+
+
+function ObservationPhoto(parent, observation)
 {
+    this.init("ObservationPhoto", "ObservationPhoto");
+
+    this.uploading = false;
+    this.observation = observation;
+
+    this.updateView = function() {
+        this.removeComponents();
+        if (this.uploading) {
+            this.div.className = "ObservationPhoto";
+            this.image = this.addImage(_server.root + "/media/spinner.gif");
+
+        } else if (this.observation) {
+            var src = _server.root + "/" + this.observation.thumbnail;
+            this.div.className = "ObservationPhoto";
+            this.image = this.addEventImage(src, "", "ObservationView",
+                                            function() {
+                                                _curtain.show(new Slideshow(parent.observations));
+                                            });
+        } else {
+            this.div.className = "ObservationPhotoEmpty";
+        }
+    }
+
+    this.setUploading = function() {
+        this.uploading = true;
+        this.updateView();
+    }
+    
+    this.setObservation = function(observation) {
+        this.uploading = false;
+        this.observation = observation;
+        this.updateView();
+    }
+
+    this.updateView();
+}
+ObservationPhoto.prototype = new UIComponent();
+
+function ObservationView(row, col, parent, matrixview)
+{
+    var self = this;
     this.init("ObservationView", "ObservationView Column");
     this.row = row;
     this.col = col;
-    this.observer = observer;
-    this.observations = observations;
-    this.startDate = new Date(_experiment.startDate.getFullYear(),
-                              _experiment.startDate.getMonth(),
-                              _experiment.startDate.getDate() + col * 7,
-                              12, 0, 0);
-    
-    var self = this;
+    this.parent = parent;
+    this.matrixview = matrixview;
+    this.observer = matrixview.getObserver(row);
     
     this.setProgress = function (value) {
         if (!this.progress) {
-            this.image.src = _server.root + "/media/spinner.gif";
-            this.image.className = "Spinner";
+            this.photo.setUploading();
             this.progress = new ProgressBar();
             this.addComponent(this.progress);
         }
@@ -1183,29 +1309,23 @@ function ObservationView(row, observer, observations, col)
         // Make sure that the visitor is logged in BEFORE uploading
         // the photo. And that she isn't uploading a photo for someone
         // else's row of observations.
-        _server.getJSON("login").then(function(e) {
+        /*
+        _server.getJSON("whoami.json").then(function(e) {
             if (e.error) alert(e.message);
-            else {
-                if (!_account || !_account.id) {
-                    _account = e;
-                    _accountPanel.update();
-                }
-                if (observer.accountId != e.id)
-                    alert("Il semblerait que cette ligne d'observations appartient à quelqu'un d'autre.");
-                else self._uploadPhoto();
-            }
+            else if (observer.accountId != e.id)
+                alert("Il semblerait que cette ligne d'observations appartient à quelqu'un d'autre.");
+            else self._uploadPhoto();
         });
+        */
+        self._uploadPhoto();
     }
     
     this._uploadPhoto = function () {
-        var date = new Date(_controller.experiment.viewStart.getFullYear(),
-                            _controller.experiment.viewStart.getMonth(),
-                            _controller.experiment.viewStart.getDate() + col * 7,
-                            12, 0, 0); // FIXME
-        var hidden = { "accountId": observer.accountId,
-                       "locationId": observer.locationId,
-                       "plantId": observer.plantId,
-                       "experimentId": observer.experimentId,
+        var date = matrixview.getColumnDate(this.col); // FIXME
+        var hidden = { "accountId": this.observer.accountId,
+                       "locationId": this.observer.locationId,
+                       "plantId": this.observer.plantId,
+                       "experimentId": this.observer.experimentId,
                        "date": toDateWithHMS(date) };
         //alert("date=" + toDateWithHMS(date));
         _curtain.show(new UploadPanel(hidden,
@@ -1215,16 +1335,19 @@ function ObservationView(row, observer, observations, col)
                                               self.updateObservation();
                                           } else {
                                               _controller.insertObservation(data);
-                                              if (data.col != self.col)
-                                                  row.updateObservationView(data.col);
+                                              var _col = matrixview.toColumn(data.weeknum)
+                                              if (_col != self.col)
+                                                  parent.updateObservationView(_col);
                                               self.updateObservation();
                                           }
                                       },
                                       function() {
+                                          console.log("Cancel?");
                                           _curtain.finished();
                                           self.updateObservation();
                                       },
                                       function() {
+                                          console.log("Error?");
                                           _curtain.finished();
                                           self.updateObservation();
                                       },
@@ -1239,12 +1362,18 @@ function ObservationView(row, observer, observations, col)
 
     this.updateSensorData = function () {
         if (this.observer.deviceId) {
-            var id = "" + this.observer.deviceId + "-" + toDate(this.startDate);
+            var date = matrixview.getColumnDate(this.col);
+            var id = "" + this.observer.deviceId + "-" + toDate(date);
             this.sensordata = _experiment.sensordata[id];
             this.updateObservation();
         }
     }
-    
+
+    this.hasObservations = function (i) {
+        //if (i==0) alert(JSON.stringify(this.observations));
+        return this.observations && this.observations.length? true : false;
+    }
+
     this.updateObservation = function () {
         this.removeComponents();
         this.progress = undefined;
@@ -1254,37 +1383,31 @@ function ObservationView(row, observer, observations, col)
         else 
             this.addComponent(new EmptyDataView());
 
+        this.observations = matrixview.getObservations(this.row, this.col);
+
+        var observation = null;
         var index = -1;
-        for (var i = 0; i < this.observations.length; i++) {
+        for (var i = 0; this.observations && i < this.observations.length; i++) {
             if (this.observations[i].thumbnail) {
                 index = i;
+                observation = this.observations[i];
                 break;
             }
         }
         
-        if (index >= 0) {
-            var src = _server.root + "/" + this.observations[index].thumbnail;
-            this.image = this.addEventImage(src, "", "ObservationView",
-                                            function() {
-                                                if (self.observations.length == 1)
-                                                    _curtain.show(new Slideshow(self.observations));
-                                                else
-                                                    _curtain.show(new Slideshow(self.observations));
+        this.photo = this.addComponent(new ObservationPhoto(this, observation));
 
-                                            });
-        } else {
-            this.image = this.addImage(_server.root + "/media/white.gif", "",
-                                       "EmptyObservationView");
-        }
-        if (this.observations.length > 1) {
+        if (this.observations && this.observations.length > 1) {
             var count = document.createElement("DIV");
             count.className = "ObservationCount";
-            count.innerHTML = "x" + this.observations.length;
+            count.innerHTML = "" + this.observations.length;
             this.div.appendChild(count);
         }
-        
-        this.ops = new ObservationOps(this);
-        this.addComponent(this.ops);
+
+        if (_account && _account.id && this.observer.accountId == _account.id) {
+            this.ops = new ObservationOps(this);
+            this.addComponent(this.ops);
+        }
     }
 
     this.updateObservation();
@@ -1631,13 +1754,13 @@ LocationSelector.prototype = new UIComponent();
 //--------------------------------------------------
 
 
-function ExperimentController(experiment)
+function ExperimentController(experiment, weekOffset, numWeeks)
 {
     var self = this;
     this.experiment = experiment;
 
     this.buildView = function() {
-        this.view = new ExperimentView(this.experiment);
+        this.view = new ExperimentView(this.experiment, weekOffset, numWeeks);
     }
 
     this.updateView = function() {
@@ -1651,31 +1774,24 @@ function ExperimentController(experiment)
     this.insertObservation = function(observation) {
         observation.date = new Date(observation.date);
         this.experiment.insertObservation(observation);
+        _activityViewer.updateList();
     }
 
     this.deleteObservation = function(observation, callback) {
-        _server.getJSON("login").then(function(e) {
-            if (e.error) alert(e.message);
-            else {
-                if (!_account || !_account.id) {
-                    _account = e;
-                    _accountPanel.update();
-                }
-                if (observation.accountId != _account.id)
-                    alert("Il semblerait que cette image n'est pas a vous !");
+        if (!_account || !_account.id || observation.accountId != _account.id)
+            alert("Il semblerait que cette image n'est pas a vous !");
+        else {
+            _server.deleteJSON("observations/" + observation.id).then(function (r) {
+                if (r.error) alert(r.message);
                 else {
-                    _server.deleteJSON("observations/" + observation.id).then(function (r) {
-                        if (r.error) alert(r.message);
-                        else {
-                            r.date = new Date(r.date);
-                            var index = self.experiment.removeObservation(r);
-                            var view = self.view.getObservationView(index.plant, index.location, index.col);
-                            if (view) view.updateObservation();
-                            if (callback) callback();
-                        }
-                    })
+                    r.date = new Date(r.date);
+                    var index = self.experiment.removeObservation(r);
+                    var view = self.view.getObservationView(index.plant, index.location, index.weeknum);
+                    if (view) view.updateObservation();
+                    if (callback) callback();
                 }
-            }});
+            })
+        }
     }
 
     this.createObserver = function(matrix, locationId, locationName) {
@@ -1699,7 +1815,10 @@ function ExperimentController(experiment)
                 matrix.addObserver(r);
                 var view = self.view.getMatrixViewByPlantId(matrix.plant.id);
                 //alert(view);
-                if (view) view.buildView();
+                if (view) {
+                    view.buildView();
+                    view.showHideRows();
+                }
             }
         }); 
     }
@@ -1727,50 +1846,70 @@ function showWeek(s)
 // Model
 //--------------------------------------------------
 
-function Observation(observer, col)
+function Observation(observer, weeknum)
 {
     this.observer = observer;
-    this.col = col;
+    this.weeknum = weeknum;
 }
 
 function ObservationMatrix(plant, cols)
 {
     this.cols = cols;
     this.plant = plant;
-    this.observers = [];
-    this.observations = [];
-    this.map = {};
+    this.observers = []; // Array of all observers of this plant
+    this.map = {}; // A map that links a locationId to the list of observations, organised by column
 
     this.addObserver = function(observer) {
-        var observations = [];
-        var row = this.observers.length;
-        for (var col = 0; col < this.cols; col++)
-            observations.push([]);
+        console.log("*** addObserver ***");
         this.observers.push(observer);
-        this.observations.push(observations);
-        this.map[observer.locationId] = observations;
+        var o = [];
+        for (var col = 0; col < this.cols; col++)
+            o.push([]);
+        this.map[observer.locationId] = o;
     }
 
     this.removeObservation = function(obs) {
         var row = this.map[obs.locationId];
-        var cell = row[obs.col];
+        var cell = row[obs.weeknum];
         for (var i = 0; i < cell.length; i++) {
             if (cell[i].id == obs.id) {
                 cell.splice(i, 1);
-                return { "plant": this.plant.id, "location": obs.locationId, "col": obs.col };
+                return { "plant": this.plant.id, "location": obs.locationId, "weeknum": obs.weeknum };
             }
         }
+    }
+ 
+    this.getObserver = function(i) {
+        return this.observers[i];
+    }
+ 
+    this.countObservers = function() {
+        return this.observers.length;
+    }
+
+    this.getObservations = function(x) {
+        var observer = x;
+        if (Number.isInteger(x))
+            observer = this.observers[x];
+        return this.map[observer.locationId];
     }
     
     this.addObservation = function(obs) {
         var row = this.map[obs.locationId];
-        var cell = row[obs.col];
-	if (cell) cell.push(obs);
-	else /* alert(JSON.stringify(obs)) */;
+        if (!row) {
+            console.log(JSON.stringify(this.map));
+        }
+        var cell = row[obs.weeknum];
+        if (!cell) {
+            alert(JSON.stringify(obs));
+            alert(JSON.stringify(row));
+            alert(JSON.stringify(this.map));
+        }
+        cell.push(obs);
     }
 }
 
-function Experiment(e, numWeeks)
+function Experiment(e)
 {
     this.id = e.id;
     this.plants = e.plants;
@@ -1782,9 +1921,11 @@ function Experiment(e, numWeeks)
     this.numWeeks = numWeeks;
     this.matrices = [];
     this.map = {};
-    
+
+    var today = new Date();
+    var numWeeks = 1 + Math.floor((today.getTime() - this.startDate.getTime()) / (7 * 24 * 60 * 60 * 1000))
     for (var i = 0; i < this.plants.length; i++) {
-        var matrix = new ObservationMatrix(this.plants[i], this.numWeeks);
+        var matrix = new ObservationMatrix(this.plants[i], numWeeks);
         this.matrices.push(matrix);
         this.map[this.plants[i].id] = matrix;
     }
@@ -1797,8 +1938,12 @@ function Experiment(e, numWeeks)
         }
     }
 
+    this.getWeeknum = function(date) {
+ 	return Math.floor((date.getTime() - this.startDate.getTime()) / 604800000);            
+    }
+
     this.removeObservation = function(observation) {
-        observation.col = this.getWeekNum(observation.date);
+        observation.weeknum = this.getWeeknum(observation.date);
         for (var i = 0; i < this.matrices.length; i++) {
             if (this.matrices[i].plant.id == observation.plantId) {
                 return this.matrices[i].removeObservation(observation);
@@ -1808,9 +1953,7 @@ function Experiment(e, numWeeks)
     }
     
     this.insertObservation = function(observation) {
-        observation.col = this.getWeekNum(observation.date);
-	if (observation.col < 0)
-	    return;
+        observation.weeknum = this.getWeeknum(observation.date);
         for (var i = 0; i < this.matrices.length; i++) {
             if (this.matrices[i].plant.id == observation.plantId) {
                 this.matrices[i].addObservation(observation);
@@ -1818,21 +1961,16 @@ function Experiment(e, numWeeks)
         }
     }
     
-    this.getWeekNum = function(date) {
- 	return Math.floor((date.getTime() - this.viewStart.getTime()) / 604800000);            
-    }
-    
     this.setObservations = function(observations) {
         for (var i = 0; i < observations.length; i++) {
             var plantId = observations[i].plantId;
             var matrix = this.map[plantId];
             observations[i].date = new Date(observations[i].date);
- 	    observations[i].col = this.getWeekNum(observations[i].date);
+ 	    observations[i].weeknum = this.getWeeknum(observations[i].date);
             matrix.addObservation(observations[i]);
         }
     }
 }
-
 
 function SlideSelector(slideshow, i)
 {
@@ -1983,15 +2121,8 @@ function Slideshow(observations)
     
     this.createShow = function() {
         this.addGlyph("glyphicon-remove", function() { _curtain.finished(); } );
+        //if (_account && _account.id && observation.accountId != _account.id)
         this.addGlyphButton("glyphicon-trash", "pull-right", function() { self.deleteObservation() } );
-
-        /*
-        this.addEventImage(_server.root + "/media/close.png", "Fermer le slideshow", "SlideshowClose FloatLeft",
-                           function() { _curtain.finished(); } );
-
-        this.addEventImage(_server.root + "/media/trash.png", "Jeter à la poubelle", "FloatRight",
-                           function() { self.deleteObservation() } );
-        */
         
         var slideshow = document.createElement("DIV");
         slideshow.className = "Slideshow_Slideshow";
@@ -2037,34 +2168,6 @@ function Slideshow(observations)
     this.preloadSlides();
 }
 Slideshow.prototype = new UIComponent();
-
-
-//--------------------------------------------------
-
-function AccountPanel()
-{
-    var self = this;
-
-    function authenticate() {
-    }
-
-    this.update = function() {
-        this.removeComponents();
-        /*
-        if (_account && _account.id) {
-            this.addText("Nom : " + _account.id);
-            //this.addEventLink("Changer", function() { self.authenticate(); }, "");    
-        } else {
-            this.addEventLink("Se connecter", function() { self.authenticate(); }, "");    
-        }
-        */
-    }
-    
-    this.init("AccountPanel", "AccountPanel", document.getElementById("AccountPanel"));
-    this.update();
-}
-AccountPanel.prototype = new UIComponent();
-
 
 //--------------------------------------------------
 
@@ -2636,11 +2739,32 @@ function ActivityViewer(id)
     var self = this;
     this.init("ActivityViewer", "", document.getElementById("ActivityViewer"));
 
+    this.length = 32;
+    
     this.setObservations = function(obs) {
         this.observations = obs;
         for (var i = 0; i < this.observations.length; i++) {
             this.observations[i].date = new Date(this.observations[i].date);
         }
+    }
+
+    this.showMorePhotos = function() {
+        this.length += 32;
+        this.buildView();
+    }
+
+    this.showLessPhotos = function() {
+        this.length -= 32;
+        if (this.length < 32) this.length = 32
+        this.buildView();
+    }
+
+    this.updateList = function() {
+        _server.getJSON("observations.json?experiment=" + id + "&sort=upload")
+            .then(function(obs) {
+                self.setObservations(obs);
+                self.buildView();
+            });
     }
     
     this.buildView = function() {
@@ -2653,7 +2777,7 @@ function ActivityViewer(id)
         div = document.createElement("DIV");
         div.className = "recent-photos";
         
-        for (var i = this.observations.length-1, j = 0; i >= 0 && j < 32; i--, j++) {
+        for (var i = this.observations.length-1, j = 0; i >= 0 && j < this.length; i--, j++) {
             var imgdiv = document.createElement("DIV");
             imgdiv.className = "recent-photo";
 
@@ -2667,6 +2791,17 @@ function ActivityViewer(id)
             var img = document.createElement("IMG");
             img.src = _server.root + "/" + this.observations[i].thumbnail;
             img.className = "recent-photo";
+            {
+                var text = "";
+                if (this.observations[i].comment) {
+                    text += this.observations[i].comment + " | ";
+                }
+                text += this.observations[i].plantFamily;
+                if (this.observations[i].plantVariety)
+                    text += ", " + this.observations[i].plantVariety;
+                text += " | " + toDate(this.observations[i].date);
+                img.title = text;
+            }
             imgdiv.appendChild(a);
             a.appendChild(img);
 
@@ -2681,49 +2816,21 @@ function ActivityViewer(id)
 
             div.appendChild(imgdiv);
         }
+
+        this.addGlyph("glyphicon-plus", function () { self.showMorePhotos(); }, div,
+                      "more-recent-photos", "Afficher plus de photos");
+
+        if (this.length > 32) {
+            this.addGlyph("glyphicon-minus", function () { self.showLessPhotos(); }, div,
+                          "less-recent-photos", "Afficher moins de photos");
+        }
         
         this.div.appendChild(div);        
     }
     
-    _server.getJSON("observations.json?experiment=" + id 
-                    + "&days=21&sort=upload")
-        .then(function(obs) {
-            self.setObservations(obs);
-            self.buildView();
-        });
+    this.updateList();
 }
 ActivityViewer.prototype = new UIComponent();
-
-//--------------------------------------------------
-
-function PerformanceProfile()
-{
-    this.startDate = new Date();
-    this.lastDate = new Date();
-    this.list = [];
-    this.stack = [ new Date() ];
-    
-    this.mark = function(label) {
-        var now = new Date();
-        var lastDate = this.stack.pop();
-        this.list.push({ "label": label,
-                         "time": (now.getTime() - this.startDate.getTime()) / 1000,
-                         "duration": (now.getTime() - lastDate.getTime()) / 1000,
-                       });
-        this.stack.push(now);
-    }
-
-    this.start = function(label) {
-        this.stack.push(new Date());
-    }
-
-    this.stop = function(label) {
-        this.stack.pop();
-        this.mark(label);
-    }
-}
-
-var _prof = new PerformanceProfile();
 
 //--------------------------------------------------
 
@@ -2732,24 +2839,21 @@ var _server = undefined;
 var _experiment = undefined;
 var _controller = undefined;
 var _curtain = undefined;
-var _account = undefined;
-var _accountPanel = undefined;
 var _forum = undefined;
+var _activityViewer = undefined;
 
 function showObservations(id, startAt)
 {
     _curtain = new Curtain();
     document.getElementById("Body").appendChild(_curtain.div);
 
-    _accountPanel = new AccountPanel();
-
+    var weekOffset = 0;
+    
     // First, load all the data and construct the data structure, aka
     // the 'model'.
     _server.getJSON("experiments/" + id + ".json").then(function(e) {
 
-        _prof.mark("loadExperiment");
-            
-        _experiment = new Experiment(e, _numWeeks);
+        _experiment = new Experiment(e);
 
 	var viewStart;
 	var viewEnd;
@@ -2758,6 +2862,7 @@ function showObservations(id, startAt)
             viewStart = _experiment.startDate;
             viewEnd = new Date(viewStart.getFullYear(), viewStart.getMonth(),
                                 viewStart.getDate() + 7 * _numWeeks, 23, 59, 59);
+            weekOffset = 0;
         } else if (startAt && startAt != "today") {
             viewStart = new Date(startAt);
             viewEnd = new Date(viewStart.getFullYear(), viewStart.getMonth(),
@@ -2766,109 +2871,42 @@ function showObservations(id, startAt)
 	} else {
             var today = new Date();
             var daysTillSunday = today.getDay() == 0? 7 : 7 - today.getDay();
-            var viewEnd = new Date(today.getFullYear(), today.getMonth(),
-				   today.getDate() + daysTillSunday, 0, 0, 0);
-            var viewStart = new Date(today.getFullYear(), today.getMonth(),
-                                     today.getDate() + daysTillSunday - _numWeeks * 7,
-                                     0, 0, 0);
+            viewEnd = new Date(today.getFullYear(), today.getMonth(),
+			       today.getDate() + daysTillSunday, 0, 0, 0);
+            viewStart = new Date(today.getFullYear(), today.getMonth(),
+                                 today.getDate() + daysTillSunday - _numWeeks * 7,
+                                 0, 0, 0);
 	}
 
         if (viewStart.getTime() < _experiment.startDate.getTime()) {
             viewStart = _experiment.startDate;
             viewEnd = new Date(viewStart.getFullYear(), viewStart.getMonth(),
-                                viewStart.getDate() + 7 * _numWeeks, 23, 59, 59);
+                               viewStart.getDate() + 7 * _numWeeks, 23, 59, 59);
+            weekOffset = 0;
         }
-        _experiment.viewStart = viewStart;
-        _experiment.viewEnd = viewEnd;
-
-        _prof.mark("handleExperiment");
-
+        weekOffset = (viewStart.getTime() - _experiment.startDate.getTime()) / 1000 / 60 / 60 / 24 / 7;
+        
         return _server.getJSON("observers.json?experiment=" + id);
 
     }).then(function(obs) {
-
-        _prof.mark("loadObservers");
-
         _experiment.setObservers(obs);
+        return _server.getJSON("observations.json?experiment=" + id);
 
-        _prof.mark("handleObservers");
-
-        // Now create the controller and build the view.
-        _controller = new ExperimentController(_experiment);
-        _controller.buildView();
-
-        _prof.mark("buildView");
-        
-
-        return _server.getJSON("observations.json?"
-                               + "experiment=" + id
-	                       + "&from=" + toDate(_experiment.viewStart)
-			       + "&to=" + toDate(_experiment.viewEnd));
     }).then(function(obs) {
-
-        _prof.mark("loadObservations");
-
         _experiment.setObservations(obs);
 
-        _prof.mark("setObservations");
-
-        _controller.updateView();
-
-        _prof.mark("updateView");
-
-        // List of date selectors
-        /*
-        var date = new Date(_experiment.startDate);
-        var div = document.getElementById("DateSelection");
-        for (var i = 0; i < 9; i++) {
-            var a = document.createElement("A");
-            a.className = "DateSelector";
-            a.setAttribute("href", "javascript:void(0)");
-            a.innerHTML = toDayAndMonth(date);
-            a.onclick = function() { return false; }
-            a.onmousedown = function() { return false; }
-            setEventHandler(a, "click", alert);  // TODO
-            div.appendChild(a);
-            date = new Date(date.getFullYear(), date.getMonth(),date.getDate() + 28);
-        }
-        */
-
+        // Now create the controller and build the view.
+        _controller = new ExperimentController(_experiment, weekOffset, _numWeeks);
+        _controller.buildView();
 
         return _server.getJSON("sensordata.json");
 
     }).then(function(data) {
-        _prof.mark("getSensorData");
-
         _experiment.sensordata = {};
         for (var i = 0; i < data.length; i++) {
             _experiment.sensordata[data[i].id] = data[i];
         }
-
-        _prof.mark("handleSensorData");
-
         _controller.updateSensorData();
-
-        _prof.mark("updateSensorData");
-
-        return _server.getJSON("whoami");
-        
-    }).then(function(data) {
-        _prof.mark("getWhoami");
-
-        if (data.id) {
-            _account = data;
-            _accountPanel.update();
-        }
-
-        if (true) {
-            var body = document.getElementById("Body");
-            var div = document.createElement("DIV");
-            var pre = document.createElement("PRE");
-            pre.className = "PerformanceProfile";
-            pre.innerHTML = JSON.stringify(_prof.list, null, 4);
-            div.appendChild(pre);
-            body.appendChild(div);
-        }
     });
 }
 
@@ -2883,334 +2921,6 @@ function initForum(id)
 
 function showRecentActivity(id)
 {
-    new ActivityViewer(id);
+    _activityViewer = new ActivityViewer(id);
 }
 
-
-//--------------------------------------------------
-
-var _notebookController = undefined;
-
-function Notebook()
-{
-    this.locations = [];
-    this.observers = [];
-    this.observations = [];
-
-    this.findLocationIndex = function(id) {
-        for (var i = 0; i < this.locations.length; i++) {
-            if (this.locations[i].id == id) 
-                return i;
-        }
-        return -1;
-    }
-
-    this.addLocation = function(location) {
-        this.locations.push(location);
-        this.observers.push([]);
-        this.observations.push([]);
-    }
-
-    this.importLocations = function(locations) {
-        for (var i = 0; i < locations.length; i++)
-            this.addLocation(locations[i]);
-    }
-
-    this.findObserverIndex = function(lindex, plantId) {
-        for (var i = 0; i < this.observers[lindex].length; i++) {
-            if (this.observers[lindex][i].plantId == plantId) 
-                return i;
-        }
-        return -1;
-    }
-
-    this.importObservers = function(observers) {
-        for (var i = 0; i < observers.length; i++) {
-            var observer = observers[i];
-            var index = this.findLocationIndex(observer.locationId);
-            if (index < 0) continue; // FIXME: something wrong with the data on the server
-            this.observers[index].push(observer);
-        }
-    }
-
-    this.addObservation = function(observation) {
-        var lindex = this.findLocationIndex(observation.locationId);
-        if (lindex < 0) return; // FIXME: something wrong with the data on the server
-        var pindex = this.findObserverIndex(lindex, observation.plantId);
-        if (pindex < 0)  return; // FIXME: something wrong with the data on the server
-        this.observations[lindex][pindex] = observation;
-    }
-}
-
-function NotebookController(notebook)
-{
-    this.notebook = notebook;
-
-    this.createView = function() {
-        this.view = new NotebookView(notebook);
-        var div = document.getElementById("MobileApp");
-        div.appendChild(this.view.div);
-    }
-
-    this.createView();    
-}
-
-function NotebookView(notebook)
-{ 
-    var self = this;
-    this.init("NotebookView", "NotebookView container");
-    this.notebook = notebook;
-    
-    this.updateView = function() {
-        this.removeComponents();
-        for (var i = 0; i < this.notebook.locations.length; i++) {
-            var view = new NotebookLocationView(notebook, i);
-            this.addComponent(view);
-        }
-        var button = new Button("AddLocationButton", "NewLocation u-full-width",
-                                "Ajouter une nouvelle parcelle de cultures",
-                                function() { if (confirm("Vraiment ajouter une nouvelle parcelle ?")) { self.addLocation(); }});
-        this.addComponent(button);
-    }
-
-    this.addLocation = function() {
-        var location =  { };
-        _server.postJSON("locations", location).then(function (r) {
-            if (r.error) alert(r.message);
-            else {
-                self.notebook.addLocation(r);
-                self.updateView();
-            }
-        }); 
-    }
-    
-    this.updateView();    
-    
-}
-NotebookView.prototype = new UIComponent();
-
-
-function NotebookLocationView(notebook, index)
-{
-    var self = this;
-    
-    this.init("NotebookLocationView_" + index, "NotebookLocationView row");
-    this.notebook = notebook;
-    this.index = index;
-    
-    this.updateView = function() {
-        this.removeComponents();
-        this.plantSelector = undefined;
-        var location = this.notebook.locations[this.index];
-        if (location.name)
-            this.addText(location.name, "NotebookLocationName");
-        else
-            this.addText("Chez moi", "NotebookLocationName");
-
-        var observers = this.notebook.observers[this.index];
-        for (var i = 0; i < observers.length; i++) {
-            var view = new NotebookObserverView(notebook, index, i);
-            this.addComponent(view);
-        }
-
-        var button = new Button("AddObserverButton", "NewObserver u-full-width",
-                                "Rajouter une légume dans ma liste d'observations",
-                                function() { self.showPlantSelector(); } );
-        this.addComponent(button);
-    }
-
-    this.hasObserver = function(id) {
-        var observers = this.notebook.observers[this.index];
-        for (var i = 0; i < observers.length; i++) {
-            if (observers[i].plantId == id)
-                return true;
-        }
-        return false;
-    }
-
-    this.hidePlantSelector = function() {
-        if (this.plantSelector) {
-            this.removeComponent(this.plantSelector);
-            this.plantSelector = undefined;
-            return;
-        }
-    }
-    
-    this.showPlantSelector = function() {
-        if (this.plantSelector) {
-            this.removeComponent(this.plantSelector);
-            this.plantSelector = undefined;
-            return;
-        }
-        var plantsAvailable = [];
-        var plantsExp = _experiment.plants;
-
-        for (var i = 0; i < plantsExp.length; i++) {
-            if (!this.hasObserver(plantsExp[i].id))
-                plantsAvailable.push(plantsExp[i]);
-        }
-        if (!this.plantSelector) {
-            this.plantSelector = new PlantSelectorList(this);
-            this.addComponent(this.plantSelector);
-        }
-        this.plantSelector.show(this, plantsAvailable);
-    }
-
-    this.addObserver = function(id) {
-        var location = this.notebook.locations[this.index];
-        var observer = {
-            "locationId": location.id,
-            "experimentId": _experiment.id,
-            "plantId": id
-        };
-        _server.postJSON("observers", observer).then(function (r) {
-            if (r.error) alert(r.message);
-            else {
-                self.notebook.observers[self.index].push(r);
-                self.updateView();
-            }
-        }); 
-        this.removeComponent(this.plantSelector);
-        this.plantSelector = undefined;
-    }
-
-    this.updateView();    
-}
-NotebookLocationView.prototype = new UIComponent();
-
-
-function PlantSelectorList(parent)
-{
-    this.init("PlantSelectorList", "PlantSelectorList");
-
-    this.show = function(parent, list) {
-        this.removeComponents();
-        for (var i = 0; i < list.length; i++)
-            this.addComponent(new PlantSelector(parent, list[i]));
-        this.addEventLink("Annuler", function() { parent.hidePlantSelector(); }, "button CancelPlantSelector u-max-full-width");    
-        this.setVisible(true);
-    }
-}
-PlantSelectorList.prototype = new UIComponent();
-
-
-function PlantSelector(parent, plant)
-{
-    this.init("PlantSelector", "PlantSelector");
-    var text = plant.family;
-    if (plant.variety)
-        text += " - " + plant.variety;
-    if (plant.note)
-        text += " - " + plant.note;
-    this.addEventLink(text, function() { parent.addObserver(plant.id); }, "button PlantSelector u-max-full-width");    
-}
-PlantSelector.prototype = new UIComponent();
-
-
-function NotebookObserverView(notebook, lindex, pindex)
-{
-    var self = this;
-    this.init("NotebookObserverView_" + lindex + "_" + pindex, "NotebookObserverView");
-    this.notebook = notebook;
-    this.lindex = lindex;
-    this.pindex = pindex;
-
-    this.updateView = function() {
-        this.removeComponents();
-        this.panel = undefined;
-        this.progress = undefined;
-        var observer = this.notebook.observers[lindex][pindex];
-        var text = "";
-        if (observer.plantVariety)
-            text = observer.plantFamily + " - " + observer.plantVariety;
-         else
-            text = observer.plantFamily;
-        this.addEventLink(text, function () { self.takePicture(); },
-                          "button NotebookObserverView u-full-width");
-
-        var observation = this.notebook.observations[lindex][pindex];
-        if (observation) 
-            this.addImage(_server.root + "/" + observation.thumbnail,
-                          "", "NotebookObservation");
-//        else 
-//            this.addEventImage(_server.root + "/media/white.gif",
-//                               "", "NotebookObservation",
-//                               function() { self.takePicture(); } );
-    }
-
-    this.hideDialog = function() {
-        if (this.panel) {
-            this.removeComponent(this.panel);
-            this.panel = undefined;
-        }
-    }
-
-    this.setError = function(e) {
-        this.addText("Erreur " + JSON.stringify(e));
-    }
-    
-    this.setProgress = function(value) {
-        this.hideDialog();
-        if (!this.progress) {
-            //this.addImage(_server.root + "/media/spinner.gif", "", "Spinner");
-            this.progress = new ProgressBar();
-            this.addComponent(this.progress);
-        }
-        this.progress.setValue(value);
-    }
-    
-    this.takePicture = function() {
-        if (this.panel) {
-            this.hideDialog();
-            return;
-        }
-        var observer = this.notebook.observers[this.lindex][this.pindex];
-        var date = new Date();
-        var hidden = { "accountId": observer.accountId,
-                       "locationId": observer.locationId,
-                       "plantId": observer.plantId,
-                       "experimentId": observer.experimentId,
-                       "date": toDate(date) };
-        
-        this.panel = new UploadPanel(hidden,
-                                     function (data) {
-                                         if (data.error)
-                                             alert(data.message);
-                                         else
-                                             notebook.addObservation(data);
-                                         self.updateView();
-                                     },
-                                     function (r) { self.updateView(); },
-                                     function (r) { self.updateView(); self.setError(r); },
-                                     function(value) {
-                                         self.setProgress(value);
-                                     });
-
-        this.addComponent(this.panel);
-    }
-
-    this.updateView();
-}
-NotebookObserverView.prototype = new UIComponent();
-
-function startMobileApp(url, id)
-{
-    _server = new Server(url);
-    var notebook = new Notebook();
-    
-    // First, load all the data and construct the data structure, aka
-    // the 'model'.
-    _server.getJSON("experiments/" + id + ".json").then(function(e) {
-        _experiment = new Experiment(e, _numWeeks);
-        return _server.getJSON("login");
-    }).then(function(a) {
-        _account = a;
-        return _server.getJSON("locations.json?account=" + _account.id);
-    }).then(function(r) {
-        notebook.importLocations(r);
-        return _server.getJSON("observers.json?account=" + _account.id + "&experiment=" + id);
-    }).then(function(list) {
-        notebook.importObservers(list);
-        _notebookController = new NotebookController(notebook);
-    });
-}

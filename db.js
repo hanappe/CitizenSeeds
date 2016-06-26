@@ -230,6 +230,23 @@ function getDevices()
     return _db.devices;
 }
 
+function selectDevices(filter)
+{
+    var devices = [];
+    for (var i = 0; i < _db.devices.length; i++) {
+        if (_db.devices[i].deleted)
+            continue;
+        if (filter.account &&
+            filter.account != _db.devices[i].account)
+            continue;
+        if (filter.type &&
+            filter.type != _db.devices[i].type)
+            continue;
+        devices.push(_db.devices[i]);
+    }
+    return devices;
+}
+
 function insertDevice(device)
 {
     device.id = newId("devices");
@@ -239,9 +256,17 @@ function insertDevice(device)
     return device;
 }
 
+function deleteDevice(device)
+{
+    device.deleted = true; // FIXME
+    saveTable("devices"); // FIXME
+}
+
 function getDevice(id)
 {
     for (var i = 0; i < _db.devices.length; i++) {
+        if (_db.devices[i].deleted)
+            continue;
         if (_db.devices[i].id == id)
             return _db.devices[i];
     }
@@ -636,8 +661,10 @@ module.exports = {
     insertDatastream: insertDatastream,
 
     getDevices: getDevices,
+    selectDevices: selectDevices,
     getDevice: getDevice,
     insertDevice: insertDevice,
+    deleteDevice: deleteDevice,
     updateDevice: updateDevice,
 
     getExperiments: getExperiments,
